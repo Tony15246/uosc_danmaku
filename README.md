@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 想要使用本插件，请将本插件完整地下载或者克隆到`scripts`目录下，文件结构如下：
 
 > 务必注意⚠️
-> 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件（可选）)
+> 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
 > 2. danmaku目录虽然下载或者克隆时为空，但插件依赖此目录缓存弹幕文件，此文件夹不可或缺，不要因为这是空文件夹就删除此文件夹
 > 3. 记得给bin文件夹下的文件赋予可执行权限
 
@@ -55,7 +55,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 
 #### uosc控件配置
 
-这一步非常重要，不添加控件，弹幕搜索按钮和弹幕开关就不会显示在进度条上方的控件条中。若没有控件，则只能通过[绑定快捷键](#绑定快捷键（可选）)调用弹幕搜索和弹幕开关功能
+这一步非常重要，不添加控件，弹幕搜索按钮和弹幕开关就不会显示在进度条上方的控件条中。若没有控件，则只能通过[绑定快捷键](#绑定快捷键可选)调用弹幕搜索和弹幕开关功能
 
 想要添加uosc控件，需要修改mpv配置文件夹下的`script-opts`中的`uosc.conf`文件。如果已经安装了uosc，但是`script-opts`文件夹下没有`uosc.conf`文件，可以去[uosc项目地址](https://github.com/tomasklaen/uosc)下载官方的`uosc.conf`文件，并按照后面的配置步骤进行配置。
 
