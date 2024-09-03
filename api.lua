@@ -167,6 +167,7 @@ function fetch_danmaku(episodeId)
 				mp.osd_message("", 0)
 				show_danmaku_func()
 				mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+                print("danmaku number for this episode is " .. response["count"])
 			else
 				mp.osd_message("Error saving JSON file", 3)
 			end
