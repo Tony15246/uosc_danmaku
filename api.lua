@@ -4,7 +4,6 @@ local episodeId = nil
 -- Buffer for the input string
 local input_buffer = ""
 local danmaku_path = mp.get_script_directory() .. "/danmaku/"
-local show_danmaku = true
 
 function itable_index_of(itable, value)
 	for index = 1, #itable do
@@ -123,7 +122,7 @@ function show_danmaku_func()
 end
 
 function hide_danmaku_func()
-	mp.set_property("secondary-sid", 0)
+	mp.set_property("secondary-sid", "no")
 end
 
 -- Function to set episodeId from user input
@@ -166,9 +165,8 @@ function fetch_danmaku(episodeId)
 				remove_danmaku_track()
 				mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
 				mp.osd_message("", 0)
-				if show_danmaku then
-					show_danmaku_func()
-				end
+				show_danmaku_func()
+				mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
 			else
 				mp.osd_message("Error saving JSON file", 3)
 			end
