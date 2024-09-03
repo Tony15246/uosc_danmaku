@@ -59,7 +59,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 
 想要添加uosc控件，需要修改mpv配置文件夹下的`script-opts`中的`uosc.conf`文件。如果已经安装了uosc，但是`script-opts`文件夹下没有`uosc.conf`文件，可以去[uosc项目地址](https://github.com/tomasklaen/uosc)下载官方的`uosc.conf`文件，并按照后面的配置步骤进行配置。
 
-由于uosc最近才更新了部分接口和控件代码，导致老旧版本的uosc和新版的uosc配置有所不同。如果是下载的最新git版uosc或者一直保持更新的用户按照[最新版uosc的控件配置步骤](#最新版uosc的控件配置步骤)配置即可。如何不确定自己的uosc版本，或者在使用诸如[MPV_lazy](https://github.com/hooke007/MPV_lazy)等由第三方管理uosc版本的用户，可以使用兼容新版和旧版uosc的[旧版uosc控件配置步骤](#旧版uosc控件配置步骤)
+由于uosc最近才更新了部分接口和控件代码，导致老旧版本的uosc和新版的uosc配置有所不同。如果是下载的最新git版uosc或者一直保持更新的用户按照[最新版uosc的控件配置步骤](#最新版uosc的控件配置步骤)配置即可。如果不确定自己的uosc版本，或者在使用诸如[MPV_lazy](https://github.com/hooke007/MPV_lazy)等由第三方管理uosc版本的用户，可以使用兼容新版和旧版uosc的[旧版uosc控件配置步骤](#旧版uosc控件配置步骤)
 
 ##### 最新版uosc的控件配置步骤
 
@@ -91,7 +91,7 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 ##### 修改uosc控件（可选）
 
-如果出于重名等各种原因，无法将本插件所放置的文件夹命名为`uosc_danmaku`的话，需要修改`cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的`uosc_danmaku`改为放置本插件的文件夹的名称。假如将本插件放置在`my_folder`文件夹下，那么弹幕开关配置就要修改为`cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
+如果出于重名等各种原因，无法将本插件所放置的文件夹命名为`uosc_danmaku`的话，需要修改`cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的`uosc_danmaku`为放置本插件的文件夹的名称。假如将本插件放置在`my_folder`文件夹下，那么弹幕开关配置就要修改为`cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
 
 #### 绑定快捷键（可选）
 
@@ -99,7 +99,7 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 弹幕搜索功能绑定的脚本消息为`open_search_danmaku_menu`和`show_danmaku_keyboard`
 
-如需配置快捷键，只需在`input.conf`中添加如下行即可。快捷键可以改为自己喜欢的组合
+如需配置快捷键，只需在`input.conf`中添加如下行即可，快捷键可以改为自己喜欢的按键组合。
 
 ```
 Ctrl+d script-message open_search_danmaku_menu
