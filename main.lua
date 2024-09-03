@@ -100,7 +100,6 @@ end
 
 -- 打开输入菜单
 function open_input_menu()
-	print(mp.get_script_name())
 	local menu_props = {
 		type = "menu_danmaku",
 		title = "在此处输入动画名称",
