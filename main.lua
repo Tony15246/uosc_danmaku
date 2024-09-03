@@ -150,19 +150,40 @@ mp.register_script_message("load-danmaku", function(episodeId)
 	set_episode_id(episodeId)
 end)
 
-mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
 mp.register_script_message("set", function(prop, value)
 	if prop ~= "show_danmaku" then
 		return
 	end
 
 	if value == "on" then
-		show_danmaku = true
 		show_danmaku_func()
 	else
-		show_danmaku = false
 		hide_danmaku_func()
 	end
 
 	mp.commandv("script-message-to", "uosc", "set", "show_danmaku", value)
+end)
+mp.register_script_message("show_danmaku_keyboard", function()
+	local has_danmaku = false
+	local sec_sid = mp.get_property("secondary-sid")
+	local tracks = mp.get_property_native("track-list")
+	for i = #tracks, 1, -1 do
+		if tracks[i].type == "sub" and tracks[i].title == "danmaku" then
+			has_danmaku = true
+			break
+		end
+	end
+
+	if sec_sid == "no" and has_danmaku == false then
+		return
+	end
+
+	if sec_sid ~= "no" then
+		hide_danmaku_func()
+		mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
+	else
+		show_danmaku_func()
+		mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+	end
 end)
