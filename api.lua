@@ -158,6 +158,10 @@ function fetch_danmaku(episodeId)
 	if res.status == 0 then
 		local response = utils.parse_json(res.stdout)
 		if response and response["comments"] then
+            if response["count"] == 0 then
+                mp.osd_message("该集弹幕内容为空，结束加载", 3)
+                return
+            end
 			local success = save_json_for_factory(response["comments"])
 			if success then
 				convert_with_danmaku_factory()
