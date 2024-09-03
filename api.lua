@@ -220,8 +220,6 @@ function convert_with_danmaku_factory()
 		danmaku_path .. "danmaku.ass",
 		"-i",
 		danmaku_path .. "danmaku.json",
-		"-N",
-		"Twitter Color Emoji",
 		"--ignore-warnings",
 	}
 
