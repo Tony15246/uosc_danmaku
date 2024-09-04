@@ -33,7 +33,7 @@ function get_animes(query)
 		cancellable = false,
 	}
 
-	mp.osd_message("Loading...", 60)
+	mp.osd_message("加载数据中...", 60)
 
 	local res = utils.subprocess(req)
 
@@ -44,7 +44,7 @@ function get_animes(query)
 	local response = utils.parse_json(res.stdout)
 
 	if not response or not response.animes then
-		mp.osd_message("No results", 3)
+		mp.osd_message("无结果", 3)
 		return
 	end
 
