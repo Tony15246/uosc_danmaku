@@ -151,27 +151,26 @@ function fetch_danmaku(episodeId)
 		cancellable = false,
 	}
 
-	mp.osd_message("Downloading danmaku...", 60)
+	mp.osd_message("弹幕加载中...", 60)
 
 	local res = utils.subprocess(req)
 
 	if res.status == 0 then
 		local response = utils.parse_json(res.stdout)
 		if response and response["comments"] then
-            if response["count"] == 0 then
-                mp.osd_message("该集弹幕内容为空，结束加载", 3)
-                return
-            end
+			if response["count"] == 0 then
+				mp.osd_message("该集弹幕内容为空，结束加载", 3)
+				return
+			end
 			local success = save_json_for_factory(response["comments"])
 			if success then
 				convert_with_danmaku_factory()
 
 				remove_danmaku_track()
 				mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
-				mp.osd_message("", 0)
 				show_danmaku_func()
 				mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-                print("danmaku number for this episode is " .. response["count"])
+				mp.osd_message("弹幕加载成功，共计" .. response["count"] .. "条弹幕", 3)
 			else
 				mp.osd_message("Error saving JSON file", 3)
 			end
