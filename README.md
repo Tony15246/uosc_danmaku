@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 
 另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台上本插件调用DanmakuFactory官方release版的DanmakuFactory.exe文件，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
 
-## 使用方法
+## 安装
 
 ### 下载
 
@@ -51,7 +51,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
     ├── danmaku
     └── main.lua
 ```
-### 配置
+### 基本配置
 
 #### uosc控件配置
 
@@ -104,4 +104,18 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 Ctrl+d script-message open_search_danmaku_menu
 j script-message show_danmaku_keyboard
+```
+
+## 配置选项
+
+本脚本目前只有一个配置选项`load_more_danmaku`，此选项默认关闭。
+
+由于弹弹Play默认对于弹幕较多的番剧加载并且整合弹幕的上限大约每集7000条，而这7000条弹幕也不是均匀分配，例如有时弹幕基本只来自于哔哩哔哩，有时弹幕又只来自于巴哈姆特。这样的话弹幕观看体验就和直接在哔哩哔哩或者巴哈姆特观看没有区别了，失去了弹弹Play整合全平台弹幕的优势。
+
+因此，本人添加了配置选项`load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
+
+想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+
+```
+load_more_danmaku=yes
 ```
