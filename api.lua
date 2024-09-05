@@ -263,7 +263,7 @@ function fetch_danmaku_all(episodeId)
 
         if res.status ~= 0 then
             mp.osd_message("HTTP Request failed: " .. res.error, 3)
-            goto continue
+            return
         end
 
         local response_comments = utils.parse_json(res.stdout)
