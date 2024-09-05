@@ -263,19 +263,20 @@ function fetch_danmaku_all(episodeId)
 
         if res.status ~= 0 then
             mp.osd_message("HTTP Request failed: " .. res.error, 3)
-            return
+            goto continue
         end
 
         local response_comments = utils.parse_json(res.stdout)
 
         if not response_comments or not response_comments["comments"] then
             mp.osd_message("No result", 3)
-            return
+            goto continue
         end
 
         for _, comment in ipairs(response_comments["comments"]) do
             table.insert(comments, comment)
         end
+        ::continue::
     end
 
     url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
