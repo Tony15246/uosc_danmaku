@@ -1,16 +1,6 @@
 local utils = require("mp.utils")
 require("api")
 
-function url_encode(str)
-	-- 将非安全字符转换为百分号编码
-	if str then
-		str = str:gsub("([^%w%-%.%_%~])", function(c)
-			return string.format("%%%02X", string.byte(c))
-		end)
-	end
-	return str
-end
-
 function get_animes(query)
 	local encoded_query = url_encode(query)
 
