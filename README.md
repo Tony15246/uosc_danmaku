@@ -97,7 +97,7 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 对于坚定的键盘爱好者和不使用鼠标主义者，可以选择通过快捷键调用弹幕搜索和弹幕开关功能
 
-弹幕搜索功能绑定的脚本消息为`open_search_danmaku_menu`和`show_danmaku_keyboard`
+弹幕搜索功能绑定的脚本消息为`open_search_danmaku_menu`，弹幕开关功能绑定的脚本消息为`show_danmaku_keyboard`
 
 如需配置快捷键，只需在`input.conf`中添加如下行即可，快捷键可以改为自己喜欢的按键组合。
 
