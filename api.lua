@@ -273,6 +273,16 @@ function fetch_danmaku_all(episodeId)
 			goto continue
 		end
 
+		if #response_comments["count"] == 0 then
+			local start = os.time()
+			while os.time() - start < 1 do
+				-- 空循环，等待 1 秒
+			end
+
+            res = utils.subprocess(req)
+            response_comments = utils.parse_json(res.stdout)
+		end
+
 		for _, comment in ipairs(response_comments["comments"]) do
 			table.insert(comments, comment)
 		end
@@ -371,6 +381,20 @@ function add_danmaku_source(query)
 
 	local new_comments = response["comments"]
 	local add_count = response["count"]
+
+	if add_count == 0 then
+        mp.osd_message("服务器无缓存数据，再次尝试请求", 60)
+
+		local start = os.time()
+		while os.time() - start < 1 do
+			-- 空循环，等待 1 秒
+		end
+
+		res = utils.subprocess(req)
+		response = utils.parse_json(res.stdout)
+		new_comments = response["comments"]
+		add_count = response["count"]
+	end
 
 	if add_count == 0 then
 		mp.osd_message("此源弹幕为空，结束加载", 3)
