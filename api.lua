@@ -257,7 +257,7 @@ function fetch_danmaku_all(episodeId)
 			cancellable = false,
 		}
 
-		mp.osd_message("正在从此地址弹幕：" .. related["url"], 60)
+		mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 60)
 
 		res = utils.subprocess(req)
 
@@ -273,7 +273,7 @@ function fetch_danmaku_all(episodeId)
 			goto continue
 		end
 
-		if #response_comments["count"] == 0 then
+		if response_comments["count"] == 0 then
 			local start = os.time()
 			while os.time() - start < 1 do
 				-- 空循环，等待 1 秒
