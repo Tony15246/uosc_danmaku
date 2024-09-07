@@ -106,7 +106,26 @@ Ctrl+d script-message open_search_danmaku_menu
 j script-message show_danmaku_keyboard
 ```
 
-## 配置选项
+#### 从弹幕源向当前弹幕添加新弹幕内容（可选）
+
+此功能尚为实验性功能，目前尚未解决弹幕去重等问题。
+
+可添加的弹幕源如哔哩哔哩上任意视频通过video路径加BV号，或者巴哈姆特上的视频地址等。比如说以下地址均可作为有效弹幕源被添加：
+
+```
+https://www.bilibili.com/video/BV1kx411o7Yo
+https://ani.gamer.com.tw/animeVideo.php?sn=36843
+```
+
+此功能通过调用弹弹Play的extcomment接口实现获取第三方弹幕站（如A/B/C站）上指定网址对应的弹幕。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_source`或`command:add_box:script-message open_add_source_menu?从源添加弹幕`到`uosc.conf`的controls配置项中。
+
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_source_menu`。
+
+```
+Ctrl+j script-message open_add_source_menu
+```
+
+## 配置选项（可选）
 
 本脚本目前只有一个配置选项`load_more_danmaku`，此选项默认关闭。
 
