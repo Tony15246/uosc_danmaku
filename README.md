@@ -11,6 +11,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 1. 从弹弹play的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
 3. 通过点击加入uosc control bar中的弹幕开关控件可以控制弹幕的开关
+4. 记忆型全自动弹幕填装，在为某个文件夹下的某一集番剧加载过一次弹幕后，加载过的弹幕会自动关联到该集；之后每次重新播放该文件就会自动加载弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕，无需再重复手动输入番剧名进行搜索（注意⚠️：全自动弹幕填装默认关闭，如需开启请阅读[auto_load配置项说明](#auto_load)）
 
 无需亲自下载整合弹幕文件资源，无需亲自处理文件格式转换，在mpv播放器中一键加载包含了哔哩哔哩、巴哈姆特等弹幕网站弹幕的弹弹play的动画弹幕。
 
@@ -127,14 +128,65 @@ Ctrl+j script-message open_add_source_menu
 
 ## 配置选项（可选）
 
-本脚本目前只有一个配置选项`load_more_danmaku`，此选项默认关闭。
+### load_more_danmaku
+
+#### 功能说明
 
 由于弹弹Play默认对于弹幕较多的番剧加载并且整合弹幕的上限大约每集7000条，而这7000条弹幕也不是均匀分配，例如有时弹幕基本只来自于哔哩哔哩，有时弹幕又只来自于巴哈姆特。这样的话弹幕观看体验就和直接在哔哩哔哩或者巴哈姆特观看没有区别了，失去了弹弹Play整合全平台弹幕的优势。
 
 因此，本人添加了配置选项`load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
+
+#### 使用方法
 
 想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 load_more_danmaku=yes
 ```
+### auto_load
+
+#### 功能说明
+
+该选项控制是否开启全自动弹幕填装功能。该功能会在为某个文件夹下的某一集番剧加载过一次弹幕后，把加载过的弹幕会自动关联到该集。之后每次重新播放该文件就会自动加载对应的弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕。
+
+举个例子，比如说有一个文件夹结构如下
+
+```
+败犬女主太多了
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_02WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_03WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_04WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_05WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_06WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_07v2WebRipHEVC_AACCHS_JP.mp4
+└── KitaujiSub_Make_Heroine_ga_Oosugiru!_08WebRipHEVC_AACCHS_JP.mp4
+```
+
+只要在播放第一集`KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4`的时候手动搜索并且加载过一次弹幕，那么打开第二集时就会直接自动加载第二集的弹幕，打开第三集时就会直接加载第三集的弹幕，以此类推，不用再手动搜索
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+
+```
+auto_load=yes
+```
+
+注意⚠️以下两点，否则此功能无法正常工作：
+
+1. 一个文件夹下有且仅有一同部番剧的若干视频文件才会生效。下面这种情况下，如果手动搜索并且加载过一次《少女歌剧》第一集的弹幕，《哭泣少女乐队》第二集的弹幕会被自动加载成《少女歌剧》第二集的弹幕
+```
+少女歌剧
+├── 少女歌剧1.mp4
+├── 少女歌剧2.mp4
+├── 少女歌剧3.mp4
+├── 少女歌剧4.mp4
+└── 哭泣少女乐队2.mp4
+```
+2. 在番剧的“集数”的阿拉伯数字之前没有出现其他阿拉伯数字才能生效，比如说
+```
+KitaujiSub_Make_Heroine_ga_Oosugiru!_02WebRipHEVC_AACCHS_JP.mp4 可以正常读取出是第2集
+[ANi] 超超超超超喜歡你的 100 個女朋友 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT] 会被读取成是第100集，这种特殊情况下请重命名文件，确保集数是第一个出现的阿拉伯数字
+```
+
