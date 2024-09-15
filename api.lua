@@ -1,3 +1,6 @@
+
+-- 选项
+-- 导入ass数据相关流程
 local options = {
     load_more_danmaku = false,
 }
@@ -11,6 +14,11 @@ local episodeId = nil
 local input_buffer = ""
 local danmaku_path = mp.get_script_directory() .. "/danmaku/"
 
+
+
+
+
+-- url编码转换  
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
     if str then
@@ -47,6 +55,7 @@ local platform = (function()
     return "linux"
 end)()
 
+
 -- Show OSD message to prompt user to input episode ID
 function show_input_menu()
     mp.osd_message("Input Episode ID: " .. input_buffer, 10)    -- Display the current input buffer in OSD
@@ -67,6 +76,7 @@ function show_input_menu()
         end)
     end
 end
+
 
 -- Handle user input by adding characters to the buffer
 function handle_input(char)
@@ -116,6 +126,13 @@ function cancel_input()
     input_buffer = "" -- Clear the input buffer
 end
 
+
+
+
+
+
+
+-- 弹幕加载相关。 移除弹幕轨道
 function remove_danmaku_track()
     local tracks = mp.get_property_native("track-list")
     for i = #tracks, 1, -1 do
@@ -141,30 +158,99 @@ function hide_danmaku_func()
     mp.set_property("secondary-sid", "no")
 end
 
--- Function to set episodeId from user input
+
+
+
+--读history 和 写history
+function read_file(file_path)
+    local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
+    if not file then
+        return nil
+    end
+    local content = file:read("*all") -- 读取文件所有内容
+    file:close()                   -- 关闭文件
+    return content
+end
+
+function write_json_file(file_path, data)
+    local file = io.open(file_path, "w")
+    if not file then
+        return
+    end
+    file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
+    file:close()
+end
+
+
+
+-- 获取父文件名
+function get_father_directory()
+	local file_path = mp.get_property("path")  --获取当前视频文件的完整路径
+    local fname = string.match(file_path, ".*\\([^\\]+)\\[^\\]+$")  -- 获取最后一个文件夹名称
+    return fname
+end
+
+
+-- 获取当前文件名所包含的集数
+function get_episode_number()
+	local filename = mp.get_property("filename")
+	local pattern = "(%d+)"
+	
+	 -- 尝试匹配文件名中的数字
+    for number in string.gmatch(filename, pattern) do
+        -- 转换为数字
+        local episodeNumber = tonumber(number)
+        -- 检查数字是否大于2000，以及是否是4k或1080p
+        if episodeNumber and episodeNumber <= 2000 and filename:sub(filename:find(number) + #number + 1, filename:find(number) + #number + 1) ~= "k" and filename:sub(filename:find(number) + #number + 1, filename:find(number) + #number + 4) ~= "1080p" then
+			return episodeNumber
+        end
+    end
+	
+end
+
+
+
+mp.register_event("start-file", get_episode_number)
+
+-- 写入history.json
+-- 读取episodeId获取danmaku
 function set_episode_id(input)
-    episodeId = input
-    local filename = mp.get_property("filename")
-    if filename ~= nil then
+    episodeId = tonumber(input)
+	local fname = get_father_directory()
+    --将文件名:episodeId写入history.json
+	if fname ~= nil then
         local history_path = danmaku_path .. "history.json"
         local history_json = read_file(history_path)
         if history_json ~= nil then
-            local history = utils.parse_json(history_json)
-            history[filename] = episodeId
-            write_json_file(history_path, history)
+			local history = utils.parse_json(history_json)
+			local episodeNumber=get_episode_number()   --动漫的集数 
+			history[fname] = {}
+			history[fname].episodeNumber=episodeNumber
+			history[fname].episodeId = episodeId
+			write_json_file(history_path, history)
+		end	
+			
         else
             local history = {}
-            history[filename] = episodeId
+            history[fname] = {}
+			history[fname].episodeNumber=episodeNumber
+			history[fname].episodeId = episodeId
             write_json_file(history_path, history)
-        end
+        
     end
     if options.load_more_danmaku then
-        fetch_danmaku_all(episodeId)
+        fetch_danmaku_all(episodeId) 
     else
         fetch_danmaku(episodeId)
     end
 end
 
+
+
+
+
+-- 匹配弹幕库 comment  仅匹配dandan本身弹幕库
+-- 通过danmaku api（url）+id获取弹幕
 -- Function to fetch danmaku from API
 function fetch_danmaku(episodeId)
     local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
@@ -216,10 +302,12 @@ function fetch_danmaku(episodeId)
     end
 end
 
+
+-- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
 function fetch_danmaku_all(episodeId)
     local comments = {}
-
-    local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId
+   
+    local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId 
 
     local req = {
         args = {
@@ -270,7 +358,9 @@ function fetch_danmaku_all(episodeId)
             cancellable = false,
         }
 
-        mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 60)
+
+        --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 60)  
+		mp.osd_message("正在从第三方库装填弹幕", 60)  
 
         res = utils.subprocess(req)
 
@@ -319,7 +409,7 @@ function fetch_danmaku_all(episodeId)
         cancellable = false,
     }
 
-    mp.osd_message("正在从弹弹Play本家弹幕库加载弹幕", 60)
+    mp.osd_message("正在从弹弹Play库装填弹幕", 60)
 
     res = utils.subprocess(req)
 
@@ -358,6 +448,8 @@ function fetch_danmaku_all(episodeId)
     end
 end
 
+
+--通过输入源url获取弹幕库 
 function add_danmaku_source(query)
     local url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(query)
 
@@ -452,24 +544,8 @@ function add_danmaku_source(query)
     mp.osd_message("弹幕加载成功，添加了" .. add_count .. "条弹幕，共计" .. #comments .. "条弹幕", 3)
 end
 
-function read_file(file_path)
-    local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
-    if not file then
-        return nil
-    end
-    local content = file:read("*all") -- 读取文件所有内容
-    file:close()                   -- 关闭文件
-    return content
-end
 
-function write_json_file(file_path, data)
-    local file = io.open(file_path, "w")
-    if not file then
-        return
-    end
-    file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
-    file:close()
-end
+
 
 function convert_json_for_merge(comments)
     local content = {}
@@ -493,7 +569,9 @@ function convert_json_for_merge(comments)
     return content
 end
 
--- Function to save the comments as the specific JSON format for DanmakuFactory
+
+
+-- 使用factory将弹幕转换为json
 function save_json_for_factory(comments)
     local json_filename = danmaku_path .. "danmaku.json"
     local json_file = io.open(json_filename, "w")
@@ -527,6 +605,7 @@ function save_json_for_factory(comments)
     return false
 end
 
+--将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
 function convert_with_danmaku_factory()
     local bin = platform == "windows" and "DanmakuFactory.exe" or "DanmakuFactory"
@@ -537,7 +616,28 @@ function convert_with_danmaku_factory()
         danmaku_path .. "danmaku.ass",
         "-i",
         danmaku_path .. "danmaku.json",
-        "--ignore-warnings",
+		--[[ 字体大小
+		"--fontsize",
+		"40",
+		-- 字体描边深度 0-4
+		"--outline",
+		"1",
+		-- 粗体字
+		"--bold",
+		"true",
+		-- 滚动弹幕通过屏幕的时间为xx秒
+		"--scrolltime",
+		"20",
+		-- 字体透明度
+		-- "--opacity",
+		--"70",
+		-- 弹幕重叠  
+		"--density",
+		"-1",
+		-- 滚动弹幕显示范围  0.0-1.0 
+		"--scrollarea",
+		"0.2",
+		"--ignore-warnings",  ]]--
     }
 
     utils.subprocess({ args = cmd })
@@ -571,20 +671,33 @@ local rm2 = danmaku_path .. "danmaku.ass"
 os.remove(rm1)
 os.remove(rm2)
 
+
+-- 自动加载上次匹配的弹幕
 function auto_load_danmaku()
-    local filename = mp.get_property("filename")
-    if filename ~= nil then
+    local fname = get_father_directory()
+    if fname ~= nil then
         local history_path = danmaku_path .. "history.json"
         local history_json = read_file(history_path)
         if history_json ~= nil then
             local history = utils.parse_json(history_json)
-            local history_id = history[filename]
-            if history_id ~= nil then
-                mp.osd_message("自动加载上次匹配的弹幕", 60)
-                set_episode_id(history_id)
-            end
+			-- 1.判断父文件名是否存在
+			local history_fname = history[fname]
+			print(history_fname) 
+			if history_fname ~= nil then
+				--2.如果存在，则获取number和id
+				local history_number=history[fname].episodeNumber
+				local history_id = history[fname].episodeId  
+				local playing_number = get_episode_number()
+				local x=playing_number - history_number  --获取集数差值
+				local tmp_id = tostring(x+history_id)	
+				mp.osd_message("自动加载上次匹配的弹幕", 60)
+				set_episode_id(tmp_id)
+			end
         end
     end
 end
 
 mp.register_event("start-file", auto_load_danmaku)
+
+
+
