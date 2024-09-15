@@ -7,7 +7,6 @@ local options = {
 require("mp.options").read_options(options, "uosc_danmaku")
 
 local utils = require("mp.utils")
-local episodeId = nil
 
 -- Buffer for the input string
 local input_buffer = ""
@@ -172,13 +171,15 @@ function get_father_directory()
     local fname = nil
     local full_path
     if platform == "windows" then
-        if string.find(file_path, "\\\\") == nil then
-            full_path = cwd .. "\\\\" .. file_path
+        file_path = string.gsub(file_path, "^%.\\", "")
+        if string.find(file_path, "\\") == nil then
+            full_path = cwd .. "\\" .. file_path
         else
             full_path = file_path
         end
         fname = string.match(full_path, ".*\\([^\\]+)\\[^\\]+$")
     else
+        file_path = string.gsub(file_path, "^%./", "")
         if string.find(file_path, "/") == nil then
             full_path = cwd .. "/" .. file_path
         else
@@ -214,8 +215,8 @@ end
 -- 写入history.json
 -- 读取episodeId获取danmaku
 function set_episode_id(input)
+    local episodeId = tonumber(input)
     if options.auto_load then
-        episodeId = tonumber(input)
         local fname = get_father_directory()
         local episodeNumber = get_episode_number() --动漫的集数
         local history_path = danmaku_path .. "history.json"
