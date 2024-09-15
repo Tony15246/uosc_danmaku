@@ -18,7 +18,7 @@ local danmaku_path = mp.get_script_directory() .. "/danmaku/"
 
 
 
--- url编码转换
+-- url编码转换  
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
     if str then
