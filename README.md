@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 └── scripts
 ```
 
-想要使用本插件，请将本插件完整地下载或者克隆到`scripts`目录下，文件结构如下：
+想要使用本插件，请将本插件完整地[下载](https://github.com/Tony15246/uosc_danmaku/releases)或者克隆到`scripts`目录下，文件结构如下：
 
 > 务必注意⚠️
 > 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
