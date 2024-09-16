@@ -8,9 +8,13 @@ require("mp.options").read_options(options, "uosc_danmaku")
 
 local utils = require("mp.utils")
 
--- Buffer for the input string
-local input_buffer = ""
 local danmaku_path = mp.get_script_directory() .. "/danmaku/"
+
+function log(str)
+    local out = io.open(danmaku_path .. "log.txt", "a")
+    out:write(tostring(str) .. "\n")
+    out:close()
+end
 
 -- url编码转换
 function url_encode(str)
@@ -21,6 +25,26 @@ function url_encode(str)
         end)
     end
     return str
+end
+
+--读history 和 写history
+function read_file(file_path)
+    local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
+    if not file then
+        return nil
+    end
+    local content = file:read("*all") -- 读取文件所有内容
+    file:close()                   -- 关闭文件
+    return content
+end
+
+function write_json_file(file_path, data)
+    local file = io.open(file_path, "w")
+    if not file then
+        return
+    end
+    file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
+    file:close()
 end
 
 function itable_index_of(itable, value)
@@ -49,73 +73,38 @@ local platform = (function()
     return "linux"
 end)()
 
--- Show OSD message to prompt user to input episode ID
-function show_input_menu()
-    mp.osd_message("Input Episode ID: " .. input_buffer, 10)    -- Display the current input buffer in OSD
-    mp.add_forced_key_binding("BS", "backspace", handle_backspace) -- Bind Backspace to delete last character
-    mp.add_forced_key_binding("Enter", "confirm", confirm_input) -- Bind Enter key to confirm input
-    mp.add_forced_key_binding("Esc", "cancel", cancel_input)    -- Bind Esc key to cancel input
-
-    -- Bind alphanumeric keys to capture user input
-    for i = 0, 9 do
-        mp.add_forced_key_binding(tostring(i), "input_" .. i, function()
-            handle_input(tostring(i))
-        end)
-    end
-    for i = 97, 122 do
-        local char = string.char(i)
-        mp.add_forced_key_binding(char, "input_" .. char, function()
-            handle_input(char)
-        end)
-    end
-end
-
--- Handle user input by adding characters to the buffer
-function handle_input(char)
-    input_buffer = input_buffer .. char
-    mp.osd_message("Input Episode ID: " .. input_buffer, 10) -- Update the OSD with current input
-end
-
--- Handle backspace to delete the last character
-function handle_backspace()
-    input_buffer = input_buffer:sub(1, -2)                -- Remove the last character
-    mp.osd_message("Input Episode ID: " .. input_buffer, 10) -- Update the OSD
-end
-
--- Confirm the input and process the episode ID
-function confirm_input()
-    mp.remove_key_binding("backspace")
-    mp.remove_key_binding("confirm")
-    mp.remove_key_binding("cancel")
-    for i = 0, 9 do
-        mp.remove_key_binding("input_" .. i)
-    end
-    for i = 97, 122 do
-        mp.remove_key_binding("input_" .. string.char(i))
-    end
-
-    if input_buffer ~= "" then
-        set_episode_id(input_buffer)
+function get_danmaku_visibility()
+    local history_path = danmaku_path .. "history.json"
+    local history_json = read_file(history_path)
+    local history
+    if history_json ~= nil then
+        history = utils.parse_json(history_json)
+        local flag = history["show_danmaku"]
+        if flag == nil then
+            history["show_danmaku"] = false
+            write_json_file(history_path, history)
+        else
+            return flag
+        end
     else
-        mp.osd_message("No input provided", 2)
+        history = {}
+        history["show_danmaku"] = false
+        write_json_file(history_path, history)
     end
-    input_buffer = "" -- Clear the input buffer
+    return false
 end
 
--- Cancel input
-function cancel_input()
-    mp.remove_key_binding("backspace")
-    mp.remove_key_binding("confirm")
-    mp.remove_key_binding("cancel")
-    for i = 0, 9 do
-        mp.remove_key_binding("input_" .. i)
+function set_danmaku_visibility(flag)
+    local history_path = danmaku_path .. "history.json"
+    local history_json = read_file(history_path)
+    local history
+    if history_json ~= nil then
+        history = utils.parse_json(history_json)
+    else
+        history = {}
     end
-    for i = 97, 122 do
-        mp.remove_key_binding("input_" .. string.char(i))
-    end
-
-    mp.osd_message("Input cancelled", 2)
-    input_buffer = "" -- Clear the input buffer
+    history["show_danmaku"] = flag
+    write_json_file(history_path, history)
 end
 
 -- 弹幕加载相关。 移除弹幕轨道
@@ -138,30 +127,13 @@ function show_danmaku_func()
             break
         end
     end
+
+    set_danmaku_visibility(true)
 end
 
 function hide_danmaku_func()
     mp.set_property("secondary-sid", "no")
-end
-
---读history 和 写history
-function read_file(file_path)
-    local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
-    if not file then
-        return nil
-    end
-    local content = file:read("*all") -- 读取文件所有内容
-    file:close()                   -- 关闭文件
-    return content
-end
-
-function write_json_file(file_path, data)
-    local file = io.open(file_path, "w")
-    if not file then
-        return
-    end
-    file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
-    file:close()
+    set_danmaku_visibility(false)
 end
 
 -- 获取父文件名
@@ -204,8 +176,9 @@ function get_episode_number()
         if
             episodeNumber
             and episodeNumber <= 1000
-            and filename:sub(filename:find(number) + #number + 1, filename:find(number) + #number + 1) ~= "k"
-            and filename:sub(filename:find(number) + #number + 1, filename:find(number) + #number + 4) ~= "1080p"
+            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "4k"
+            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "720p"
+            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "360p"
         then
             return episodeNumber
         end
@@ -214,7 +187,8 @@ end
 
 -- 写入history.json
 -- 读取episodeId获取danmaku
-function set_episode_id(input)
+function set_episode_id(input, from_menu)
+    from_menu = from_menu or false
     local episodeId = tonumber(input)
     if options.auto_load then
         local fname = get_father_directory()
@@ -239,16 +213,16 @@ function set_episode_id(input)
         end
     end
     if options.load_more_danmaku then
-        fetch_danmaku_all(episodeId)
+        fetch_danmaku_all(episodeId, from_menu)
     else
-        fetch_danmaku(episodeId)
+        fetch_danmaku(episodeId, from_menu)
     end
 end
 
 -- 匹配弹幕库 comment  仅匹配dandan本身弹幕库
 -- 通过danmaku api（url）+id获取弹幕
 -- Function to fetch danmaku from API
-function fetch_danmaku(episodeId)
+function fetch_danmaku(episodeId, from_menu)
     local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
 
     -- Use curl command to get the JSON data
@@ -284,8 +258,13 @@ function fetch_danmaku(episodeId)
 
                 remove_danmaku_track()
                 mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
-                show_danmaku_func()
-                mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+                if from_menu then
+                    show_danmaku_func()
+                    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+                elseif get_danmaku_visibility() then
+                    show_danmaku_func()
+                    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+                end
                 mp.osd_message("弹幕加载成功，共计" .. response["count"] .. "条弹幕", 3)
             else
                 mp.osd_message("Error saving JSON file", 3)
@@ -299,7 +278,7 @@ function fetch_danmaku(episodeId)
 end
 
 -- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
-function fetch_danmaku_all(episodeId)
+function fetch_danmaku_all(episodeId, from_menu)
     local comments = {}
 
     local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId
@@ -434,8 +413,13 @@ function fetch_danmaku_all(episodeId)
 
         remove_danmaku_track()
         mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
-        show_danmaku_func()
-        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        if from_menu then
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        elseif get_danmaku_visibility() then
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        end
         mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
     else
         mp.osd_message("Error saving JSON file", 3)
@@ -653,8 +637,6 @@ function split(str, delim)
     end
     return result
 end
-
-mp.register_script_message("show-input-menu", show_input_menu)
 
 local rm1 = danmaku_path .. "danmaku.json"
 local rm2 = danmaku_path .. "danmaku.ass"

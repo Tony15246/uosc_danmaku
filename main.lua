@@ -170,11 +170,11 @@ end)
 
 -- Register script message to show the input menu
 mp.register_script_message("load-danmaku", function(episodeId)
-    set_episode_id(episodeId)
+    set_episode_id(episodeId, true)
 end)
 
 mp.register_script_message("open_add_source_menu", open_add_menu)
-mp.register_script_message("add-source-event", function (query)
+mp.register_script_message("add-source-event", function(query)
     mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
     add_danmaku_source(query)
 end)
