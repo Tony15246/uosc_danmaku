@@ -34,7 +34,7 @@ function read_file(file_path)
         return nil
     end
     local content = file:read("*all") -- 读取文件所有内容
-    file:close()                   -- 关闭文件
+    file:close() -- 关闭文件
     return content
 end
 
@@ -190,7 +190,7 @@ end
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
     local episodeId = tonumber(input)
-    if options.auto_load then
+    if options.auto_load and from_menu then
         local fname = get_father_directory()
         local episodeNumber = get_episode_number() --动漫的集数
         local history_path = danmaku_path .. "history.json"
