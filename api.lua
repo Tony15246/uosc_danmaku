@@ -34,7 +34,7 @@ function read_file(file_path)
         return nil
     end
     local content = file:read("*all") -- 读取文件所有内容
-    file:close() -- 关闭文件
+    file:close()                      -- 关闭文件
     return content
 end
 
@@ -139,6 +139,11 @@ end
 -- 获取父文件名
 function get_father_directory()
     local file_path = mp.get_property("path") --获取当前视频文件的完整路径
+
+    if string.find(file_path, "http://") ~= nil or string.find(file_path, "https://") ~= nil then
+        return nil
+    end
+
     local cwd = mp.get_property("working-directory")
     local fname = nil
     local full_path
@@ -531,7 +536,7 @@ function convert_json_for_merge(comments)
                 "%s,%s,%s,25,,,",
                 fields[1], -- first field of p to first field of c
                 fields[3], -- third field of p to second field of c
-                fields[2] -- second field of p to third field of c
+                fields[2]  -- second field of p to third field of c
             )
             local m_value = comment["m"]
 
@@ -558,7 +563,7 @@ function save_json_for_factory(comments)
                     "%s,%s,%s,25,,,",
                     fields[1], -- first field of p to first field of c
                     fields[3], -- third field of p to second field of c
-                    fields[2] -- second field of p to third field of c
+                    fields[2]  -- second field of p to third field of c
                 )
                 local m_value = comment["m"]
 
@@ -620,12 +625,12 @@ end
 function escape_json_string(str)
     -- 将 JSON 中需要转义的字符进行替换
     str = str:gsub("\\", "\\\\") -- 反斜杠
-    str = str:gsub('"', '\\"') -- 双引号
-    str = str:gsub("\b", "\\b") -- 退格符
-    str = str:gsub("\f", "\\f") -- 换页符
-    str = str:gsub("\n", "\\n") -- 换行符
-    str = str:gsub("\r", "\\r") -- 回车符
-    str = str:gsub("\t", "\\t") -- 制表符
+    str = str:gsub('"', '\\"')   -- 双引号
+    str = str:gsub("\b", "\\b")  -- 退格符
+    str = str:gsub("\f", "\\f")  -- 换页符
+    str = str:gsub("\n", "\\n")  -- 换行符
+    str = str:gsub("\r", "\\r")  -- 回车符
+    str = str:gsub("\t", "\\t")  -- 制表符
     return str
 end
 
