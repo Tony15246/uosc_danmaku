@@ -171,21 +171,21 @@ end
 function get_episode_number()
     local filename = mp.get_property("filename")
     local pattern = "(%d+)"
+    local flagindex = 1
 
     -- 尝试匹配文件名中的数字
     for number in string.gmatch(filename, pattern) do
         -- 转换为数字
-        local episodeNumber = tonumber(number)
+        local episode_number = tonumber(number)
         -- 检查数字是否大于2000，以及是否是4k或1080p
         filename = string.lower(filename)
-        if
-            episodeNumber
-            and episodeNumber <= 1000
-            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "4k"
-            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "720p"
-            and filename:sub(filename:find(number) + 0, filename:find(number) + #number + 1) ~= "360p"
-        then
-            return episodeNumber
+        local startindex, endindex = string.find(filename, number, flagindex)
+        flagindex = endindex + 1
+        if episode_number and episode_number <= 1000 then
+            local resolution = filename:sub(startindex + 0, endindex + 1)
+            if resolution ~= "4k" and resolution ~= "720p" and resolution ~= "360p" then
+                return episode_number
+            end
         end
     end
 end
