@@ -2,6 +2,8 @@
 local options = {
     load_more_danmaku = false,
     auto_load = false,
+    open_search_danmaku_menu_key = "Ctrl+d",
+    show_danmaku_keyboard_key = "j"
 }
 
 require("mp.options").read_options(options, "uosc_danmaku")
@@ -675,3 +677,11 @@ end
 if options.auto_load then
     mp.register_event("start-file", auto_load_danmaku)
 end
+
+
+mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function ()
+    mp.commandv("script-message", "open_search_danmaku_menu")
+end)
+mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", function ()
+    mp.commandv("script-message", "show_danmaku_keyboard")
+end)
