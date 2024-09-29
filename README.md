@@ -101,6 +101,8 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 对于坚定的键盘爱好者和不使用鼠标主义者，可以选择通过快捷键调用弹幕搜索和弹幕开关功能
 
+快捷键已经进行了默认绑定。默认情况下弹幕搜索功能绑定“Ctrl+d”；弹幕开关功能绑定“j”
+
 弹幕搜索功能绑定的脚本消息为`open_search_danmaku_menu`，弹幕开关功能绑定的脚本消息为`show_danmaku_keyboard`
 
 如需配置快捷键，只需在`input.conf`中添加如下行即可，快捷键可以改为自己喜欢的按键组合。
@@ -108,6 +110,14 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 Ctrl+d script-message open_search_danmaku_menu
 j script-message show_danmaku_keyboard
+```
+
+> 根据[此issue中的需求](https://github.com/Tony15246/uosc_danmaku/issues/6)，添加了通过uosc_danmaku.conf绑定快捷键的功能。（请注意，最高优先级仍然是input.conf中设置的快捷键）
+> 想要在uosc_danmaku.conf中自定义快捷键，可以像下面这样更改默认快捷键。
+
+```
+open_search_danmaku_menu_key=Ctrl+i
+show_danmaku_keyboard_key=i
 ```
 
 #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
