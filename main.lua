@@ -1,4 +1,5 @@
 local utils = require("mp.utils")
+local msg = require 'mp.msg'
 require("api")
 
 function get_animes(query)
@@ -8,7 +9,11 @@ function get_animes(query)
     local params = "anime=" .. encoded_query
     local full_url = url .. "?" .. params
 
-    local req = {
+    local cmd = {
+        name = 'subprocess',
+        capture_stdout = true,
+        capture_stderr = true,
+        playback_only = true,
         args = {
             "curl",
             "-L",
@@ -20,15 +25,14 @@ function get_animes(query)
             "User-Agent: MyCustomUserAgent/1.0",
             full_url,
         },
-        cancellable = false,
     }
 
     mp.osd_message("加载数据中...", 60)
 
-    local res = utils.subprocess(req)
+    local res = mp.command_native(cmd)
 
     if res.status ~= 0 then
-        mp.osd_message("HTTP Request failed: " .. res.error, 3)
+        msg.error("HTTP Request failed: " .. res.stderr, 3)
     end
 
     local response = utils.parse_json(res.stdout)
