@@ -2,6 +2,7 @@
 local options = {
     load_more_danmaku = false,
     auto_load = false,
+    autoload_local_danmaku = false,
     DanmakuFactory_Path = 'DanmakuFactory',
     history_dir = "~~/",
     open_search_danmaku_menu_key = "Ctrl+d",
@@ -327,7 +328,8 @@ end
 local function load_danmaku(comments, from_menu)
     local success = save_json_for_factory(comments)
     if success then
-        convert_with_danmaku_factory()
+        local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+        convert_with_danmaku_factory(danmaku_json)
 
         remove_danmaku_track()
         local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
@@ -542,7 +544,8 @@ function add_danmaku_source(query)
         msg.verbose("Error saving JSON file", 3)
     end
 
-    convert_with_danmaku_factory()
+    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+    convert_with_danmaku_factory(danmaku_json)
     remove_danmaku_track()
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     if not file_exists(danmaku_file) then
@@ -612,14 +615,14 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory()
+function convert_with_danmaku_factory(danmaku_input)
     danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or mp.command_native({ "expand-path", options.DanmakuFactory_Path })
     local arg = {
         danmaku_factory_path,
         "-o",
         utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
-        utils.join_path(danmaku_path, "danmaku.json"),
+        danmaku_input,
         "--ignore-warnings",
         "--resolution", options.resolution,
         "--scrolltime", options.scrolltime,
@@ -666,6 +669,24 @@ end
 function auto_load_danmaku()
     local dir = get_parent_directory()
     local filename = mp.get_property('filename/no-ext')
+
+    -- 加载可能存在的本地 xml 弹幕
+    if options.autoload_local_danmaku then
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if file_exists(danmaku_xml) then
+            convert_with_danmaku_factory(danmaku_xml)
+            remove_danmaku_track()
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            if not file_exists(danmaku_file) then
+                msg.verbose("xml 弹幕文件未转换成功", 3)
+            end
+            mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+            return
+        end
+    end
+
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -698,7 +719,7 @@ function auto_load_danmaku()
     end
 end
 
-if options.auto_load then
+if options.auto_load or options.autoload_local_danmaku then
     mp.register_event("start-file", auto_load_danmaku)
 end
 

@@ -196,3 +196,8 @@ auto_load=yes
 └── 哭泣少女乐队2.mp4
 ```
 
+### autoload_local_danmaku
+
+#### 功能说明
+
+自动加载播放文件同目录下同名的 xml 格式的弹幕文件
