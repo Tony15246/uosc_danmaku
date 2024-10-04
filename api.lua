@@ -171,6 +171,47 @@ function hide_danmaku_func()
     set_danmaku_visibility(false)
 end
 
+-- 拆分字符串中的字符和数字
+local function split_by_numbers(filename)
+    local parts = {}
+    local pattern = "([^%d]*)(%d+)([^%d]*)"
+    for pre, num, post in string.gmatch(filename, pattern) do
+        table.insert(parts, {pre = pre, num = tonumber(num), post = post})
+    end
+    return parts
+end
+
+-- 识别并匹配前后剧集
+local function compare_filenames(fname1, fname2)
+    local parts1 = split_by_numbers(fname1)
+    local parts2 = split_by_numbers(fname2)
+
+    local min_len = math.min(#parts1, #parts2)
+
+    -- 逐个部分进行比较
+    for i = 1, min_len do
+        local part1 = parts1[i]
+        local part2 = parts2[i]
+
+        -- 比较数字前的字符是否相同
+        if part1.pre ~= part2.pre then
+            return false
+        end
+
+        -- 比较数字部分
+        if part1.num ~= part2.num then
+            return part1.num, part2.num
+        end
+
+        -- 比较数字后的字符是否相同
+        if part1.post ~= part2.post then
+            return false
+        end
+    end
+
+    return false
+end
+
 -- 规范化路径
 local function normalize(path)
     if normalize_path ~= nil then
@@ -208,31 +249,54 @@ function get_parent_directory()
 end
 
 -- 获取当前文件名所包含的集数
-function get_episode_number()
-    local filename = mp.get_property("filename")
-    local pattern = "(%d+)"
-    local flagindex = 1
+function get_episode_number(fname)
+    local filename = mp.get_property('filename/no-ext')
 
-    -- 尝试匹配文件名中的数字
-    for number in string.gmatch(filename, pattern) do
-        -- 转换为数字
-        local episode_number = tonumber(number)
-        -- 检查数字是否大于2000，以及是否是4k或1080p
-        filename = string.lower(filename)
-        local startindex, endindex = string.find(filename, number, flagindex)
-        flagindex = endindex + 1
-        if episode_number and episode_number <= 1000 then
-            local resolution = filename:sub(startindex + 0, endindex + 1)
-            if resolution ~= "4k" and resolution ~= "720p" and resolution ~= "360p" then
+    -- 尝试对比记录文件名来获取当前集数
+    if fname then
+        local episode_num1, episode_num2 = compare_filenames(fname, filename)
+        if episode_num1 and episode_num2 then
+            return episode_num1, episode_num2
+        else
+            return nil, nil
+        end
+    end
+
+    -- 匹配模式：支持多种集数形式
+    local patterns = {
+        -- 匹配 [数字] 格式
+        "%[(%d+)%v?%d?]",
+        -- 匹配 直接跟随的数字 格式
+        "([^%d])(\\d+)([^%d]*)",
+        -- 匹配 S01E02 格式
+        "[S%d+]?E(%d+)",
+        -- 匹配 第04话 格式
+        "第(%d+)话",
+        -- 匹配 -/# 第数字 格式
+        "[-#]%s*(%d+)%s*",
+        -- 匹配 直接跟随的数字 格式
+        "(%d+)%s*[^%d]*$"
+    }
+
+    -- 尝试匹配文件名中的集数
+    for _, pattern in ipairs(patterns) do
+        local match = {string.match(filename, pattern)}
+        if #match > 0 then
+            -- 返回集数，通常是匹配的第一个捕获
+            local episode_number = tonumber(match[1])
+            if episode_number then
                 return episode_number
             end
         end
     end
+    -- 未找到集数
+    return nil
 end
 
 -- 写入history.json
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
+    local fname = mp.get_property('filename/no-ext')
     from_menu = from_menu or false
     local episodeId = tonumber(input)
     if options.auto_load and from_menu then
@@ -246,8 +310,9 @@ function set_episode_id(input, from_menu)
                 history = utils.parse_json(history_json) or {}
             end
             history[dir] = {}
-            history[dir].episodeNumber = episodeNumber
             history[dir].episodeId = episodeId
+            history[dir].episodeNumber = episodeNumber
+            history[dir].fname = fname
             write_json_file(history_path, history)
         end
     end
@@ -600,6 +665,7 @@ end
 -- 自动加载上次匹配的弹幕
 function auto_load_danmaku()
     local dir = get_parent_directory()
+    local filename = mp.get_property('filename/no-ext')
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -610,11 +676,23 @@ function auto_load_danmaku()
                 --2.如果存在，则获取number和id
                 local history_number = history[dir].episodeNumber
                 local history_id = history[dir].episodeId
-                local playing_number = get_episode_number()
-                local x = playing_number - history_number --获取集数差值
-                local tmp_id = tostring(x + history_id)
-                mp.osd_message("自动加载上次匹配的弹幕", 60)
-                set_episode_id(tmp_id)
+                local history_fname = history[dir].fname
+                local playing_number = nil
+                if history_fname then
+                    if history_fname ~= filename then
+                        history_number, playing_number = get_episode_number(history_fname)
+                    else
+                        playing_number = history_number
+                    end
+                else
+                    playing_number = get_episode_number()
+                end
+                if playing_number ~= nil then
+                    local x = playing_number - history_number --获取集数差值
+                    local tmp_id = tostring(x + history_id)
+                    mp.osd_message("自动加载上次匹配的弹幕", 60)
+                    set_episode_id(tmp_id)
+                end
             end
         end
     end
