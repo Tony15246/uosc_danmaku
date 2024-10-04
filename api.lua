@@ -405,7 +405,7 @@ local function load_danmaku(comments, from_menu)
         end
         mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
     else
-        msg.verbose("Error saving JSON file", 3)
+        msg.verbose("Error saving JSON file")
     end
 end
 
@@ -437,7 +437,7 @@ end
 -- Function to fetch danmaku from API
 function fetch_danmaku(episodeId, from_menu)
     local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
-    mp.osd_message("弹幕加载中...", 60)
+    mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status == 0 then
         local response = utils.parse_json(res.stdout)
@@ -448,10 +448,12 @@ function fetch_danmaku(episodeId, from_menu)
             end
             load_danmaku(response["comments"], from_menu)
         else
-            msg.verbose("No result", 3)
+            mp.osd_message("无数据", 3)
+            msg.verbose("No result")
         end
     else
-        msg.error("HTTP Request failed: " .. res.stderr, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
     end
 end
 
@@ -459,34 +461,38 @@ end
 function fetch_danmaku_all(episodeId, from_menu)
     local comments = {}
     local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId
-    mp.osd_message("弹幕加载中...", 60)
+    mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        msg.error("HTTP Request failed: " .. res.stderr, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
     local response = utils.parse_json(res.stdout)
 
     if not response or not response["relateds"] then
-        msg.verbose("No result", 3)
+        mp.osd_message("无数据", 3)
+        msg.verbose("No result")
         return
     end
 
     for _, related in ipairs(response["relateds"]) do
         url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(related["url"])
-        --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 60)
-        mp.osd_message("正在从第三方库装填弹幕", 60)
+        --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
+        mp.osd_message("正在从第三方库装填弹幕", 30)
         local res = get_danmaku_comments(url)
         if res.status ~= 0 then
-            msg.error("HTTP Request failed: " .. res.stderr, 3)
+            mp.osd_message("获取数据失败", 3)
+            msg.error("HTTP Request failed: " .. res.stderr)
             return
         end
 
         local response_comments = utils.parse_json(res.stdout)
 
         if not response_comments or not response_comments["comments"] then
-            msg.verbose("No result", 3)
+            mp.osd_message("无数据", 3)
+            msg.verbose("No result")
             goto continue
         end
 
@@ -507,17 +513,19 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
-    mp.osd_message("正在从弹弹Play库装填弹幕", 60)
+    mp.osd_message("正在从弹弹Play库装填弹幕", 30)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        msg.error("HTTP Request failed: " .. res.stderr, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
     response = utils.parse_json(res.stdout)
 
     if not response or not response["comments"] then
-        msg.verbose("No result", 3)
+        mp.osd_message("无数据", 3)
+        msg.verbose("No result")
         return
     end
 
@@ -536,10 +544,11 @@ end
 --通过输入源url获取弹幕库
 function add_danmaku_source(query)
     local url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(query)
-    mp.osd_message("弹幕加载中...", 60)
+    mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        msg.error("HTTP Request failed: " .. res.stderr, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
@@ -554,7 +563,7 @@ function add_danmaku_source(query)
     local add_count = response["count"]
 
     if add_count == 0 then
-        mp.osd_message("服务器无缓存数据，再次尝试请求", 60)
+        mp.osd_message("服务器无缓存数据，再次尝试请求", 30)
 
         local start = os.time()
         while os.time() - start < 2 do
@@ -599,7 +608,7 @@ function add_danmaku_source(query)
         json_file:write("]")
         json_file:close()
     else
-        msg.verbose("Error saving JSON file", 3)
+        msg.verbose("Error saving JSON file")
     end
 
     local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
@@ -768,7 +777,7 @@ function auto_load_danmaku()
             remove_danmaku_track()
             local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
             if not file_exists(danmaku_file) then
-                msg.verbose("xml 弹幕文件未转换成功", 3)
+                msg.verbose("xml 弹幕文件未转换成功")
             end
             mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
             show_danmaku_func()
@@ -801,7 +810,7 @@ function auto_load_danmaku()
                 if playing_number ~= nil then
                     local x = playing_number - history_number --获取集数差值
                     local tmp_id = tostring(x + history_id)
-                    mp.osd_message("自动加载上次匹配的弹幕", 60)
+                    mp.osd_message("自动加载上次匹配的弹幕", 3)
                     set_episode_id(tmp_id)
                 end
             else

@@ -27,12 +27,13 @@ function get_animes(query)
         },
     }
 
-    mp.osd_message("加载数据中...", 60)
+    mp.osd_message("加载数据中...", 30)
 
     local res = mp.command_native(cmd)
 
     if res.status ~= 0 then
-        msg.error("HTTP Request failed: " .. res.stderr, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
     end
 
     local response = utils.parse_json(res.stdout)
