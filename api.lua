@@ -4,7 +4,7 @@ local options = {
     auto_load = false,
     autoload_local_danmaku = false,
     DanmakuFactory_Path = 'DanmakuFactory',
-    history_dir = "~~/",
+    history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
     --分辨率
@@ -36,13 +36,7 @@ local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
-local history_path = mp.command_native({"expand-path", utils.join_path(options.history_dir, "danmaku-history.json")})
-
-function log(str)
-    local out = io.open(utils.join_path(danmaku_path, "log.txt"), "a")
-    out:write(tostring(str) .. "\n")
-    out:close()
-end
+local history_path = mp.command_native({"expand-path", options.history_path})
 
 -- url编码转换
 function url_encode(str)
@@ -321,6 +315,70 @@ function set_episode_id(input, from_menu)
         fetch_danmaku_all(episodeId, from_menu)
     else
         fetch_danmaku(episodeId, from_menu)
+    end
+end
+
+-- 使用 Unix 的 head 和 md5sum 命令计算前 16MB 的 MD5 哈希
+local function get_md5_unix(file_path)
+    local arg = { "sh", "-c", "head -c 16M '" .. file_path .. "' | md5sum" }
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
+
+    if result.status == 0 then
+        return result.stdout:gsub("%s+", "")
+    else
+        return nil
+    end
+end
+
+-- 使用 Windows PowerShell 的命令计算前 16MB 的 MD5 哈希
+local function get_md5_windows(file_path)
+    local cmd = [[
+        $stream = [System.IO.File]::OpenRead(']] .. file_path .. [['); 
+        $buffer = New-Object byte[] (16MB); 
+        $bytesRead = $stream.Read($buffer, 0, 16MB); 
+        $stream.Close(); 
+        $s = [System.IO.MemoryStream]::new($buffer, 0, $bytesRead); 
+        Get-FileHash -Algorithm MD5 -InputStream $s | Select-Object -ExpandProperty Hash
+    ]]
+
+    local arg = {"powershell", "-NoProfile", "-Command", cmd}
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
+
+    if result.status == 0 then
+        return result.stdout:gsub("%s+", "")
+    else
+        return nil
+    end
+end
+
+-- 根据操作系统调用不同的哈希计算函数
+local function get_file_md5(file_path)
+    if platform == "windows" then
+        return get_md5_windows(file_path)
+    else
+        return get_md5_unix(file_path)
+    end
+end
+
+-- 使用 curl 发送 HTTP POST 请求获取弹幕 episodeId
+local function match_file(file_name, file_hash)
+    local url = "https://api.dandanplay.net/api/v2/match"
+    local body = utils.format_json({
+        fileName = file_name,
+        fileHash = file_hash,
+    })
+
+    local arg = {
+        "curl", "-s", "-X", "POST", url,
+        "-H", "Content-Type: application/json",
+        "-d", body
+    }
+
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
+    if result.status == 0 then
+        return result.stdout
+    else
+        return nil
     end
 end
 
@@ -665,8 +723,40 @@ function split(str, delim)
     return result
 end
 
+-- 通过文件前 16M 的 hash 值进行弹幕匹配
+local function get_danmaku_with_hash(file_name, file_path)
+    if is_protocol(file_path) then
+        return
+    end
+    -- 计算文件哈希
+    local hash = get_file_md5(normalize(file_path))
+    if not hash then
+        return
+    end
+
+    -- 发送匹配请求
+    local match_data_raw = match_file(file_name, hash)
+    if not match_data_raw then
+        return
+    end
+
+    -- 解析匹配结果
+    local match_data = utils.parse_json(match_data_raw)
+    if not match_data.isMatched then
+        msg.verbose("No matching episode")
+        return
+    elseif #match_data.matches > 1 then
+        msg.verbose("Multiple matching episodes")
+        return
+    end
+
+    -- 获取并加载弹幕数据
+    set_episode_id(match_data.matches[1].episodeId, true)
+end
+
 -- 自动加载上次匹配的弹幕
 function auto_load_danmaku()
+    local path = mp.get_property("path")
     local dir = get_parent_directory()
     local filename = mp.get_property('filename/no-ext')
 
@@ -714,7 +804,11 @@ function auto_load_danmaku()
                     mp.osd_message("自动加载上次匹配的弹幕", 60)
                     set_episode_id(tmp_id)
                 end
+            else
+                get_danmaku_with_hash(filename, path)
             end
+        else
+            get_danmaku_with_hash(filename, path)
         end
     end
 end
