@@ -27,25 +27,28 @@ function get_animes(query)
         },
     }
 
-    mp.osd_message("加载数据中...", 30)
+    local items = {}
+
+    local message = "加载数据中..."
+    update_menu(menu_item(message), query)
 
     local res = mp.command_native(cmd)
 
     if res.status ~= 0 then
-        mp.osd_message("获取数据失败", 3)
+        local message = "获取数据失败"
+        update_menu(menu_item(message), query)
         msg.error("HTTP Request failed: " .. res.stderr)
     end
 
     local response = utils.parse_json(res.stdout)
 
     if not response or not response.animes then
-        mp.osd_message("无结果", 3)
+        local message = "无结果"
+        update_menu(menu_item(message), query)
+        msg.verbose("无结果")
         return
     end
 
-    mp.osd_message("", 0)
-
-    local items = {}
     for _, anime in ipairs(response.animes) do
         table.insert(items, {
             title = anime.animeTitle,
@@ -58,18 +61,8 @@ function get_animes(query)
         })
     end
 
-    local menu_props = {
-        type = "menu_anime",
-        title = "在此处输入动画名称",
-        search_style = "palette",
-        search_debounce = "submit",
-        on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
-        footnote = "使用enter或ctrl+enter进行搜索",
-        search_suggestion = query,
-        items = items,
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+    update_menu(items, query)
+
 end
 
 function get_episodes(episodes)
@@ -87,6 +80,27 @@ function get_episodes(episodes)
         type = "menu_episodes",
         title = "剧集信息",
         search_style = "disabled",
+        items = items,
+    }
+    local json_props = utils.format_json(menu_props)
+    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+end
+
+function menu_item(input)
+    local items = {}
+    table.insert(items, { title = input, value = "" })
+    return items
+end
+
+function update_menu(items, query)
+    local menu_props = {
+        type = "menu_anime",
+        title = "在此处输入动画名称",
+        search_style = "palette",
+        search_debounce = "submit",
+        on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
+        footnote = "使用enter或ctrl+enter进行搜索",
+        search_suggestion = query,
         items = items,
     }
     local json_props = utils.format_json(menu_props)
@@ -165,7 +179,7 @@ mp.commandv(
 -- 注册函数给 uosc 按钮使用
 mp.register_script_message("open_search_danmaku_menu", open_input_menu)
 mp.register_script_message("search-anime-event", function(query)
-    mp.commandv("script-message-to", "uosc", "close-menu", "menu_danmaku")
+    mp.commandv("script-message-to", "uosc", "update-menu", "menu_danmaku")
     get_animes(query)
 end)
 mp.register_script_message("search-episodes-event", function(episodes)
