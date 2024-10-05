@@ -281,7 +281,7 @@ function get_episode_number(fname)
         -- 匹配 -/# 第数字 格式
         "[-#]%s*(%d+)%s*",
         -- 匹配 直接跟随的数字 格式
-        "(%d+)([^%d pP kK]*)$",
+        "[^vV](%d+)[^pPkK][^%d]*$",
         -- 匹配 直接跟随的数字 格式
         "[^%d](%d+)[^%d]*",
     }
@@ -293,9 +293,13 @@ function get_episode_number(fname)
             -- 返回集数，通常是匹配的第一个捕获
             local episode_number = tonumber(match[1])
             if episode_number then
+                if episode_number >= 1000 then
+                    goto continue
+                end
                 return episode_number
             end
         end
+        ::continue::
     end
     -- 未找到集数
     return nil
@@ -853,6 +857,8 @@ function auto_load_danmaku()
                     local tmp_id = tostring(x + history_id)
                     mp.osd_message("自动加载上次匹配的弹幕", 3)
                     set_episode_id(tmp_id)
+                else
+                    get_danmaku_with_hash(filename, path)
                 end
             else
                 get_danmaku_with_hash(filename, path)
