@@ -2,21 +2,54 @@
 local options = {
     load_more_danmaku = false,
     auto_load = false,
+    autoload_local_danmaku = false,
+    -- 保存哈希匹配的关联结果
+    -- 启用时可以避免同番剧剧集的反复哈希匹配
+    -- 禁用时始终进行哈希匹配（仅当同目录从未执行过手动搜索）；可以应对边缘案例：
+    -- 同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧
+    save_hash_match = false,
+    -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
+    -- 留空（默认值）会在脚本同目录的 bin 中查找
+    -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+    DanmakuFactory_Path = '',
+    -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
+    history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
-    show_danmaku_keyboard_key = "j"
+    show_danmaku_keyboard_key = "j",
+    --分辨率
+    resolution = "1920 1080",
+    --速度
+    scrolltime = "12",
+    --字体
+    fontname = "sans-serif",
+    --大小 
+    fontsize = "50",
+    --透明度(1-255)  255 为不透明
+    opacity = "150",
+    --阴影
+    shadow = "0",
+    --粗体 true false
+    bold = "true",
+    --弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
+    density = "0.0",
+    --全部弹幕的显示范围(0.0-1.0)
+    displayarea = "0.85",
+    --描边 0-4
+    outline = "1",
+    --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
+    blacklist_path = "",
 }
 
-require("mp.options").read_options(options, "uosc_danmaku")
+require("mp.options").read_options(options, "uosc_danmaku", function() end)
 
-local utils = require("mp.utils")
+local mp = require 'mp'
+local utils = require 'mp.utils'
+local msg = require 'mp.msg'
 
-local danmaku_path = mp.get_script_directory() .. "/danmaku/"
-
-function log(str)
-    local out = io.open(danmaku_path .. "log.txt", "a")
-    out:write(tostring(str) .. "\n")
-    out:close()
-end
+local danmaku_path = os.getenv("TEMP") or "/tmp/"
+local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
+local history_path = mp.command_native({"expand-path", options.history_path})
+local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
 -- url编码转换
 function url_encode(str)
@@ -27,6 +60,18 @@ function url_encode(str)
         end)
     end
     return str
+end
+
+local function is_protocol(path)
+    return type(path) == 'string' and (path:find('^%a[%w.+-]-://') ~= nil or path:find('^%a[%w.+-]-:%?') ~= nil)
+end
+
+local function file_exists(path)
+    if path then
+        local meta = utils.file_info(path)
+        return meta and meta.is_file
+    end
+    return false
 end
 
 --读history 和 写history
@@ -76,7 +121,6 @@ local platform = (function()
 end)()
 
 function get_danmaku_visibility()
-    local history_path = danmaku_path .. "history.json"
     local history_json = read_file(history_path)
     local history
     if history_json ~= nil then
@@ -97,13 +141,10 @@ function get_danmaku_visibility()
 end
 
 function set_danmaku_visibility(flag)
-    local history_path = danmaku_path .. "history.json"
+    local history = {}
     local history_json = read_file(history_path)
-    local history
     if history_json ~= nil then
         history = utils.parse_json(history_json)
-    else
-        history = {}
     end
     history["show_danmaku"] = flag
     write_json_file(history_path, history)
@@ -138,85 +179,149 @@ function hide_danmaku_func()
     set_danmaku_visibility(false)
 end
 
--- 获取父文件名
-function get_father_directory()
-    local file_path = mp.get_property("path") --获取当前视频文件的完整路径
+-- 拆分字符串中的字符和数字
+local function split_by_numbers(filename)
+    local parts = {}
+    local pattern = "([^%d]*)(%d+)([^%d]*)"
+    for pre, num, post in string.gmatch(filename, pattern) do
+        table.insert(parts, {pre = pre, num = tonumber(num), post = post})
+    end
+    return parts
+end
 
-    if string.find(file_path, "http://") ~= nil or string.find(file_path, "https://") ~= nil then
-        return nil
+-- 识别并匹配前后剧集
+local function compare_filenames(fname1, fname2)
+    local parts1 = split_by_numbers(fname1)
+    local parts2 = split_by_numbers(fname2)
+
+    local min_len = math.min(#parts1, #parts2)
+
+    -- 逐个部分进行比较
+    for i = 1, min_len do
+        local part1 = parts1[i]
+        local part2 = parts2[i]
+
+        -- 比较数字前的字符是否相同
+        if part1.pre ~= part2.pre then
+            return false
+        end
+
+        -- 比较数字部分
+        if part1.num ~= part2.num then
+            return part1.num, part2.num
+        end
+
+        -- 比较数字后的字符是否相同
+        if part1.post ~= part2.post then
+            return false
+        end
     end
 
-    local cwd = mp.get_property("working-directory")
-    local fname = nil
-    local full_path
-    if platform == "windows" then
-        file_path = string.gsub(file_path, "^%.\\", "")
-        if string.find(file_path, "\\") == nil then
-            full_path = cwd .. "\\" .. file_path
+    return false
+end
+
+-- 规范化路径
+local function normalize(path)
+    if normalize_path ~= nil then
+        if normalize_path then
+            path = mp.command_native({"normalize-path", path})
         else
-            full_path = file_path
+            local directory = mp.get_property("working-directory", "")
+            path = mp.utils.join_path(directory, path:gusb('^%.[\\/]',''))
+            if platform == "windows" then path = path:gsub("\\", "/") end
         end
-        fname = string.match(full_path, ".*\\([^\\]+)\\[^\\]+$")
-    else
-        file_path = string.gsub(file_path, "^%./", "")
-        if string.find(file_path, "/") == nil then
-            full_path = cwd .. "/" .. file_path
-        else
-            full_path = file_path
-        end
-        fname = string.match(full_path, ".*/([^/]+)/[^/]+$")
+        return path
     end
-    return fname
+
+    normalize_path = false
+
+    local commands = mp.get_property_native("command-list", {})
+    for _, command in ipairs(commands) do
+        if command.name == "normalize-path" then
+            normalize_path = true
+            break
+        end
+    end
+    return normalize(path)
+end
+
+-- 获取父目录路径
+function get_parent_directory()
+    local path = mp.get_property("path")
+    local dir = nil
+    if path and not is_protocol(path) then
+        path = normalize(path)
+        dir = utils.split_path(path)
+    end
+    return dir
 end
 
 -- 获取当前文件名所包含的集数
-function get_episode_number()
-    local filename = mp.get_property("filename")
-    local pattern = "(%d+)"
-    local flagindex = 1
+function get_episode_number(fname)
+    local filename = mp.get_property('filename/no-ext')
 
-    -- 尝试匹配文件名中的数字
-    for number in string.gmatch(filename, pattern) do
-        -- 转换为数字
-        local episode_number = tonumber(number)
-        -- 检查数字是否大于2000，以及是否是4k或1080p
-        filename = string.lower(filename)
-        local startindex, endindex = string.find(filename, number, flagindex)
-        flagindex = endindex + 1
-        if episode_number and episode_number <= 1000 then
-            local resolution = filename:sub(startindex + 0, endindex + 1)
-            if resolution ~= "4k" and resolution ~= "720p" and resolution ~= "360p" then
+    -- 尝试对比记录文件名来获取当前集数
+    if fname then
+        local episode_num1, episode_num2 = compare_filenames(fname, filename)
+        if episode_num1 and episode_num2 then
+            return episode_num1, episode_num2
+        else
+            return nil, nil
+        end
+    end
+
+    -- 匹配模式：支持多种集数形式
+    local patterns = {
+        -- 匹配 [数字] 格式
+        "%[(%d+)%v?%d?]",
+        -- 匹配 直接跟随的数字 格式
+        "([^%d])(\\d+)([^%d]*)",
+        -- 匹配 S01E02 格式
+        "[S%d+]?E(%d+)",
+        -- 匹配 第04话 格式
+        "第(%d+)话",
+        -- 匹配 -/# 第数字 格式
+        "[-#]%s*(%d+)%s*",
+        -- 匹配 直接跟随的数字 格式
+        "(%d+)%s*[^%d]*$"
+    }
+
+    -- 尝试匹配文件名中的集数
+    for _, pattern in ipairs(patterns) do
+        local match = {string.match(filename, pattern)}
+        if #match > 0 then
+            -- 返回集数，通常是匹配的第一个捕获
+            local episode_number = tonumber(match[1])
+            if episode_number then
                 return episode_number
             end
         end
     end
+    -- 未找到集数
+    return nil
 end
 
 -- 写入history.json
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
+    local fname = mp.get_property('filename/no-ext')
     from_menu = from_menu or false
     local episodeId = tonumber(input)
     if options.auto_load and from_menu then
-        local fname = get_father_directory()
+        local history = {}
+        local dir = get_parent_directory()
         local episodeNumber = get_episode_number() --动漫的集数
-        local history_path = danmaku_path .. "history.json"
         --将文件名:episodeId写入history.json
-        if fname ~= nil then
+        if dir ~= nil then
             local history_json = read_file(history_path)
             if history_json ~= nil then
-                local history = utils.parse_json(history_json)
-                history[fname] = {}
-                history[fname].episodeNumber = episodeNumber
-                history[fname].episodeId = episodeId
-                write_json_file(history_path, history)
-            else
-                local history = {}
-                history[fname] = {}
-                history[fname].episodeNumber = episodeNumber
-                history[fname].episodeId = episodeId
-                write_json_file(history_path, history)
+                history = utils.parse_json(history_json) or {}
             end
+            history[dir] = {}
+            history[dir].episodeId = episodeId
+            history[dir].episodeNumber = episodeNumber
+            history[dir].fname = fname
+            write_json_file(history_path, history)
         end
     end
     if options.load_more_danmaku then
@@ -226,14 +331,104 @@ function set_episode_id(input, from_menu)
     end
 end
 
--- 匹配弹幕库 comment  仅匹配dandan本身弹幕库
--- 通过danmaku api（url）+id获取弹幕
--- Function to fetch danmaku from API
-function fetch_danmaku(episodeId, from_menu)
-    local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+-- 使用 Unix 的 head 和 md5sum 命令计算前 16MB 的 MD5 哈希
+local function get_md5_unix(file_path)
+    local arg = { "sh", "-c", "head -c 16M '" .. file_path .. "' | md5sum" }
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
 
-    -- Use curl command to get the JSON data
-    local req = {
+    if result.status == 0 then
+        return result.stdout:gsub("%s+", "")
+    else
+        return nil
+    end
+end
+
+-- 使用 Windows PowerShell 的命令计算前 16MB 的 MD5 哈希
+local function get_md5_windows(file_path)
+    local cmd = [[
+        $stream = [System.IO.File]::OpenRead(']] .. file_path .. [['); 
+        $buffer = New-Object byte[] (16MB); 
+        $bytesRead = $stream.Read($buffer, 0, 16MB); 
+        $stream.Close(); 
+        $s = [System.IO.MemoryStream]::new($buffer, 0, $bytesRead); 
+        Get-FileHash -Algorithm MD5 -InputStream $s | Select-Object -ExpandProperty Hash
+    ]]
+
+    local arg = {"powershell", "-NoProfile", "-Command", cmd}
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
+
+    if result.status == 0 then
+        return result.stdout:gsub("%s+", "")
+    else
+        return nil
+    end
+end
+
+-- 根据操作系统调用不同的哈希计算函数
+local function get_file_md5(file_path)
+    if platform == "windows" then
+        return get_md5_windows(file_path)
+    else
+        return get_md5_unix(file_path)
+    end
+end
+
+-- 使用 curl 发送 HTTP POST 请求获取弹幕 episodeId
+local function match_file(file_name, file_hash)
+    local url = "https://api.dandanplay.net/api/v2/match"
+    local body = utils.format_json({
+        fileName = file_name,
+        fileHash = file_hash,
+    })
+
+    local arg = {
+        "curl", "-s", "-X", "POST", url,
+        "-H", "Content-Type: application/json",
+        "-d", body
+    }
+
+    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
+    if result.status == 0 then
+        return result.stdout
+    else
+        return nil
+    end
+end
+
+-- 加载弹幕
+local function load_danmaku(comments, from_menu)
+    local success = save_json_for_factory(comments)
+    if success then
+        local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+        convert_with_danmaku_factory(danmaku_json)
+
+        remove_danmaku_track()
+        local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+        if not file_exists(danmaku_file) then
+            mp.osd_message("未找到弹幕文件", 3)
+            return
+        end
+        mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
+        if from_menu then
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        elseif get_danmaku_visibility() then
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        end
+        mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+    else
+        msg.verbose("Error saving JSON file")
+    end
+end
+
+-- Use curl command to get the JSON data
+local function get_danmaku_comments(url)
+    local cmd = {
+        name = 'subprocess',
+        capture_stdout = true,
+        capture_stderr = true,
+        playback_only = true,
         args = {
             "curl",
             "-L",
@@ -245,13 +440,18 @@ function fetch_danmaku(episodeId, from_menu)
             "User-Agent: MyCustomUserAgent/1.0",
             url,
         },
-        cancellable = false,
     }
 
-    mp.osd_message("弹幕加载中...", 60)
+    return mp.command_native(cmd)
+end
 
-    local res = utils.subprocess(req)
-
+-- 匹配弹幕库 comment  仅匹配dandan本身弹幕库
+-- 通过danmaku api（url）+id获取弹幕
+-- Function to fetch danmaku from API
+function fetch_danmaku(episodeId, from_menu)
+    local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+    mp.osd_message("弹幕加载中...", 30)
+    local res = get_danmaku_comments(url)
     if res.status == 0 then
         local response = utils.parse_json(res.stdout)
         if response and response["comments"] then
@@ -259,100 +459,53 @@ function fetch_danmaku(episodeId, from_menu)
                 mp.osd_message("该集弹幕内容为空，结束加载", 3)
                 return
             end
-            local success = save_json_for_factory(response["comments"])
-            if success then
-                convert_with_danmaku_factory()
-
-                remove_danmaku_track()
-                mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
-                if from_menu then
-                    show_danmaku_func()
-                    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-                elseif get_danmaku_visibility() then
-                    show_danmaku_func()
-                    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-                end
-                mp.osd_message("弹幕加载成功，共计" .. response["count"] .. "条弹幕", 3)
-            else
-                mp.osd_message("Error saving JSON file", 3)
-            end
+            load_danmaku(response["comments"], from_menu)
         else
-            mp.osd_message("No result", 3)
+            mp.osd_message("无数据", 3)
+            msg.verbose("No result")
         end
     else
-        mp.osd_message("HTTP Request failed: " .. res.error, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
     end
 end
 
 -- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
 function fetch_danmaku_all(episodeId, from_menu)
     local comments = {}
-
     local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId
-
-    local req = {
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            url,
-        },
-        cancellable = false,
-    }
-
-    mp.osd_message("弹幕加载中...", 60)
-
-    local res = utils.subprocess(req)
-
+    mp.osd_message("弹幕加载中...", 30)
+    local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        mp.osd_message("HTTP Request failed: " .. res.error, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
     local response = utils.parse_json(res.stdout)
 
     if not response or not response["relateds"] then
-        mp.osd_message("No result", 3)
+        mp.osd_message("无数据", 3)
+        msg.verbose("No result")
         return
     end
 
     for _, related in ipairs(response["relateds"]) do
         url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(related["url"])
-
-        req = {
-            args = {
-                "curl",
-                "-L",
-                "-X",
-                "GET",
-                "--header",
-                "Accept: application/json",
-                "--header",
-                "User-Agent: MyCustomUserAgent/1.0",
-                url,
-            },
-            cancellable = false,
-        }
-
-        --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 60)
-        mp.osd_message("正在从第三方库装填弹幕", 60)
-
-        res = utils.subprocess(req)
-
+        --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
+        mp.osd_message("正在从第三方库装填弹幕", 30)
+        local res = get_danmaku_comments(url)
         if res.status ~= 0 then
-            mp.osd_message("HTTP Request failed: " .. res.error, 3)
+            mp.osd_message("获取数据失败", 3)
+            msg.error("HTTP Request failed: " .. res.stderr)
             return
         end
 
         local response_comments = utils.parse_json(res.stdout)
 
         if not response_comments or not response_comments["comments"] then
-            mp.osd_message("No result", 3)
+            mp.osd_message("无数据", 3)
+            msg.verbose("No result")
             goto continue
         end
 
@@ -362,7 +515,7 @@ function fetch_danmaku_all(episodeId, from_menu)
                 -- 空循环，等待 1 秒
             end
 
-            res = utils.subprocess(req)
+            res = get_danmaku_comments(url)
             response_comments = utils.parse_json(res.stdout)
         end
 
@@ -373,35 +526,19 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
-
-    req = {
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            url,
-        },
-        cancellable = false,
-    }
-
-    mp.osd_message("正在从弹弹Play库装填弹幕", 60)
-
-    res = utils.subprocess(req)
-
+    mp.osd_message("正在从弹弹Play库装填弹幕", 30)
+    local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        mp.osd_message("HTTP Request failed: " .. res.error, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
     response = utils.parse_json(res.stdout)
 
     if not response or not response["comments"] then
-        mp.osd_message("No result", 3)
+        mp.osd_message("无数据", 3)
+        msg.verbose("No result")
         return
     end
 
@@ -414,50 +551,17 @@ function fetch_danmaku_all(episodeId, from_menu)
         return
     end
 
-    local success = save_json_for_factory(comments)
-    if success then
-        convert_with_danmaku_factory()
-
-        remove_danmaku_track()
-        mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
-        if from_menu then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        elseif get_danmaku_visibility() then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        end
-        mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-    else
-        mp.osd_message("Error saving JSON file", 3)
-    end
+    load_danmaku(comments, from_menu)
 end
 
 --通过输入源url获取弹幕库
 function add_danmaku_source(query)
     local url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(query)
-
-    local req = {
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            url,
-        },
-        cancellable = false,
-    }
-
-    mp.osd_message("弹幕加载中...", 60)
-
-    local res = utils.subprocess(req)
-
+    mp.osd_message("弹幕加载中...", 30)
+    local res = get_danmaku_comments(url)
     if res.status ~= 0 then
-        mp.osd_message("HTTP Request failed: " .. res.error, 3)
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP Request failed: " .. res.stderr)
         return
     end
 
@@ -472,14 +576,14 @@ function add_danmaku_source(query)
     local add_count = response["count"]
 
     if add_count == 0 then
-        mp.osd_message("服务器无缓存数据，再次尝试请求", 60)
+        mp.osd_message("服务器无缓存数据，再次尝试请求", 30)
 
         local start = os.time()
         while os.time() - start < 2 do
             -- 空循环，等待 1 秒
         end
 
-        res = utils.subprocess(req)
+        res = get_danmaku_comments(url)
         response = utils.parse_json(res.stdout)
         new_comments = response["comments"]
         add_count = response["count"]
@@ -492,7 +596,7 @@ function add_danmaku_source(query)
 
     new_comments = convert_json_for_merge(new_comments)
 
-    local old_comment_path = danmaku_path .. "danmaku.json"
+    local old_comment_path = utils.join_path(danmaku_path, "danmaku.json")
     local comments = read_file(old_comment_path)
 
     if comments == nil then
@@ -505,7 +609,7 @@ function add_danmaku_source(query)
         table.insert(comments, comment)
     end
 
-    local json_filename = danmaku_path .. "danmaku.json"
+    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
     local json_file = io.open(json_filename, "w")
 
     if json_file then
@@ -517,12 +621,17 @@ function add_danmaku_source(query)
         json_file:write("]")
         json_file:close()
     else
-        mp.osd_message("Error saving JSON file", 3)
+        msg.verbose("Error saving JSON file")
     end
 
-    convert_with_danmaku_factory()
+    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+    convert_with_danmaku_factory(danmaku_json)
     remove_danmaku_track()
-    mp.commandv("sub-add", danmaku_path .. "danmaku.ass", "auto", "danmaku")
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    if not file_exists(danmaku_file) then
+        mp.osd_message("未找到弹幕文件", 3)
+    end
+    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
     show_danmaku_func()
     mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     mp.osd_message("弹幕加载成功，添加了" .. add_count .. "条弹幕，共计" .. #comments .. "条弹幕", 3)
@@ -550,9 +659,9 @@ function convert_json_for_merge(comments)
     return content
 end
 
--- 使用factory将弹幕转换为json
+-- 将弹幕转换为factory可读的json格式
 function save_json_for_factory(comments)
-    local json_filename = danmaku_path .. "danmaku.json"
+    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
     local json_file = io.open(json_filename, "w")
 
     if json_file then
@@ -586,42 +695,47 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory()
-    local bin = platform == "windows" and "DanmakuFactory.exe" or "DanmakuFactory"
-    danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or mp.get_script_directory() .. "/bin/" .. bin
-    local cmd = {
+function convert_with_danmaku_factory(danmaku_input)
+    if exec_path == "" then
+        exec_path = utils.join_path(mp.get_script_directory(), "bin")
+        if platform == "windows" then
+            exec_path = utils.join_path(exec_path, "DanmakuFactory.exe")
+        else
+            exec_path = utils.join_path(exec_path, "DanmakuFactory")
+        end
+    end
+    local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
+
+    local arg = {
         danmaku_factory_path,
         "-o",
-        danmaku_path .. "danmaku.ass",
+        utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
-        danmaku_path .. "danmaku.json",
+        danmaku_input,
         "--ignore-warnings",
-        --[[ 字体大小
-		"--fontsize",
-		"40",
-		-- 字体描边深度 0-4
-		"--outline",
-		"1",
-		-- 粗体字
-		"--bold",
-		"true",
-		-- 滚动弹幕通过屏幕的时间为xx秒
-		"--scrolltime",
-		"20",
-		-- 字体透明度
-		-- "--opacity",
-		--"70",
-		-- 弹幕重叠
-		"--density",
-		"-1",
-		-- 滚动弹幕显示范围  0.0-1.0
-		"--scrollarea",
-		"0.2",
-		]]
-        --
+        "--resolution", options.resolution,
+        "--scrolltime", options.scrolltime,
+        "--fontname", options.fontname,
+        "--fontsize", options.fontsize,
+        "--opacity", options.opacity,
+        "--shadow", options.shadow,
+        "--bold", options.bold,
+        "--density", options.density,
+        "--displayarea", options.displayarea,
+        "--outline", options.outline,
     }
 
-    utils.subprocess({ args = cmd })
+    if blacklist_file ~= "" and file_exists(blacklist_file) then
+        table.insert(arg, "--blacklist")
+        table.insert(arg, blacklist_file)
+    end
+
+    mp.command_native({
+        name = 'subprocess',
+        playback_only = false,
+        capture_stdout = true,
+        args = arg,
+    })
 end
 
 function escape_json_string(str)
@@ -645,39 +759,114 @@ function split(str, delim)
     return result
 end
 
-local rm1 = danmaku_path .. "danmaku.json"
-local rm2 = danmaku_path .. "danmaku.ass"
-os.remove(rm1)
-os.remove(rm2)
+-- 通过文件前 16M 的 hash 值进行弹幕匹配
+local function get_danmaku_with_hash(file_name, file_path)
+    if is_protocol(file_path) then
+        return
+    end
+    -- 计算文件哈希
+    local hash = get_file_md5(normalize(file_path))
+    if not hash then
+        return
+    end
 
--- 自动加载上次匹配的弹幕
-function auto_load_danmaku()
-    local fname = get_father_directory()
-    if fname ~= nil then
-        local history_path = danmaku_path .. "history.json"
-        local history_json = read_file(history_path)
-        if history_json ~= nil then
-            local history = utils.parse_json(history_json)
-            -- 1.判断父文件名是否存在
-            local history_fname = history[fname]
-            if history_fname ~= nil then
-                --2.如果存在，则获取number和id
-                local history_number = history[fname].episodeNumber
-                local history_id = history[fname].episodeId
-                local playing_number = get_episode_number()
-                local x = playing_number - history_number --获取集数差值
-                local tmp_id = tostring(x + history_id)
-                mp.osd_message("自动加载上次匹配的弹幕", 60)
-                set_episode_id(tmp_id)
-            end
+    -- 发送匹配请求
+    local match_data_raw = match_file(file_name, hash)
+    if not match_data_raw then
+        return
+    end
+
+    -- 解析匹配结果
+    local match_data = utils.parse_json(match_data_raw)
+    if not match_data.isMatched then
+        msg.verbose("No matching episode")
+        return
+    elseif #match_data.matches > 1 then
+        msg.verbose("Multiple matching episodes")
+        return
+    end
+
+    -- 获取并加载弹幕数据
+    if options.save_hash_match then
+        set_episode_id(match_data.matches[1].episodeId, true)
+    else
+        if options.load_more_danmaku then
+            fetch_danmaku_all(match_data.matches[1].episodeId, true)
+        else
+            fetch_danmaku(match_data.matches[1].episodeId, true)
         end
     end
 end
 
-if options.auto_load then
-    mp.register_event("start-file", auto_load_danmaku)
+-- 自动加载上次匹配的弹幕
+function auto_load_danmaku()
+    local path = mp.get_property("path")
+    local dir = get_parent_directory()
+    local filename = mp.get_property('filename/no-ext')
+
+    -- 加载可能存在的本地 xml 弹幕
+    if options.autoload_local_danmaku then
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if file_exists(danmaku_xml) then
+            convert_with_danmaku_factory(danmaku_xml)
+            remove_danmaku_track()
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            if not file_exists(danmaku_file) then
+                msg.verbose("xml 弹幕文件未转换成功")
+            end
+            mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+            return
+        end
+    end
+
+    if dir ~= nil then
+        local history_json = read_file(history_path)
+        if history_json ~= nil then
+            local history = utils.parse_json(history_json) or {}
+            -- 1.判断父文件名是否存在
+            local history_dir = history[dir]
+            if history_dir ~= nil then
+                --2.如果存在，则获取number和id
+                local history_number = history[dir].episodeNumber
+                local history_id = history[dir].episodeId
+                local history_fname = history[dir].fname
+                local playing_number = nil
+                if history_fname then
+                    if history_fname ~= filename then
+                        history_number, playing_number = get_episode_number(history_fname)
+                    else
+                        playing_number = history_number
+                    end
+                else
+                    playing_number = get_episode_number()
+                end
+                if playing_number ~= nil then
+                    local x = playing_number - history_number --获取集数差值
+                    local tmp_id = tostring(x + history_id)
+                    mp.osd_message("自动加载上次匹配的弹幕", 3)
+                    set_episode_id(tmp_id)
+                end
+            else
+                get_danmaku_with_hash(filename, path)
+            end
+        else
+            get_danmaku_with_hash(filename, path)
+        end
+    end
 end
 
+if options.auto_load or options.autoload_local_danmaku then
+    mp.register_event("file-loaded", auto_load_danmaku)
+end
+
+mp.add_hook("on_unload", 50, function()
+    local rm1 = utils.join_path(danmaku_path, "danmaku.json")
+    local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
+    if file_exists(rm1) then os.remove(rm1) end
+    if file_exists(rm2) then os.remove(rm2) end
+end)
 
 mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function ()
     mp.commandv("script-message", "open_search_danmaku_menu")
