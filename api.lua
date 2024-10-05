@@ -274,8 +274,6 @@ function get_episode_number(fname)
     local patterns = {
         -- 匹配 [数字] 格式
         "%[(%d+)%v?%d?]",
-        -- 匹配 直接跟随的数字 格式
-        "([^%d])(\\d+)([^%d]*)",
         -- 匹配 S01E02 格式
         "[S%d+]?E(%d+)",
         -- 匹配 第04话 格式
@@ -283,7 +281,9 @@ function get_episode_number(fname)
         -- 匹配 -/# 第数字 格式
         "[-#]%s*(%d+)%s*",
         -- 匹配 直接跟随的数字 格式
-        "(%d+)%s*[^%d]*$"
+        "(%d+)([^%d pP kK]*)$",
+        -- 匹配 直接跟随的数字 格式
+        "[^%d](%d+)[^%d]*",
     }
 
     -- 尝试匹配文件名中的集数
@@ -310,7 +310,7 @@ function set_episode_id(input, from_menu)
     if options.auto_load and from_menu then
         local history = {}
         local dir = get_parent_directory()
-        local episodeNumber = get_episode_number() --动漫的集数
+        local episodeNumber = tonumber(episodeId) % 1000 --动漫的集数
         --将文件名:episodeId写入history.json
         if dir ~= nil then
             local history_json = read_file(history_path)
