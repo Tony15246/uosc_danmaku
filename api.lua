@@ -337,7 +337,7 @@ end
 
 -- 使用 Unix 的 head 和 md5sum 命令计算前 16MB 的 MD5 哈希
 local function get_md5_unix(file_path)
-    local arg = { "sh", "-c", "head -c 16M '" .. file_path .. "' | md5sum" }
+    local arg = { "sh", "-c", "head -c 16M '" .. file_path .. "' | md5sum | awk '{print $1}'" }
     local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
 
     if result.status == 0 then
@@ -383,6 +383,7 @@ local function match_file(file_name, file_hash)
     local body = utils.format_json({
         fileName = file_name,
         fileHash = file_hash,
+        matchMode = "hashAndFileName"
     })
 
     local arg = {
