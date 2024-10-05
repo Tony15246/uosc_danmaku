@@ -42,8 +42,7 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 
 > 务必注意⚠️
 > 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
-> 2. danmaku目录虽然下载或者克隆时为空，但插件依赖此目录缓存弹幕文件，此文件夹不可或缺，不要因为这是空文件夹就删除此文件夹
-> 3. 记得给bin文件夹下的文件赋予可执行权限
+> 2. 记得给bin文件夹下的文件赋予可执行权限
 
 ```
 ~/.config/mpv/scripts 
