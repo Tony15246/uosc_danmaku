@@ -3,7 +3,16 @@ local options = {
     load_more_danmaku = false,
     auto_load = false,
     autoload_local_danmaku = false,
-    DanmakuFactory_Path = 'DanmakuFactory',
+    -- 保存哈希匹配的关联结果
+    -- 启用时可以避免同番剧剧集的反复哈希匹配
+    -- 禁用时始终进行哈希匹配（仅当同目录从未执行过手动搜索）；可以应对边缘案例：
+    -- 同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧
+    save_hash_match = false,
+    -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
+    -- 留空（默认值）会在脚本同目录的 bin 中查找
+    -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+    DanmakuFactory_Path = '',
+    -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
@@ -27,6 +36,8 @@ local options = {
     displayarea = "0.85",
     --描边 0-4
     outline = "1",
+    --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
+    blacklist_path = "",
 }
 
 require("mp.options").read_options(options, "uosc_danmaku", function() end)
@@ -36,7 +47,9 @@ local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
+local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
 local history_path = mp.command_native({"expand-path", options.history_path})
+local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
 -- url编码转换
 function url_encode(str)
@@ -683,7 +696,16 @@ end
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
 function convert_with_danmaku_factory(danmaku_input)
-    danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or mp.command_native({ "expand-path", options.DanmakuFactory_Path })
+    if exec_path == "" then
+        exec_path = utils.join_path(mp.get_script_directory(), "bin")
+        if platform == "windows" then
+            exec_path = utils.join_path(exec_path, "DanmakuFactory.exe")
+        else
+            exec_path = utils.join_path(exec_path, "DanmakuFactory")
+        end
+    end
+    local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
+
     local arg = {
         danmaku_factory_path,
         "-o",
@@ -702,6 +724,11 @@ function convert_with_danmaku_factory(danmaku_input)
         "--displayarea", options.displayarea,
         "--outline", options.outline,
     }
+
+    if blacklist_file ~= "" and file_exists(blacklist_file) then
+        table.insert(arg, "--blacklist")
+        table.insert(arg, blacklist_file)
+    end
 
     mp.command_native({
         name = 'subprocess',
@@ -760,7 +787,15 @@ local function get_danmaku_with_hash(file_name, file_path)
     end
 
     -- 获取并加载弹幕数据
-    set_episode_id(match_data.matches[1].episodeId, true)
+    if options.save_hash_match then
+        set_episode_id(match_data.matches[1].episodeId, true)
+    else
+        if options.load_more_danmaku then
+            fetch_danmaku_all(match_data.matches[1].episodeId, true)
+        else
+            fetch_danmaku(match_data.matches[1].episodeId, true)
+        end
+    end
 end
 
 -- 自动加载上次匹配的弹幕
@@ -823,10 +858,10 @@ function auto_load_danmaku()
 end
 
 if options.auto_load or options.autoload_local_danmaku then
-    mp.register_event("start-file", auto_load_danmaku)
+    mp.register_event("file-loaded", auto_load_danmaku)
 end
 
-mp.register_event("end-file", function()
+mp.add_hook("on_unload", 50, function()
     local rm1 = utils.join_path(danmaku_path, "danmaku.json")
     local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
     if file_exists(rm1) then os.remove(rm1) end
