@@ -492,9 +492,10 @@ function fetch_danmaku_all(episodeId, from_menu)
 
     for _, related in ipairs(response["relateds"]) do
         url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(related["url"])
+        local shift = related["shift"]
         --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
         mp.osd_message("正在从第三方库装填弹幕", 30)
-        local res = get_danmaku_comments(url)
+        res = get_danmaku_comments(url)
         if res.status ~= 0 then
             mp.osd_message("获取数据失败", 3)
             msg.error("HTTP Request failed: " .. res.stderr)
@@ -520,6 +521,7 @@ function fetch_danmaku_all(episodeId, from_menu)
         end
 
         for _, comment in ipairs(response_comments["comments"]) do
+            comment["shift"] = shift
             table.insert(comments, comment)
         end
         ::continue::
@@ -527,7 +529,7 @@ function fetch_danmaku_all(episodeId, from_menu)
 
     url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
     mp.osd_message("正在从弹弹Play库装填弹幕", 30)
-    local res = get_danmaku_comments(url)
+    res = get_danmaku_comments(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
         msg.error("HTTP Request failed: " .. res.stderr)
@@ -668,11 +670,15 @@ function save_json_for_factory(comments)
         json_file:write("[\n")
         for _, comment in ipairs(comments) do
             local p = comment["p"]
+            local shift = comment["shift"]
             if p then
                 local fields = split(p, ",")
+                if shift ~= nil then
+                    fields[1] = tonumber(fields[1]) + tonumber(shift)
+                end
                 local c_value = string.format(
                     "%s,%s,%s,25,,,",
-                    fields[1], -- first field of p to first field of c
+                    tostring(fields[1]), -- first field of p to first field of c
                     fields[3], -- third field of p to second field of c
                     fields[2]  -- second field of p to third field of c
                 )
