@@ -847,6 +847,8 @@ function auto_load_danmaku()
                     local tmp_id = tostring(x + history_id)
                     mp.osd_message("自动加载上次匹配的弹幕", 3)
                     set_episode_id(tmp_id)
+                else
+                    get_danmaku_with_hash(filename, path)
                 end
             else
                 get_danmaku_with_hash(filename, path)
