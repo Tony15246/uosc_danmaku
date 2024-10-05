@@ -13,8 +13,10 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
 3. 通过点击加入uosc control bar中的弹幕开关控件可以控制弹幕的开关
 4. 通过点击加入uosc control bar中的[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)按钮可以通过受支持的网络源添加弹幕
 5. 记忆型全自动弹幕填装，在为某个文件夹下的某一集番剧加载过一次弹幕后，加载过的弹幕会自动关联到该集；之后每次重新播放该文件就会自动加载弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕，无需再重复手动输入番剧名进行搜索（注意⚠️：全自动弹幕填装默认关闭，如需开启请阅读[auto_load配置项说明](#auto_load)）
-6. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
-7. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
+6. 在没有手动加载过弹幕，没有填装记自动弹幕忆之前，通过文件哈希匹配的方式自动添加弹幕（仅限本地文件），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
+7. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
+8. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
+9. 自定义弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
 
 无需亲自下载整合弹幕文件资源，无需亲自处理文件格式转换，在mpv播放器中一键加载包含了哔哩哔哩、巴哈姆特等弹幕网站弹幕的弹弹play的动画弹幕。
 
@@ -51,7 +53,6 @@ https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
     ├── bin
     │   ├── DanmakuFactory
     │   └── DanmakuFactory.exe
-    ├── danmaku
     └── main.lua
 ```
 ### 基本配置
@@ -200,3 +201,81 @@ auto_load=yes
 #### 功能说明
 
 自动加载播放文件同目录下同名的 xml 格式的弹幕文件
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+
+```
+autoload_local_danmaku=yes
+```
+
+### save_hash_match
+
+#### 功能说明
+
+保存哈希匹配的关联结果。启用时可以避免同番剧剧集的反复哈希匹配；禁用时始终进行哈希匹配（仅当同目录从未执行过手动搜索）
+可以应对边缘案例：同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧。在这些情况下这些命名特殊无法获取到正确剧集数的文件可以通过保存哈希匹配结果加载其对应的弹幕。
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+
+```
+save_hash_match=yes
+```
+
+### DanmakuFactory_Path
+
+#### 功能说明
+
+指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
+不特殊指定或者留空（默认值）会在脚本同目录的 bin 中查找，调用本人构建好的DanmakuFactory可执行文件
+示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+
+#### 使用示例
+
+```
+DanmakuFactory_Path="/path/to/your/DanmakuFactory"
+```
+
+### history_path
+
+#### 功能说明
+
+指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径。默认值是`"~~/danmaku-history.json"`也就是mpv配置文件夹的根目录下
+
+#### 使用示例
+
+```
+history_path="/path/to/your/danmaku-history.json"
+```
+
+### DanmakuFactory相关配置（自定义弹幕样式相关配置）
+
+默认配置如下，可根据需求更改并自定义弹幕样式
+
+```
+#分辨率
+resolution="1920 1080"
+#速度
+scrolltime="12"
+#字体
+fontname="sans-serif"
+#大小 
+fontsize="50"
+#透明度(1-255)  255 为不透明
+opacity="150"
+#阴影
+shadow="0"
+#粗体 true false
+bold="true"
+#弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
+density="0.0"
+#全部弹幕的显示范围(0.0-1.0)
+displayarea="0.85"
+#描边 0-4
+outline="1"
+#指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
+blacklist_path=""
+```
