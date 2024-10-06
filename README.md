@@ -5,7 +5,8 @@
 
 插件具体效果见演示视频：
 
-https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e
+<video width="902" src="https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e">
+</video>
 
 ### 主要功能
 1. 从弹弹play的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
@@ -279,3 +280,11 @@ outline="1"
 #指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
 blacklist_path=""
 ```
+
+## 常见问题
+
+### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”
+
+很有可能是Windows系统的病毒威胁与保护误查杀了本插件使用的DanmakuFactory.exe，把DanmakuFactory.exe当成了病毒。找到下图中的界面还原DanmakuFactory.exe并允许此应用
+
+<img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
