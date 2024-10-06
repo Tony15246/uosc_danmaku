@@ -62,11 +62,11 @@ function url_encode(str)
     return str
 end
 
-local function is_protocol(path)
+function is_protocol(path)
     return type(path) == 'string' and (path:find('^%a[%w.+-]-://') ~= nil or path:find('^%a[%w.+-]-:%?') ~= nil)
 end
 
-local function file_exists(path)
+function file_exists(path)
     if path then
         local meta = utils.file_info(path)
         return meta and meta.is_file
@@ -221,7 +221,7 @@ local function compare_filenames(fname1, fname2)
 end
 
 -- 规范化路径
-local function normalize(path)
+function normalize(path)
     if normalize_path ~= nil then
         if normalize_path then
             path = mp.command_native({"normalize-path", path})
@@ -635,6 +635,7 @@ function add_danmaku_source(query)
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     if not file_exists(danmaku_file) then
         mp.osd_message("未找到弹幕文件", 3)
+        return
     end
     mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
     show_danmaku_func()
@@ -769,7 +770,7 @@ function split(str, delim)
 end
 
 -- 通过文件前 16M 的 hash 值进行弹幕匹配
-local function get_danmaku_with_hash(file_name, file_path)
+function get_danmaku_with_hash(file_name, file_path)
     if is_protocol(file_path) then
         return
     end
@@ -807,29 +808,23 @@ local function get_danmaku_with_hash(file_name, file_path)
     end
 end
 
--- 自动加载上次匹配的弹幕
-function auto_load_danmaku()
-    local path = mp.get_property("path")
-    local dir = get_parent_directory()
-    local filename = mp.get_property('filename/no-ext')
-
-    -- 加载可能存在的本地 xml 弹幕
-    if options.autoload_local_danmaku then
-        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
-        if file_exists(danmaku_xml) then
-            convert_with_danmaku_factory(danmaku_xml)
-            remove_danmaku_track()
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-            if not file_exists(danmaku_file) then
-                msg.verbose("xml 弹幕文件未转换成功")
-            end
-            mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-            return
-        end
+-- 加载本地 xml 弹幕
+function load_local_danmaku(danmaku_xml)
+    convert_with_danmaku_factory(danmaku_xml)
+    remove_danmaku_track()
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    if not file_exists(danmaku_file) then
+        msg.verbose("xml 弹幕文件未转换成功")
+        return
     end
+    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
+    show_danmaku_func()
+    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+end
 
+-- 自动加载上次匹配的弹幕
+function auto_load_danmaku(dir, filename)
+    local path = mp.get_property("path")
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -868,8 +863,26 @@ function auto_load_danmaku()
     end
 end
 
-if options.auto_load or options.autoload_local_danmaku then
-    mp.register_event("file-loaded", auto_load_danmaku)
+if options.auto_load then
+    mp.register_event("file-loaded", function()
+        local dir = get_parent_directory()
+        local filename = mp.get_property('filename/no-ext')
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if not options.autoload_local_danmaku or not file_exists(danmaku_xml) then
+            auto_load_danmaku(dir, filename)
+        end
+    end)
+end
+
+if options.autoload_local_danmaku then
+    mp.register_event("file-loaded", function()
+        local dir = get_parent_directory()
+        local filename = mp.get_property('filename/no-ext')
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if file_exists(danmaku_xml) then
+            load_local_danmaku(danmaku_xml)
+        end
+    end)
 end
 
 mp.add_hook("on_unload", 50, function()
