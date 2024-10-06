@@ -4,8 +4,8 @@ local options = {
     auto_load = false,
     autoload_local_danmaku = false,
     -- 保存哈希匹配的关联结果
-    -- 启用时可以避免同番剧剧集的反复哈希匹配
-    -- 禁用时始终进行哈希匹配（仅当同目录从未执行过手动搜索）；可以应对边缘案例：
+    -- 启用时可以避免同番剧不同剧集的反复哈希匹配
+    -- 禁用时对同目录文件始终进行哈希匹配（仅当同目录从未执行过手动搜索），这可以应对边缘案例：
     -- 同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧
     save_hash_match = false,
     -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
@@ -273,7 +273,7 @@ function get_episode_number(fname)
     -- 匹配模式：支持多种集数形式
     local patterns = {
         -- 匹配 [数字] 格式
-        "%[(%d+)%v?%d?]",
+        "%[(%d+)v?%d?%]",
         -- 匹配 S01E02 格式
         "[S%d+]?E(%d+)",
         -- 匹配 第04话 格式
@@ -281,9 +281,7 @@ function get_episode_number(fname)
         -- 匹配 -/# 第数字 格式
         "[-#]%s*(%d+)%s*",
         -- 匹配 直接跟随的数字 格式
-        "[^vV](%d+)[^pPkK][^%d]*$",
-        -- 匹配 直接跟随的数字 格式
-        "[^%d](%d+)[^%d]*",
+        "[^%dhHxXvV](%d%d%d?)[^%dpPkKxXbBfF][^%d]*$",
     }
 
     -- 尝试匹配文件名中的集数
@@ -308,12 +306,12 @@ end
 -- 写入history.json
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
-    local fname = mp.get_property('filename/no-ext')
     from_menu = from_menu or false
     local episodeId = tonumber(input)
     if options.auto_load and from_menu then
         local history = {}
         local dir = get_parent_directory()
+        local fname = mp.get_property('filename/no-ext')
         local episodeNumber = tonumber(episodeId) % 1000 --动漫的集数
         --将文件名:episodeId写入history.json
         if dir ~= nil then
