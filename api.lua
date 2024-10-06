@@ -863,27 +863,20 @@ function auto_load_danmaku(dir, filename)
     end
 end
 
-if options.auto_load then
-    mp.register_event("file-loaded", function()
-        local dir = get_parent_directory()
-        local filename = mp.get_property('filename/no-ext')
-        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
-        if not options.autoload_local_danmaku or not file_exists(danmaku_xml) then
-            auto_load_danmaku(dir, filename)
-        end
-    end)
-end
-
-if options.autoload_local_danmaku then
-    mp.register_event("file-loaded", function()
-        local dir = get_parent_directory()
-        local filename = mp.get_property('filename/no-ext')
-        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+mp.register_event("file-loaded", function()
+    local dir = get_parent_directory()
+    local filename = mp.get_property('filename/no-ext')
+    local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+    if options.autoload_local_danmaku then
         if file_exists(danmaku_xml) then
             load_local_danmaku(danmaku_xml)
+            return
         end
-    end)
-end
+    end
+    if options.auto_load then
+        auto_load_danmaku(dir, filename)
+    end
+end)
 
 mp.add_hook("on_unload", 50, function()
     local rm1 = utils.join_path(danmaku_path, "danmaku.json")
