@@ -863,9 +863,19 @@ function auto_load_danmaku(dir, filename)
     end
 end
 
+mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function ()
+    mp.commandv("script-message", "open_search_danmaku_menu")
+end)
+mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", function ()
+    mp.commandv("script-message", "show_danmaku_keyboard")
+end)
+
 mp.register_event("file-loaded", function()
     local dir = get_parent_directory()
     local filename = mp.get_property('filename/no-ext')
+    if filename == nil or dir == nil then
+        return
+    end
     local danmaku_xml = utils.join_path(dir, filename .. ".xml")
     if options.autoload_local_danmaku then
         if file_exists(danmaku_xml) then
@@ -883,11 +893,4 @@ mp.add_hook("on_unload", 50, function()
     local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then os.remove(rm2) end
-end)
-
-mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function ()
-    mp.commandv("script-message", "open_search_danmaku_menu")
-end)
-mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", function ()
-    mp.commandv("script-message", "show_danmaku_keyboard")
 end)
