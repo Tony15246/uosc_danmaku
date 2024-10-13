@@ -227,7 +227,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
         local path = mp.get_property("path")
         local dir = get_parent_directory()
         local filename = mp.get_property('filename/no-ext')
-        if filename then
+        if filename and dir then
             local danmaku_xml = utils.join_path(dir, filename .. ".xml")
             if file_exists(danmaku_xml) then
                 load_local_danmaku(danmaku_xml)
