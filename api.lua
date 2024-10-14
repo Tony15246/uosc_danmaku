@@ -902,7 +902,7 @@ function load_local_danmaku(danmaku_xml)
 end
 
 -- 自动加载上次匹配的弹幕
-function auto_load_danmaku(path, dir, filename)
+function auto_load_danmaku(path, dir, filename, number)
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -916,8 +916,12 @@ function auto_load_danmaku(path, dir, filename)
                 local history_fname = history[dir].fname
                 local playing_number = nil
                 if history_fname then
-                    if history_fname ~= filename then
-                        history_number, playing_number = get_episode_number(filename, history_fname)
+                    if filename ~= history_fname then
+                        if number then
+                            playing_number = number
+                        else
+                            history_number, playing_number = get_episode_number(filename, history_fname)
+                        end
                     else
                         playing_number = history_number
                     end
@@ -955,14 +959,16 @@ mp.register_event("file-loaded", function()
 
     if options.autoload_for_url and is_protocol(path) then
         local title, season_num, episod_num = get_title()
+        local episod_number = nil
         if title and episod_num then
             if season_num then
                 dir = title .." Season".. season_num
+                episod_number = episod_num
             else
                 dir = title
             end
             filename = url_decode(mp.get_property("media-title"))
-            auto_load_danmaku(path, dir, filename)
+            auto_load_danmaku(path, dir, filename, episod_number)
             return
         end
     end
