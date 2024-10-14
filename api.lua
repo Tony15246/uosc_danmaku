@@ -71,14 +71,14 @@ function url_decode(str)
 
     if str ~= nil then
         str = str:gsub('^%a[%a%d-_]+://', '')
-        str = str:gsub('^%a[%a%d-_]+:\\?', '')
-        str = str:gsub('%%(%x%x)', hex_to_char)
+              :gsub('^%a[%a%d-_]+:\\?', '')
+              :gsub('%%(%x%x)', hex_to_char)
         if str:find('://localhost:?') then
             str = str:gsub('^.*/', '')
         end
         str = str:gsub('%?.+', '')
-        str = str:gsub('[\\/:]*', '')
-        str = str:gsub('%+', ' ')
+              :gsub('[\\/:]*', '')
+              :gsub('%+', ' ')
         return str
     else
         return
@@ -281,7 +281,17 @@ end
 -- 获取网络文件标题信息
 function get_title(from_menu)
     local path = mp.get_property("path")
-    if path and not is_protocol(path) then return nil end
+
+    if path and not is_protocol(path) then
+        local dir = get_parent_directory(path)
+        local _, title = utils.split_path(dir:sub(1, -2))
+        title = title:gsub("[%[].-[%]]","")
+                :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
+                :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
+                :gsub("^%s*(.-)%s*$", "%1")
+        return title
+    end
+
     local title = url_decode(mp.get_property("media-title"))
     local season_num, episod_num = nil, nil
     if title then
@@ -295,7 +305,7 @@ function get_title(from_menu)
             episod_num = get_episode_number(title)
             if episod_num then
                 local parts = split(title, episod_num)
-                title = parts[1]:gsub("[%[%(].*[%)%]]","")
+                title = parts[1]:gsub("[%[%(].-[%)%]]","")
                         :gsub("%[.*","")
                         :gsub("%-.*","")
                         :gsub("^%s*(.-)%s*$", "%1")
