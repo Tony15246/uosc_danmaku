@@ -52,6 +52,7 @@ function get_animes(query)
     for _, anime in ipairs(response.animes) do
         table.insert(items, {
             title = anime.animeTitle,
+            hint = anime.typeDescription,
             value = {
                 "script-message-to",
                 mp.get_script_name(),

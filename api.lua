@@ -285,7 +285,7 @@ function get_title(from_menu)
     if path and not is_protocol(path) then
         local dir = get_parent_directory(path)
         local _, title = utils.split_path(dir:sub(1, -2))
-        title = title:gsub("[%[].-[%]]","")
+        title = title:gsub("%[.-%]", "")
                 :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
                 :gsub("^%s*(.-)%s*$", "%1")
@@ -295,19 +295,20 @@ function get_title(from_menu)
     local title = url_decode(mp.get_property("media-title"))
     local season_num, episod_num = nil, nil
     if title then
-        if title:match(".*S%d+:E%d+.*%|.+") then
-            title, season_num, episod_num = title:match("(.+)%s+S(%d+):E(%d+)")
-        elseif title:match(".*%-.*S%d+E%d+:.+") then
-            title, season_num, episod_num = title:match("(.+)%s*%-%s*S(%d+)E(%d+)")
-        elseif title:match(".*S%d+E%d+:.+") then
-            title, season_num, episod_num = title:match("(.+)%s*S(%d+)E(%d+)")
+        if title:match(".*S%d+:E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
+        elseif title:match(".*%-.*S%d+E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
+        elseif title:match(".*S%d+E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
         else
             episod_num = get_episode_number(title)
             if episod_num then
                 local parts = split(title, episod_num)
-                title = parts[1]:gsub("[%[%(].-[%)%]]","")
-                        :gsub("%[.*","")
-                        :gsub("%-.*","")
+                title = parts[1]:gsub("[%[%(].-[%)%]]", "")
+                        :gsub("%[.*", "")
+                        :gsub("[%-#].*", "")
+                        :gsub("第.*", "")
                         :gsub("^%s*(.-)%s*$", "%1")
             else
                 title = nil
@@ -342,7 +343,7 @@ function get_episode_number(filename, fname)
         -- 匹配 第04话 格式
         "第(%d+)话",
         -- 匹配 -/# 第数字 格式
-        "[-#]%s*(%d+)%s*",
+        "[%-#]%s*(%d+)%s*",
         -- 匹配 直接跟随的数字 格式
         "[^%dhHxXvV](%d%d%d?)[^%dpPkKxXbBfF][^%d]*$",
     }
@@ -901,7 +902,7 @@ function load_local_danmaku(danmaku_xml)
 end
 
 -- 自动加载上次匹配的弹幕
-function auto_load_danmaku(path, dir, filename)
+function auto_load_danmaku(path, dir, filename, number)
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -915,8 +916,12 @@ function auto_load_danmaku(path, dir, filename)
                 local history_fname = history[dir].fname
                 local playing_number = nil
                 if history_fname then
-                    if history_fname ~= filename then
-                        history_number, playing_number = get_episode_number(filename, history_fname)
+                    if filename ~= history_fname then
+                        if number then
+                            playing_number = number
+                        else
+                            history_number, playing_number = get_episode_number(filename, history_fname)
+                        end
                     else
                         playing_number = history_number
                     end
@@ -954,14 +959,16 @@ mp.register_event("file-loaded", function()
 
     if options.autoload_for_url and is_protocol(path) then
         local title, season_num, episod_num = get_title()
+        local episod_number = nil
         if title and episod_num then
             if season_num then
                 dir = title .." Season".. season_num
+                episod_number = episod_num
             else
                 dir = title
             end
             filename = url_decode(mp.get_property("media-title"))
-            auto_load_danmaku(path, dir, filename)
+            auto_load_danmaku(path, dir, filename, episod_number)
             return
         end
     end
