@@ -3,6 +3,7 @@ local options = {
     load_more_danmaku = false,
     auto_load = false,
     autoload_local_danmaku = false,
+    autoload_for_url = false,
     -- 保存哈希匹配的关联结果
     -- 启用时可以避免同番剧不同剧集的反复哈希匹配
     -- 禁用时对同目录文件始终进行哈希匹配（仅当同目录从未执行过手动搜索），这可以应对边缘案例：
@@ -60,6 +61,28 @@ function url_encode(str)
         end)
     end
     return str
+end
+
+-- url解码转换
+function url_decode(str)
+    local function hex_to_char(x)
+        return string.char(tonumber(x, 16))
+    end
+
+    if str ~= nil then
+        str = str:gsub('^%a[%a%d-_]+://', '')
+        str = str:gsub('^%a[%a%d-_]+:\\?', '')
+        str = str:gsub('%%(%x%x)', hex_to_char)
+        if str:find('://localhost:?') then
+            str = str:gsub('^.*/', '')
+        end
+        str = str:gsub('%?.+', '')
+        str = str:gsub('[\\/:]*', '')
+        str = str:gsub('%+', ' ')
+        return str
+    else
+        return
+    end
 end
 
 function is_protocol(path)
@@ -246,8 +269,7 @@ function normalize(path)
 end
 
 -- 获取父目录路径
-function get_parent_directory()
-    local path = mp.get_property("path")
+function get_parent_directory(path)
     local dir = nil
     if path and not is_protocol(path) then
         path = normalize(path)
@@ -256,9 +278,40 @@ function get_parent_directory()
     return dir
 end
 
+-- 获取网络文件标题信息
+function get_title(from_menu)
+    local path = mp.get_property("path")
+    if path and not is_protocol(path) then return nil end
+    local title = url_decode(mp.get_property("media-title"))
+    local season_num, episod_num = nil, nil
+    if title then
+        if title:match(".*S%d+:E%d+.*%|.+") then
+            title, season_num, episod_num = title:match("(.+)%s+S(%d+):E(%d+)")
+        elseif title:match(".*%-.*S%d+E%d+:.+") then
+            title, season_num, episod_num = title:match("(.+)%s*%-%s*S(%d+)E(%d+)")
+        elseif title:match(".*S%d+E%d+:.+") then
+            title, season_num, episod_num = title:match("(.+)%s*S(%d+)E(%d+)")
+        else
+            episod_num = get_episode_number(title)
+            if episod_num then
+                local parts = split(title, episod_num)
+                title = parts[1]:gsub("[%[%(].*[%)%]]","")
+                        :gsub("%[.*","")
+                        :gsub("%-.*","")
+                        :gsub("^%s*(.-)%s*$", "%1")
+            else
+                title = nil
+            end
+        end
+    end
+    if from_menu then
+        return title
+    end
+    return title, season_num, episod_num
+end
+
 -- 获取当前文件名所包含的集数
-function get_episode_number(fname)
-    local filename = mp.get_property('filename/no-ext')
+function get_episode_number(filename, fname)
 
     -- 尝试对比记录文件名来获取当前集数
     if fname then
@@ -308,11 +361,26 @@ end
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
     local episodeId = tonumber(input)
-    if options.auto_load and from_menu then
+    if from_menu and options.auto_load or options.autoload_for_url then
         local history = {}
-        local dir = get_parent_directory()
+        local path = mp.get_property("path")
+        local dir = get_parent_directory(path)
         local fname = mp.get_property('filename/no-ext')
         local episodeNumber = tonumber(episodeId) % 1000 --动漫的集数
+
+        if is_protocol(path) then
+            local title, season_num, episod_num = get_title()
+            if title and episod_num then
+                if season_num then
+                    dir = title .." Season".. season_num
+                else
+                    dir = title
+                end
+                fname = url_decode(mp.get_property("media-title"))
+                episodeNumber = episod_num
+            end
+        end
+
         --将文件名:episodeId写入history.json
         if dir ~= nil then
             local history_json = read_file(history_path)
@@ -823,8 +891,7 @@ function load_local_danmaku(danmaku_xml)
 end
 
 -- 自动加载上次匹配的弹幕
-function auto_load_danmaku(dir, filename)
-    local path = mp.get_property("path")
+function auto_load_danmaku(path, dir, filename)
     if dir ~= nil then
         local history_json = read_file(history_path)
         if history_json ~= nil then
@@ -839,12 +906,12 @@ function auto_load_danmaku(dir, filename)
                 local playing_number = nil
                 if history_fname then
                     if history_fname ~= filename then
-                        history_number, playing_number = get_episode_number(history_fname)
+                        history_number, playing_number = get_episode_number(filename, history_fname)
                     else
                         playing_number = history_number
                     end
                 else
-                    playing_number = get_episode_number()
+                    playing_number = get_episode_number(filename)
                 end
                 if playing_number ~= nil then
                     local x = playing_number - history_number --获取集数差值
@@ -871,8 +938,24 @@ mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", f
 end)
 
 mp.register_event("file-loaded", function()
-    local dir = get_parent_directory()
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
+
+    if options.autoload_for_url and is_protocol(path) then
+        local title, season_num, episod_num = get_title()
+        if title and episod_num then
+            if season_num then
+                dir = title .." Season".. season_num
+            else
+                dir = title
+            end
+            filename = url_decode(mp.get_property("media-title"))
+            auto_load_danmaku(path, dir, filename)
+            return
+        end
+    end
+
     if filename == nil or dir == nil then
         return
     end
@@ -884,7 +967,7 @@ mp.register_event("file-loaded", function()
         end
     end
     if options.auto_load then
-        auto_load_danmaku(dir, filename)
+        auto_load_danmaku(path, dir, filename)
     end
 end)
 
