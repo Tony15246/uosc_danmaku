@@ -254,6 +254,8 @@ save_hash_match=yes
 
 #### 使用示例
 
+想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+
 ```
 DanmakuFactory_Path=/path/to/your/DanmakuFactory
 ```
@@ -266,6 +268,8 @@ DanmakuFactory_Path=/path/to/your/DanmakuFactory
 
 #### 使用示例
 
+想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+
 ```
 history_path=/path/to/your/danmaku-history.json
 ```
@@ -273,6 +277,8 @@ history_path=/path/to/your/danmaku-history.json
 ### DanmakuFactory相关配置（自定义弹幕样式相关配置）
 
 默认配置如下，可根据需求更改并自定义弹幕样式
+
+想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
 
 ```
 #分辨率
