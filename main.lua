@@ -114,6 +114,7 @@ function open_input_menu()
         title = "在此处输入动画名称",
         search_style = "palette",
         search_debounce = "submit",
+        search_suggestion = get_title(true),
         on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
         footnote = "使用enter或ctrl+enter进行搜索",
         items = {
@@ -225,7 +226,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
 
     if sec_sid == "no" and has_danmaku == false then
         local path = mp.get_property("path")
-        local dir = get_parent_directory()
+        local dir = get_parent_directory(path)
         local filename = mp.get_property('filename/no-ext')
         if filename and dir then
             local danmaku_xml = utils.join_path(dir, filename .. ".xml")
