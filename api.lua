@@ -40,11 +40,11 @@ local options = {
     blacklist_path = "",
 }
 
-require("mp.options").read_options(options, "uosc_danmaku", function() end)
-
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
+
+require("mp.options").read_options(options, mp.get_script_name(), function() end)
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
