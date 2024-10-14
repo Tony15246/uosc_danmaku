@@ -77,7 +77,6 @@ function url_decode(str)
             str = str:gsub('^.*/', '')
         end
         str = str:gsub('%?.+', '')
-              :gsub('[\\/:]*', '')
               :gsub('%+', ' ')
         return str
     else
@@ -281,27 +280,33 @@ end
 -- 获取网络文件标题信息
 function get_title(from_menu)
     local path = mp.get_property("path")
+    local thin_space = "\xE2\x80\x89"
 
     if path and not is_protocol(path) then
         local dir = get_parent_directory(path)
         local _, title = utils.split_path(dir:sub(1, -2))
+        local pattern = "^[%s" .. thin_space .. "]*(.-)[%s" .. thin_space .. "]*$"
         title = title:gsub("%[.-%]", "")
                 :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
-                :gsub("^%s*(.-)%s*$", "%1")
+                :gsub(pattern, "%1")
         return title
     end
 
-    local title = url_decode(mp.get_property("media-title"))
-    local season_num, episod_num = nil, nil
+    local title = mp.get_property("media-title"):gsub(thin_space, "%s")
+    local ftitle, season_num, episod_num = nil, nil, nil
     if title then
         if title:match(".*S%d+:E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-        elseif title:match(".*%-.*S%d+E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
+            ftitle, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
+            title = url_decode(ftitle)
+        elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
+            ftitle, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
+            title = url_decode(ftitle)
         elseif title:match(".*S%d+E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
+            ftitle, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
+            title = url_decode(ftitle)
         else
+            title = url_decode(title)
             episod_num = get_episode_number(title)
             if episod_num then
                 local parts = split(title, episod_num)
