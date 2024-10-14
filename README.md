@@ -211,6 +211,24 @@ auto_load=yes
 autoload_local_danmaku=yes
 ```
 
+### autoload_for_url
+
+#### 功能说明
+
+为可能支持的 url 视频文件实现弹幕关联记忆和继承，配合播放列表食用效果最佳
+
+> [!NOTE]
+>
+> 实验性功能，尚不完善
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+
+```
+autoload_for_url=yes
+```
+
 ### save_hash_match
 
 #### 功能说明
