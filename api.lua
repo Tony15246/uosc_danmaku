@@ -285,15 +285,16 @@ function get_title(from_menu)
     if path and not is_protocol(path) then
         local dir = get_parent_directory(path)
         local _, title = utils.split_path(dir:sub(1, -2))
-        local pattern = "^[%s" .. thin_space .. "]*(.-)[%s" .. thin_space .. "]*$"
-        title = title:gsub("%[.-%]", "")
+        title = title
+                :gsub(thin_space, " ")
+                :gsub("%[.-%]", "")
                 :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
-                :gsub(pattern, "%1")
+                :gsub("^%s*(.-)%s*$", "%1")
         return title
     end
 
-    local title = mp.get_property("media-title"):gsub(thin_space, "%s")
+    local title = mp.get_property("media-title"):gsub(thin_space, " ")
     local ftitle, season_num, episod_num = nil, nil, nil
     if title then
         if title:match(".*S%d+:E%d+") ~= nil then
@@ -338,6 +339,9 @@ function get_episode_number(filename, fname)
             return nil, nil
         end
     end
+
+    local thin_space = "\xE2\x80\x89"
+    filename = filename:gsub(thin_space, " ")
 
     -- 匹配模式：支持多种集数形式
     local patterns = {
