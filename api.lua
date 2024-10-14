@@ -285,7 +285,7 @@ function get_title(from_menu)
     if path and not is_protocol(path) then
         local dir = get_parent_directory(path)
         local _, title = utils.split_path(dir:sub(1, -2))
-        title = title:gsub("[%[].-[%]]","")
+        title = title:gsub("%[.-%]", "")
                 :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
                 :gsub("^%s*(.-)%s*$", "%1")
@@ -295,19 +295,20 @@ function get_title(from_menu)
     local title = url_decode(mp.get_property("media-title"))
     local season_num, episod_num = nil, nil
     if title then
-        if title:match(".*S%d+:E%d+.*%|.+") then
-            title, season_num, episod_num = title:match("(.+)%s+S(%d+):E(%d+)")
-        elseif title:match(".*%-.*S%d+E%d+:.+") then
-            title, season_num, episod_num = title:match("(.+)%s*%-%s*S(%d+)E(%d+)")
-        elseif title:match(".*S%d+E%d+:.+") then
-            title, season_num, episod_num = title:match("(.+)%s*S(%d+)E(%d+)")
+        if title:match(".*S%d+:E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
+        elseif title:match(".*%-.*S%d+E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
+        elseif title:match(".*S%d+E%d+") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
         else
             episod_num = get_episode_number(title)
             if episod_num then
                 local parts = split(title, episod_num)
-                title = parts[1]:gsub("[%[%(].-[%)%]]","")
-                        :gsub("%[.*","")
-                        :gsub("%-.*","")
+                title = parts[1]:gsub("[%[%(].-[%)%]]", "")
+                        :gsub("%[.*", "")
+                        :gsub("[%-#].*", "")
+                        :gsub("第.*", "")
                         :gsub("^%s*(.-)%s*$", "%1")
             else
                 title = nil
@@ -342,7 +343,7 @@ function get_episode_number(filename, fname)
         -- 匹配 第04话 格式
         "第(%d+)话",
         -- 匹配 -/# 第数字 格式
-        "[-#]%s*(%d+)%s*",
+        "[%-#]%s*(%d+)%s*",
         -- 匹配 直接跟随的数字 格式
         "[^%dhHxXvV](%d%d%d?)[^%dpPkKxXbBfF][^%d]*$",
     }
