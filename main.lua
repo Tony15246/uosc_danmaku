@@ -1,11 +1,12 @@
 local utils = require("mp.utils")
 local msg = require 'mp.msg'
+local options = require("options")
 require("api")
 
 function get_animes(query)
     local encoded_query = url_encode(query)
 
-    local url = "https://api.dandanplay.net/api/v2/search/episodes"
+    local url = options.api_server .. "/api/v2/search/episodes"
     local params = "anime=" .. encoded_query
     local full_url = url .. "?" .. params
 
