@@ -1,51 +1,7 @@
--- 选项
-local options = {
-    load_more_danmaku = false,
-    auto_load = false,
-    autoload_local_danmaku = false,
-    autoload_for_url = false,
-    -- 保存哈希匹配的关联结果
-    -- 启用时可以避免同番剧不同剧集的反复哈希匹配
-    -- 禁用时对同目录文件始终进行哈希匹配（仅当同目录从未执行过手动搜索），这可以应对边缘案例：
-    -- 同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧
-    save_hash_match = false,
-    -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
-    -- 留空（默认值）会在脚本同目录的 bin 中查找
-    -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
-    DanmakuFactory_Path = '',
-    -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
-    history_path = "~~/danmaku-history.json",
-    open_search_danmaku_menu_key = "Ctrl+d",
-    show_danmaku_keyboard_key = "j",
-    --分辨率
-    resolution = "1920 1080",
-    --速度
-    scrolltime = "12",
-    --字体
-    fontname = "sans-serif",
-    --大小 
-    fontsize = "50",
-    --透明度(1-255)  255 为不透明
-    opacity = "150",
-    --阴影
-    shadow = "0",
-    --粗体 true false
-    bold = "true",
-    --弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
-    density = "0.0",
-    --全部弹幕的显示范围(0.0-1.0)
-    displayarea = "0.85",
-    --描边 0-4
-    outline = "1",
-    --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
-    blacklist_path = "",
-}
-
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
-
-require("mp.options").read_options(options, mp.get_script_name(), function() end)
+local options = require("options")
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
@@ -277,7 +233,7 @@ function get_parent_directory(path)
     return dir
 end
 
--- 获取网络文件标题信息
+-- 获取播放文件标题信息
 function get_title(from_menu)
     local path = mp.get_property("path")
     local thin_space = "\xE2\x80\x89"
@@ -294,18 +250,19 @@ function get_title(from_menu)
         return title
     end
 
-    local title = mp.get_property("media-title"):gsub(thin_space, " ")
+    local title = mp.get_property("media-title")
     local season_num, episod_num = nil, nil
     if title then
+        title = title:gsub(thin_space, " ")
         if title:match(".*S%d+:E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "
+            title = url_decode(title):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "
+            title = url_decode(title):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "
+            title = url_decode(title):gsub("%s*%[.-%]s*", "")
         else
             title = url_decode(title)
             episod_num = get_episode_number(title)
@@ -465,7 +422,7 @@ end
 
 -- 使用 curl 发送 HTTP POST 请求获取弹幕 episodeId
 local function match_file(file_name, file_hash)
-    local url = "https://api.dandanplay.net/api/v2/match"
+    local url = options.api_server .. "/api/v2/match"
     local body = utils.format_json({
         fileName = file_name,
         fileHash = file_hash,
@@ -540,7 +497,7 @@ end
 -- 通过danmaku api（url）+id获取弹幕
 -- Function to fetch danmaku from API
 function fetch_danmaku(episodeId, from_menu)
-    local url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+    local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
     mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status == 0 then
@@ -564,7 +521,7 @@ end
 -- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
 function fetch_danmaku_all(episodeId, from_menu)
     local comments = {}
-    local url = "https://api.dandanplay.net/api/v2/related/" .. episodeId
+    local url = options.api_server .. "/api/v2/related/" .. episodeId
     mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
@@ -582,7 +539,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     for _, related in ipairs(response["relateds"]) do
-        url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(related["url"])
+        url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
         local shift = related["shift"]
         --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
         mp.osd_message("正在从第三方库装填弹幕", 30)
@@ -618,7 +575,7 @@ function fetch_danmaku_all(episodeId, from_menu)
         ::continue::
     end
 
-    url = "https://api.dandanplay.net/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
+    url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
     mp.osd_message("正在从弹弹Play库装填弹幕", 30)
     res = get_danmaku_comments(url)
     if res.status ~= 0 then
@@ -649,7 +606,7 @@ end
 
 --通过输入源url获取弹幕库
 function add_danmaku_source(query)
-    local url = "https://api.dandanplay.net/api/v2/extcomment?url=" .. url_encode(query)
+    local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
