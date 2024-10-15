@@ -9,7 +9,7 @@
 </video>
 
 ### 主要功能
-1. 从弹弹play的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
+1. 从弹弹play或自定义服务的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
 3. 通过点击加入uosc control bar中的弹幕开关控件可以控制弹幕的开关
 4. 通过点击加入uosc control bar中的[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)按钮可以通过受支持的网络源添加弹幕
@@ -141,6 +141,25 @@ Ctrl+j script-message open_add_source_menu
 ```
 
 ## 配置选项（可选）
+
+### api_server
+
+#### 功能说明
+
+允许自定义弹幕 API 的服务地址
+
+> [!NOTE]
+>
+> 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[anoraker/abetsy](https://hub.docker.com/repository/docker/anoraker/abetsy)
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+api_server=https://api.dandanplay.net
+```
+
 
 ### load_more_danmaku
 
