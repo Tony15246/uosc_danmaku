@@ -295,17 +295,17 @@ function get_title(from_menu)
     end
 
     local title = mp.get_property("media-title"):gsub(thin_space, " ")
-    local ftitle, season_num, episod_num = nil, nil, nil
+    local season_num, episod_num = nil, nil
     if title then
         if title:match(".*S%d+:E%d+") ~= nil then
-            ftitle, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-            title = url_decode(ftitle)
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
+            title = url_decode(title):gsub("%s*%[.-%]s*", "
         elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
-            ftitle, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
-            title = url_decode(ftitle)
+            title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
+            title = url_decode(title):gsub("%s*%[.-%]s*", "
         elseif title:match(".*S%d+E%d+") ~= nil then
-            ftitle, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
-            title = url_decode(ftitle)
+            title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
+            title = url_decode(title):gsub("%s*%[.-%]s*", "
         else
             title = url_decode(title)
             episod_num = get_episode_number(title)
