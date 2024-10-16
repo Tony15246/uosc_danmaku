@@ -3,6 +3,9 @@ local msg = require 'mp.msg'
 local options = require("options")
 require("api")
 
+local input_loaded, input = pcall(require, "mp.input")
+local uosc_available = false
+
 function get_animes(query)
     local encoded_query = url_encode(query)
 
@@ -31,13 +34,21 @@ function get_animes(query)
     local items = {}
 
     local message = "加载数据中..."
-    update_menu(menu_item(message), query)
+    if uosc_available then
+        update_menu(menu_item(message), query)
+    else
+        mp.osd_message(message, 30)
+    end
 
     local res = mp.command_native(cmd)
 
     if res.status ~= 0 then
         local message = "获取数据失败"
-        update_menu(menu_item(message), query)
+        if uosc_available then
+            update_menu(menu_item(message), query)
+        else
+            mp.osd_message(message, 3)
+        end
         msg.error("HTTP Request failed: " .. res.stderr)
     end
 
@@ -45,7 +56,11 @@ function get_animes(query)
 
     if not response or not response.animes then
         local message = "无结果"
-        update_menu(menu_item(message), query)
+        if uosc_available then
+            update_menu(menu_item(message), query)
+        else
+            mp.osd_message(message, 3)
+        end
         msg.verbose("无结果")
         return
     end
@@ -63,8 +78,14 @@ function get_animes(query)
         })
     end
 
-    update_menu(items, query)
-
+    if uosc_available then
+        update_menu(items, query)
+    elseif input_loaded then
+        mp.osd_message("", 0)
+        mp.add_timeout(0.1, function()
+            open_menu_select(items)
+        end)
+    end
 end
 
 function get_episodes(episodes)
@@ -85,7 +106,13 @@ function get_episodes(episodes)
         items = items,
     }
     local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+    elseif input_loaded then
+        mp.add_timeout(0.1, function()
+            open_menu_select(items)
+        end)
+    end
 end
 
 function menu_item(input)
@@ -97,7 +124,7 @@ end
 function update_menu(items, query)
     local menu_props = {
         type = "menu_anime",
-        title = "在此处输入动画名称",
+        title = "在此处输入番剧名称",
         search_style = "palette",
         search_debounce = "submit",
         on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
@@ -109,11 +136,40 @@ function update_menu(items, query)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
+function open_menu_select(menu_items)
+    local item_titles, item_values = {}, {}
+    for i, v in ipairs(menu_items) do
+        item_titles[i] = v.hint and v.title .. " (" .. v.hint .. ")" or v.title
+        item_values[i] = v.value
+    end
+    mp.commandv('script-message-to', 'console', 'disable')
+    input.select({
+        prompt = '筛选:',
+        items = item_titles,
+        submit = function(id)
+            mp.commandv(unpack(item_values[id]))
+        end,
+    })
+end
+
 -- 打开输入菜单
-function open_input_menu()
+function open_input_menu_get()
+    mp.commandv('script-message-to', 'console', 'disable')
+    input.get({
+        prompt = '番剧名称:',
+        default_text = get_title(true),
+        cursor_position = get_title(true) and #get_title(true) + 1,
+        submit = function(text)
+            input.terminate()
+            mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", text)
+        end
+    })
+end
+
+function open_input_menu_uosc()
     local menu_props = {
         type = "menu_danmaku",
-        title = "在此处输入动画名称",
+        title = "在此处输入番剧名称",
         search_style = "palette",
         search_debounce = "submit",
         search_suggestion = get_title(true),
@@ -133,7 +189,18 @@ function open_input_menu()
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
-function open_add_menu()
+function open_add_menu_get()
+    mp.commandv('script-message-to', 'console', 'disable')
+    input.get({
+        prompt = 'Input url:',
+        submit = function(text)
+            input.terminate()
+            mp.commandv("script-message-to", mp.get_script_name(), "add-source-event", text)
+        end
+    })
+end
+
+function open_add_menu_uosc()
     local menu_props = {
         type = "menu_source",
         title = "在此输入源地址url",
@@ -153,6 +220,22 @@ function open_add_menu()
     }
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+end
+
+function open_input_menu()
+    if uosc_available then
+        open_input_menu_uosc()
+    elseif input_loaded then
+        open_input_menu_get()
+    end
+end
+
+function open_add_menu()
+    if uosc_available then
+        open_add_menu_uosc()
+    elseif input_loaded then
+        open_add_menu_get()
+    end
 end
 
 mp.commandv(
@@ -179,14 +262,23 @@ mp.commandv(
     })
 )
 
+
+mp.register_script_message('uosc-version', function()
+    uosc_available = true
+end)
+
 -- 注册函数给 uosc 按钮使用
 mp.register_script_message("open_search_danmaku_menu", open_input_menu)
 mp.register_script_message("search-anime-event", function(query)
-    mp.commandv("script-message-to", "uosc", "update-menu", "menu_danmaku")
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "update-menu", "menu_danmaku")
+    end
     get_animes(query)
 end)
 mp.register_script_message("search-episodes-event", function(episodes)
-    mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
+    end
     get_episodes(utils.parse_json(episodes))
 end)
 
@@ -197,7 +289,9 @@ end)
 
 mp.register_script_message("open_add_source_menu", open_add_menu)
 mp.register_script_message("add-source-event", function(query)
-    mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
+    end
     add_danmaku_source(query)
 end)
 
