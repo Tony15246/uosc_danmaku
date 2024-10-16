@@ -236,7 +236,7 @@ end
 -- 获取播放文件标题信息
 function get_title(from_menu)
     local path = mp.get_property("path")
-    local thin_space = "\xE2\x80\x89"
+    local thin_space = string.char(0xE2, 0x80, 0x89)
 
     if path and not is_protocol(path) then
         local dir = get_parent_directory(path)
@@ -256,13 +256,13 @@ function get_title(from_menu)
         title = title:gsub(thin_space, " ")
         if title:match(".*S%d+:E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
-            title = url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
         else
             title = url_decode(title)
             episod_num = get_episode_number(title)
@@ -297,7 +297,7 @@ function get_episode_number(filename, fname)
         end
     end
 
-    local thin_space = "\xE2\x80\x89"
+    local thin_space = string.char(0xE2, 0x80, 0x89)
     filename = filename:gsub(thin_space, " ")
 
     -- 匹配模式：支持多种集数形式
@@ -321,13 +321,11 @@ function get_episode_number(filename, fname)
             -- 返回集数，通常是匹配的第一个捕获
             local episode_number = tonumber(match[1])
             if episode_number then
-                if episode_number >= 1000 then
-                    goto continue
+                if episode_number < 1000 then
+                    return episode_number
                 end
-                return episode_number
             end
         end
-        ::continue::
     end
     -- 未找到集数
     return nil
@@ -552,27 +550,25 @@ function fetch_danmaku_all(episodeId, from_menu)
 
         local response_comments = utils.parse_json(res.stdout)
 
-        if not response_comments or not response_comments["comments"] then
+        if response_comments and response_comments["comments"] then
+            if response_comments["count"] == 0 then
+                local start = os.time()
+                while os.time() - start < 1 do
+                    -- 空循环，等待 1 秒
+                end
+    
+                res = get_danmaku_comments(url)
+                response_comments = utils.parse_json(res.stdout)
+            end
+    
+            for _, comment in ipairs(response_comments["comments"]) do
+                comment["shift"] = shift
+                table.insert(comments, comment)
+            end
+        else
             mp.osd_message("无数据", 3)
             msg.verbose("No result")
-            goto continue
         end
-
-        if response_comments["count"] == 0 then
-            local start = os.time()
-            while os.time() - start < 1 do
-                -- 空循环，等待 1 秒
-            end
-
-            res = get_danmaku_comments(url)
-            response_comments = utils.parse_json(res.stdout)
-        end
-
-        for _, comment in ipairs(response_comments["comments"]) do
-            comment["shift"] = shift
-            table.insert(comments, comment)
-        end
-        ::continue::
     end
 
     url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
