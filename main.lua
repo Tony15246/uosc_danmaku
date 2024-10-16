@@ -155,10 +155,11 @@ end
 -- 打开输入菜单
 function open_input_menu_get()
     mp.commandv('script-message-to', 'console', 'disable')
+    local title = get_title(true)
     input.get({
         prompt = '番剧名称:',
-        default_text = get_title(true),
-        cursor_position = get_title(true) and #get_title(true) + 1,
+        default_text = title,
+        cursor_position = title and #title + 1,
         submit = function(text)
             input.terminate()
             mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", text)
