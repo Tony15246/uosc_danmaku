@@ -600,8 +600,44 @@ function fetch_danmaku_all(episodeId, from_menu)
     load_danmaku(comments, from_menu)
 end
 
---通过输入源url获取弹幕库
 function add_danmaku_source(query)
+    if is_protocol(query) then
+        add_danmaku_source_online(query)
+    else
+        add_danmaku_source_local(query)
+    end
+end
+
+function add_danmaku_source_local(query)
+    local path = normalize(query)
+    if not file_exists(path) then
+        msg.verbose("无效的文件路径")
+        return
+    end
+    if not (string.match(path, "%.xml$") or string.match(path, "%.json$") or string.match(path, "%.ass$")) then
+        msg.verbose("仅支持弹幕文件")
+        return
+    end
+    local old_danmaku = utils.join_path(danmaku_path, "danmaku.ass")
+    local danmaku_input = {path}
+    if file_exists(old_danmaku) then
+        table.insert(danmaku_input, old_danmaku)
+    end
+    convert_with_danmaku_factory(danmaku_input)
+    remove_danmaku_track()
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    if not file_exists(danmaku_file) then
+        mp.osd_message("未找到弹幕文件", 3)
+        return
+    end
+    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
+    show_danmaku_func()
+    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+    mp.osd_message("弹幕添加成功", 3)
+end
+
+--通过输入源url获取弹幕库
+function add_danmaku_source_online(query)
     local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     mp.osd_message("弹幕加载中...", 30)
     local res = get_danmaku_comments(url)
@@ -762,7 +798,6 @@ function convert_with_danmaku_factory(danmaku_input)
         "-o",
         utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
-        danmaku_input,
         "--ignore-warnings",
         "--resolution", options.resolution,
         "--scrolltime", options.scrolltime,
@@ -775,6 +810,17 @@ function convert_with_danmaku_factory(danmaku_input)
         "--displayarea", options.displayarea,
         "--outline", options.outline,
     }
+
+    -- 检查 danmaku_input 是字符串还是数组，并插入到正确的位置
+    if type(danmaku_input) == "string" then
+        -- 如果是单个字符串，直接插入
+        table.insert(arg, 5, danmaku_input)
+    else
+        -- 如果是字符串数组，逐个插入
+        for i, input in ipairs(danmaku_input) do
+            table.insert(arg, 4 + i, input)
+        end
+    end
 
     if blacklist_file ~= "" and file_exists(blacklist_file) then
         table.insert(arg, "--blacklist")
