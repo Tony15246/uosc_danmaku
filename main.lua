@@ -39,6 +39,7 @@ function get_animes(query)
     else
         mp.osd_message(message, 30)
     end
+    msg.verbose("尝试获取番剧数据：" .. full_url)
 
     local res = mp.command_native(cmd)
 
@@ -49,7 +50,7 @@ function get_animes(query)
         else
             mp.osd_message(message, 3)
         end
-        msg.error("HTTP Request failed: " .. res.stderr)
+        msg.error("HTTP 请求失败：" .. res.stderr)
     end
 
     local response = utils.parse_json(res.stdout)

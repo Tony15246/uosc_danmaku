@@ -1,6 +1,7 @@
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
+local md5 = require("md5")
 local options = require("options")
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
@@ -376,48 +377,6 @@ function set_episode_id(input, from_menu)
     end
 end
 
--- 使用 Unix 的 head 和 md5sum 命令计算前 16MB 的 MD5 哈希
-local function get_md5_unix(file_path)
-    local arg = { "sh", "-c", "head -c 16M -- \"" .. file_path .. "\" | md5sum | awk '{print $1}'" }
-    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
-
-    if result.status == 0 then
-        return result.stdout:gsub("%s+", "")
-    else
-        return nil
-    end
-end
-
--- 使用 Windows PowerShell 的命令计算前 16MB 的 MD5 哈希
-local function get_md5_windows(file_path)
-    local cmd = [[
-        $stream = [System.IO.File]::OpenRead(']] .. file_path .. [['); 
-        $buffer = New-Object byte[] (16MB); 
-        $bytesRead = $stream.Read($buffer, 0, 16MB); 
-        $stream.Close(); 
-        $s = [System.IO.MemoryStream]::new($buffer, 0, $bytesRead); 
-        Get-FileHash -Algorithm MD5 -InputStream $s | Select-Object -ExpandProperty Hash
-    ]]
-
-    local arg = {"powershell", "-NoProfile", "-Command", cmd}
-    local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
-
-    if result.status == 0 then
-        return result.stdout:gsub("%s+", "")
-    else
-        return nil
-    end
-end
-
--- 根据操作系统调用不同的哈希计算函数
-local function get_file_md5(file_path)
-    if platform == "windows" then
-        return get_md5_windows(file_path)
-    else
-        return get_md5_unix(file_path)
-    end
-end
-
 -- 使用 curl 发送 HTTP POST 请求获取弹幕 episodeId
 local function match_file(file_name, file_hash)
     local url = options.api_server .. "/api/v2/match"
@@ -464,7 +423,7 @@ local function load_danmaku(comments, from_menu)
         end
         mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
     else
-        msg.verbose("Error saving JSON file")
+        msg.verbose("保存 JSON 文件出错")
     end
 end
 
@@ -497,6 +456,7 @@ end
 function fetch_danmaku(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
     mp.osd_message("弹幕加载中...", 30)
+    msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_comments(url)
     if res.status == 0 then
         local response = utils.parse_json(res.stdout)
@@ -508,11 +468,11 @@ function fetch_danmaku(episodeId, from_menu)
             load_danmaku(response["comments"], from_menu)
         else
             mp.osd_message("无数据", 3)
-            msg.verbose("No result")
+            msg.verbose("无数据")
         end
     else
         mp.osd_message("获取数据失败", 3)
-        msg.error("HTTP Request failed: " .. res.stderr)
+        msg.error("HTTP 请求失败：" .. res.stderr)
     end
 end
 
@@ -521,10 +481,11 @@ function fetch_danmaku_all(episodeId, from_menu)
     local comments = {}
     local url = options.api_server .. "/api/v2/related/" .. episodeId
     mp.osd_message("弹幕加载中...", 30)
+    msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
-        msg.error("HTTP Request failed: " .. res.stderr)
+        msg.error("HTTP 请求失败：" .. res.stderr)
         return
     end
 
@@ -532,7 +493,7 @@ function fetch_danmaku_all(episodeId, from_menu)
 
     if not response or not response["relateds"] then
         mp.osd_message("无数据", 3)
-        msg.verbose("No result")
+        msg.verbose("无数据")
         return
     end
 
@@ -541,10 +502,11 @@ function fetch_danmaku_all(episodeId, from_menu)
         local shift = related["shift"]
         --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
         mp.osd_message("正在从第三方库装填弹幕", 30)
+        msg.verbose("正在从第三方库装填弹幕：" .. url)
         res = get_danmaku_comments(url)
         if res.status ~= 0 then
             mp.osd_message("获取数据失败", 3)
-            msg.error("HTTP Request failed: " .. res.stderr)
+            msg.error("HTTP 请求失败：" .. res.stderr)
             return
         end
 
@@ -556,27 +518,28 @@ function fetch_danmaku_all(episodeId, from_menu)
                 while os.time() - start < 1 do
                     -- 空循环，等待 1 秒
                 end
-    
+
                 res = get_danmaku_comments(url)
                 response_comments = utils.parse_json(res.stdout)
             end
-    
+
             for _, comment in ipairs(response_comments["comments"]) do
                 comment["shift"] = shift
                 table.insert(comments, comment)
             end
         else
             mp.osd_message("无数据", 3)
-            msg.verbose("No result")
+            msg.verbose("无数据")
         end
     end
 
     url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
     mp.osd_message("正在从弹弹Play库装填弹幕", 30)
+    msg.verbose("尝试获取弹幕：" .. url)
     res = get_danmaku_comments(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
-        msg.error("HTTP Request failed: " .. res.stderr)
+        msg.error("HTTP 请求失败：" .. res.stderr)
         return
     end
 
@@ -584,7 +547,7 @@ function fetch_danmaku_all(episodeId, from_menu)
 
     if not response or not response["comments"] then
         mp.osd_message("无数据", 3)
-        msg.verbose("No result")
+        msg.verbose("无数据")
         return
     end
 
@@ -600,6 +563,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     load_danmaku(comments, from_menu)
 end
 
+--通过输入源url获取弹幕库
 function add_danmaku_source(query)
     if is_protocol(query) then
         add_danmaku_source_online(query)
@@ -640,10 +604,11 @@ end
 function add_danmaku_source_online(query)
     local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     mp.osd_message("弹幕加载中...", 30)
+    msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_comments(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
-        msg.error("HTTP Request failed: " .. res.stderr)
+        msg.error("HTTP 请求失败：" .. res.stderr)
         return
     end
 
@@ -703,7 +668,7 @@ function add_danmaku_source_online(query)
         json_file:write("]")
         json_file:close()
     else
-        msg.verbose("Error saving JSON file")
+        msg.verbose("保存 JSON 文件出错")
     end
 
     local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
@@ -862,9 +827,25 @@ function get_danmaku_with_hash(file_name, file_path)
         return
     end
     -- 计算文件哈希
-    local hash = get_file_md5(normalize(file_path))
+    local file, error = io.open(normalize(file_path), 'rb')
+    if error ~= nil then
+        return msg.error(error)
+    end
+    local m = md5.new()
+    for _ = 1, 16 * 1024 do
+        local content = file:read(1024)
+        if content == nil then
+            file:close()
+            return msg.error('无法读取文件内容')
+        end
+        m:update(content)
+    end
+    file:close()
+    local hash = m:finish()
     if not hash then
         return
+    else
+        msg.info('hash:', hash)
     end
 
     -- 发送匹配请求
@@ -876,10 +857,10 @@ function get_danmaku_with_hash(file_name, file_path)
     -- 解析匹配结果
     local match_data = utils.parse_json(match_data_raw)
     if not match_data.isMatched then
-        msg.verbose("No matching episode")
+        msg.verbose("没有匹配的剧集")
         return
     elseif #match_data.matches > 1 then
-        msg.verbose("Multiple matching episodes")
+        msg.verbose("找到多个匹配的剧集")
         return
     end
 
