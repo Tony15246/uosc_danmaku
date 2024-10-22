@@ -392,6 +392,11 @@ local function match_file(file_name, file_hash)
         "-d", body
     }
 
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
     if result.status == 0 then
         return result.stdout
@@ -429,22 +434,29 @@ end
 
 -- Use curl command to get the JSON data
 local function get_danmaku_comments(url)
+    local arg = {
+        "curl",
+        "-L",
+        "-X",
+        "GET",
+        "--header",
+        "Accept: application/json",
+        "--user-agent",
+        options.user_agent,
+        url,
+    }
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local cmd = {
         name = 'subprocess',
         capture_stdout = true,
         capture_stderr = true,
         playback_only = true,
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            url,
-        },
+        args = arg,
     }
 
     return mp.command_native(cmd)
@@ -865,15 +877,7 @@ function get_danmaku_with_hash(file_name, file_path)
     end
 
     -- 获取并加载弹幕数据
-    if options.save_hash_match then
-        set_episode_id(match_data.matches[1].episodeId, true)
-    else
-        if options.load_more_danmaku then
-            fetch_danmaku_all(match_data.matches[1].episodeId, true)
-        else
-            fetch_danmaku(match_data.matches[1].episodeId, true)
-        end
-    end
+    set_episode_id(match_data.matches[1].episodeId, true)
 end
 
 -- 加载本地 xml 弹幕

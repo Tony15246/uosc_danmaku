@@ -7,11 +7,8 @@ local options = {
     auto_load = false,
     autoload_local_danmaku = false,
     autoload_for_url = false,
-    -- 保存哈希匹配的关联结果
-    -- 启用时可以避免同番剧不同剧集的反复哈希匹配
-    -- 禁用时对同目录文件始终进行哈希匹配（仅当同目录从未执行过手动搜索），这可以应对边缘案例：
-    -- 同目录存在同一番剧的 OVA 和 MOVIE；同一番剧的剧集文件命名格式不同；同目录存在多个不同番剧
-    save_hash_match = false,
+    user_agent = "mpv_danmaku/1.0",
+    proxy = "",
     -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
     -- 留空（默认值）会在脚本同目录的 bin 中查找
     -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
