@@ -13,22 +13,29 @@ function get_animes(query)
     local params = "anime=" .. encoded_query
     local full_url = url .. "?" .. params
 
+    local arg = {
+        "curl",
+        "-L",
+        "-X",
+        "GET",
+        "--header",
+        "Accept: application/json",
+        "--user-agent",
+        options.user_agent,
+        full_url,
+    }
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local cmd = {
         name = 'subprocess',
         capture_stdout = true,
         capture_stderr = true,
         playback_only = true,
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            full_url,
-        },
+        args = arg,
     }
 
     local items = {}
