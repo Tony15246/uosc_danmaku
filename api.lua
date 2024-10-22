@@ -877,15 +877,7 @@ function get_danmaku_with_hash(file_name, file_path)
     end
 
     -- 获取并加载弹幕数据
-    if options.save_hash_match then
-        set_episode_id(match_data.matches[1].episodeId, true)
-    else
-        if options.load_more_danmaku then
-            fetch_danmaku_all(match_data.matches[1].episodeId, true)
-        else
-            fetch_danmaku(match_data.matches[1].episodeId, true)
-        end
-    end
+    set_episode_id(match_data.matches[1].episodeId, true)
 end
 
 -- 加载本地 xml 弹幕
