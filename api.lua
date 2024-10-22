@@ -392,6 +392,11 @@ local function match_file(file_name, file_hash)
         "-d", body
     }
 
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
     if result.status == 0 then
         return result.stdout
@@ -429,22 +434,29 @@ end
 
 -- Use curl command to get the JSON data
 local function get_danmaku_comments(url)
+    local arg = {
+        "curl",
+        "-L",
+        "-X",
+        "GET",
+        "--header",
+        "Accept: application/json",
+        "--user-agent",
+        options.user_agent,
+        url,
+    }
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local cmd = {
         name = 'subprocess',
         capture_stdout = true,
         capture_stderr = true,
         playback_only = true,
-        args = {
-            "curl",
-            "-L",
-            "-X",
-            "GET",
-            "--header",
-            "Accept: application/json",
-            "--header",
-            "User-Agent: MyCustomUserAgent/1.0",
-            url,
-        },
+        args = arg,
     }
 
     return mp.command_native(cmd)

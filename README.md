@@ -253,6 +253,34 @@ autoload_local_danmaku=yes
 autoload_for_url=yes
 ```
 
+### user_agent
+
+#### 功能说明
+
+自定义`curl`发送网络请求时使用的 User Agent，默认值是`mpv_danmaku/1.0`
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
+
+```
+user_agent=mpv_danmaku/1.0
+```
+
+### proxy
+
+#### 功能说明
+
+自定义`curl`发送网络请求时使用的代理，默认禁用
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+proxy=127.0.0.1:7890
+```
+
 ### save_hash_match
 
 #### 功能说明

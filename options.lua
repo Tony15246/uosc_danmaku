@@ -7,6 +7,8 @@ local options = {
     auto_load = false,
     autoload_local_danmaku = false,
     autoload_for_url = false,
+    user_agent = "mpv_danmaku/1.0",
+    proxy = "",
     -- 保存哈希匹配的关联结果
     -- 启用时可以避免同番剧不同剧集的反复哈希匹配
     -- 禁用时对同目录文件始终进行哈希匹配（仅当同目录从未执行过手动搜索），这可以应对边缘案例：
