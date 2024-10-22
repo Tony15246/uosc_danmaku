@@ -632,9 +632,9 @@ function add_danmaku_source_online(query)
     end
 
     local new_comments = response["comments"]
-    local add_count = response["count"]
+    local count = response["count"]
 
-    if add_count == 0 then
+    if count == 0 then
         mp.osd_message("服务器无缓存数据，再次尝试请求", 30)
 
         local start = os.time()
@@ -645,46 +645,21 @@ function add_danmaku_source_online(query)
         res = get_danmaku_comments(url)
         response = utils.parse_json(res.stdout)
         new_comments = response["comments"]
-        add_count = response["count"]
+        count = response["count"]
     end
 
-    if add_count == 0 then
+    if count == 0 then
         mp.osd_message("此源弹幕为空，结束加载", 3)
         return
     end
 
-    new_comments = convert_json_for_merge(new_comments)
-
-    local old_comment_path = utils.join_path(danmaku_path, "danmaku.json")
-    local comments = read_file(old_comment_path)
-
-    if comments == nil then
-        comments = {}
-    else
-        comments = utils.parse_json(comments)
+    save_json_for_factory(new_comments)
+    local old_danmaku = utils.join_path(danmaku_path, "danmaku.ass")
+    local danmaku_input = { utils.join_path(danmaku_path, "danmaku.json") }
+    if file_exists(old_danmaku) then
+        table.insert(danmaku_input, old_danmaku)
     end
-
-    for _, comment in ipairs(new_comments) do
-        table.insert(comments, comment)
-    end
-
-    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
-    local json_file = io.open(json_filename, "w")
-
-    if json_file then
-        json_file:write("[\n")
-        for _, comment in ipairs(comments) do
-            local json_entry = string.format('{"c":"%s","m":"%s"},\n', comment["c"], comment["m"])
-            json_file:write(json_entry)
-        end
-        json_file:write("]")
-        json_file:close()
-    else
-        msg.verbose("保存 JSON 文件出错")
-    end
-
-    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-    convert_with_danmaku_factory(danmaku_json)
+    convert_with_danmaku_factory(danmaku_input)
     remove_danmaku_track()
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     if not file_exists(danmaku_file) then
@@ -694,29 +669,7 @@ function add_danmaku_source_online(query)
     mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
     show_danmaku_func()
     mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-    mp.osd_message("弹幕加载成功，添加了" .. add_count .. "条弹幕，共计" .. #comments .. "条弹幕", 3)
-end
-
-function convert_json_for_merge(comments)
-    local content = {}
-    for _, comment in ipairs(comments) do
-        local p = comment["p"]
-        if p then
-            local fields = split(p, ",")
-            local c_value = string.format(
-                "%s,%s,%s,25,,,",
-                fields[1], -- first field of p to first field of c
-                fields[3], -- third field of p to second field of c
-                fields[2]  -- second field of p to third field of c
-            )
-            local m_value = comment["m"]
-
-            m_value = escape_json_string(m_value)
-
-            table.insert(content, { ["c"] = c_value, ["m"] = m_value })
-        end
-    end
-    return content
+    mp.osd_message("弹幕添加成功", 3)
 end
 
 -- 将弹幕转换为factory可读的json格式
@@ -741,8 +694,6 @@ function save_json_for_factory(comments)
                     fields[2]  -- second field of p to third field of c
                 )
                 local m_value = comment["m"]
-
-                m_value = escape_json_string(m_value)
 
                 -- Write the JSON object as a single line, no spaces or extra formatting
                 local json_entry = string.format('{"c":"%s","m":"%s"},\n', c_value, m_value)
@@ -810,18 +761,6 @@ function convert_with_danmaku_factory(danmaku_input)
         capture_stdout = true,
         args = arg,
     })
-end
-
-function escape_json_string(str)
-    -- 将 JSON 中需要转义的字符进行替换
-    str = str:gsub("\\", "\\\\") -- 反斜杠
-    str = str:gsub('"', '\\"')   -- 双引号
-    str = str:gsub("\b", "\\b")  -- 退格符
-    str = str:gsub("\f", "\\f")  -- 换页符
-    str = str:gsub("\n", "\\n")  -- 换行符
-    str = str:gsub("\r", "\\r")  -- 回车符
-    str = str:gsub("\t", "\\t")  -- 制表符
-    return str
 end
 
 -- Utility function to split a string by a delimiter
