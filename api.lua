@@ -1,6 +1,5 @@
-local mp = require 'mp'
-local utils = require 'mp.utils'
-local msg = require 'mp.msg'
+local msg = require('mp.msg')
+local utils = require("mp.utils")
 local md5 = require("md5")
 local options = require("options")
 
@@ -433,7 +432,7 @@ local function load_danmaku(comments, from_menu)
 end
 
 -- Use curl command to get the JSON data
-local function get_danmaku_comments(url)
+function get_danmaku_contents(url)
     local arg = {
         "curl",
         "-L",
@@ -469,7 +468,7 @@ function fetch_danmaku(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
     mp.osd_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local res = get_danmaku_comments(url)
+    local res = get_danmaku_contents(url)
     if res.status == 0 then
         local response = utils.parse_json(res.stdout)
         if response and response["comments"] then
@@ -494,7 +493,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/related/" .. episodeId
     mp.osd_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local res = get_danmaku_comments(url)
+    local res = get_danmaku_contents(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
         msg.error("HTTP 请求失败：" .. res.stderr)
@@ -515,7 +514,7 @@ function fetch_danmaku_all(episodeId, from_menu)
         --mp.osd_message("正在从此地址加载弹幕：" .. related["url"], 30)
         mp.osd_message("正在从第三方库装填弹幕", 30)
         msg.verbose("正在从第三方库装填弹幕：" .. url)
-        res = get_danmaku_comments(url)
+        res = get_danmaku_contents(url)
         if res.status ~= 0 then
             mp.osd_message("获取数据失败", 3)
             msg.error("HTTP 请求失败：" .. res.stderr)
@@ -531,7 +530,7 @@ function fetch_danmaku_all(episodeId, from_menu)
                     -- 空循环，等待 1 秒
                 end
 
-                res = get_danmaku_comments(url)
+                res = get_danmaku_contents(url)
                 response_comments = utils.parse_json(res.stdout)
             end
 
@@ -548,7 +547,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
     mp.osd_message("正在从弹弹Play库装填弹幕", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    res = get_danmaku_comments(url)
+    res = get_danmaku_contents(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
         msg.error("HTTP 请求失败：" .. res.stderr)
@@ -617,7 +616,7 @@ function add_danmaku_source_online(query)
     local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     mp.osd_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local res = get_danmaku_comments(url)
+    local res = get_danmaku_contents(url)
     if res.status ~= 0 then
         mp.osd_message("获取数据失败", 3)
         msg.error("HTTP 请求失败：" .. res.stderr)
@@ -642,7 +641,7 @@ function add_danmaku_source_online(query)
             -- 空循环，等待 1 秒
         end
 
-        res = get_danmaku_comments(url)
+        res = get_danmaku_contents(url)
         response = utils.parse_json(res.stdout)
         new_comments = response["comments"]
         count = response["count"]
