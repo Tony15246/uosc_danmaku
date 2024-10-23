@@ -1,5 +1,5 @@
+local msg = require('mp.msg')
 local utils = require("mp.utils")
-local msg = require 'mp.msg'
 local options = require("options")
 require("api")
 
@@ -8,36 +8,9 @@ local uosc_available = false
 
 function get_animes(query)
     local encoded_query = url_encode(query)
-
     local url = options.api_server .. "/api/v2/search/episodes"
     local params = "anime=" .. encoded_query
     local full_url = url .. "?" .. params
-
-    local arg = {
-        "curl",
-        "-L",
-        "-X",
-        "GET",
-        "--header",
-        "Accept: application/json",
-        "--user-agent",
-        options.user_agent,
-        full_url,
-    }
-
-    if options.proxy ~= "" then
-        table.insert(arg, '-x')
-        table.insert(arg, options.proxy)
-    end
-
-    local cmd = {
-        name = 'subprocess',
-        capture_stdout = true,
-        capture_stderr = true,
-        playback_only = true,
-        args = arg,
-    }
-
     local items = {}
 
     local message = "加载数据中..."
@@ -48,7 +21,7 @@ function get_animes(query)
     end
     msg.verbose("尝试获取番剧数据：" .. full_url)
 
-    local res = mp.command_native(cmd)
+    local res = get_danmaku_contents(full_url)
 
     if res.status ~= 0 then
         local message = "获取数据失败"
@@ -113,6 +86,7 @@ function get_episodes(episodes)
         search_style = "disabled",
         items = items,
     }
+
     local json_props = utils.format_json(menu_props)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "open-menu", json_props)
@@ -280,7 +254,7 @@ end)
 mp.register_script_message("open_search_danmaku_menu", open_input_menu)
 mp.register_script_message("search-anime-event", function(query)
     if uosc_available then
-        mp.commandv("script-message-to", "uosc", "update-menu", "menu_danmaku")
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_danmaku")
     end
     get_animes(query)
 end)
