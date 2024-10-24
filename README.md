@@ -13,6 +13,8 @@
 <video width="902" src="https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e">
 </video>
 
+在未安装uosc框架时，调用mpv内部的`mp.input`进行菜单渲染，具体效果见[此pr](https://github.com/Tony15246/uosc_danmaku/pull/24)
+
 ### 主要功能
 1. 从弹弹play或自定义服务的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
@@ -128,6 +130,8 @@ show_danmaku_keyboard_key=i
 
 #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
 
+从弹幕源添加弹幕。在已经在播放弹幕的情况下会将添加的弹幕追加到现有弹幕中。
+
 此功能尚为实验性功能，目前尚未解决弹幕去重等问题。
 
 可添加的弹幕源如哔哩哔哩上任意视频通过video路径加BV号，或者巴哈姆特上的视频地址等。比如说以下地址均可作为有效弹幕源被添加：
@@ -143,6 +147,15 @@ https://ani.gamer.com.tw/animeVideo.php?sn=36843
 
 ```
 Ctrl+j script-message open_add_source_menu
+```
+
+现已添加了对加载本地弹幕文件的支持，输入本地弹幕文件的绝对路径即可使用本插件加载弹幕。加载出来的弹幕样式同在本插件中设置的弹幕样式。支持的文件格式有ass文件和xml文件。具体可参见[此issue](https://github.com/Tony15246/uosc_danmaku/issues/26)
+
+```
+#Linux下示例
+/home/tony/Downloads/example.xml
+#Windows下示例
+C:\Users\Tony\Downloads\example.xml
 ```
 
 ## 配置选项（可选）
@@ -241,6 +254,8 @@ autoload_local_danmaku=yes
 
 为可能支持的 url 视频文件实现弹幕关联记忆和继承，配合播放列表食用效果最佳
 
+目前的具体支持情况和实现效果可以参考[此pr](https://github.com/Tony15246/uosc_danmaku/pull/16)
+
 > [!NOTE]
 >
 > 实验性功能，尚不完善
@@ -262,6 +277,10 @@ autoload_for_url=yes
 #### 使用方法
 
 想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
+
+> [!NOTE]
+>
+> User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
 
 ```
 user_agent=mpv_danmaku/1.0
@@ -346,6 +365,6 @@ blacklist_path=
 
 ### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”
 
-很有可能是Windows系统的病毒威胁与保护误查杀了本插件使用的DanmakuFactory.exe，把DanmakuFactory.exe当成了病毒。找到下图中的界面还原DanmakuFactory.exe并允许此应用
+可能是Windows系统的病毒威胁与保护误查杀了本插件使用的DanmakuFactory.exe，把DanmakuFactory.exe当成了病毒。找到下图中的界面还原DanmakuFactory.exe并允许此应用
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
