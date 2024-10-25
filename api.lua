@@ -754,6 +754,11 @@ function convert_with_danmaku_factory(danmaku_input)
         table.insert(arg, blacklist_file)
     end
 
+    if options.blockmode ~= "" then
+        table.insert(arg, "--blockmode")
+        table.insert(arg, options.blockmode)
+    end
+
     mp.command_native({
         name = 'subprocess',
         playback_only = false,
