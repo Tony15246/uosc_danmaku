@@ -37,6 +37,8 @@ local options = {
     displayarea = "0.85",
     --描边 0-4
     outline = "1",
+    -- 指定不会显示在屏幕上的弹幕类型。使用“-”连接类型名称，例如“L2R-TOP-BOTTOM”。可用的类型包括：L2R,R2L,TOP,BOTTOM,SPECIAL,COLOR,REPEAT
+    blockmode = "",
     --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
     blacklist_path = "",
 }
