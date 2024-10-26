@@ -106,12 +106,17 @@ local function transform(x, a1, b1, c1, d1)
     return tobit(a + a1), tobit(b + b1), tobit(c + c1), tobit(d + d1)
 end
 
--- assert(#s % 4 == 0)
 local function md5_update(self, s)
+    local m, len = s, #s
+    if len % 4 ~= 0 then
+        m = m .. '\128' .. rep('\0', 63 - band(len + 8, 63)) ..
+                char(band(lshift(len, 3), 255), band(rshift(len, 5), 255), band(rshift(len, 13), 255),
+            band(rshift(len, 21), 255)) .. '\0\0\0\0'
+    end
     local a, b, c, d = self.a, self.b, self.c, self.d
     local x, k = self.x, self.k
-    for i = 1, #s, 4 do
-        local m0, m1, m2, m3 = byte(s, i, i + 3)
+    for i = 1, #m, 4 do
+        local m0, m1, m2, m3 = byte(m, i, i + 3)
         x[k] = bor(m0, lshift(m1, 8), lshift(m2, 16), lshift(m3, 24))
         if k == 16 then
             a, b, c, d = transform(x, a, b, c, d)
@@ -121,16 +126,18 @@ local function md5_update(self, s)
         end
     end
     self.a, self.b, self.c, self.d, self.k = a, b, c, d, k
-    self.len = self.len + #s
+    self.len = self.len + len
     return self
 end
 
 local function md5_finish(self)
     local len = self.len
-    local s = '\128' .. rep('\0', 63 - band(len + 8, 63)) ..
+    if len % 4 == 0 then
+        local s = '\128' .. rep('\0', 63 - band(len + 8, 63)) ..
                   char(band(lshift(len, 3), 255), band(rshift(len, 5), 255), band(rshift(len, 13), 255),
-            band(rshift(len, 21), 255)) .. '\0\0\0\0'
-    md5_update(self, s)
+                band(rshift(len, 21), 255)) .. '\0\0\0\0'
+        md5_update(self, s)
+    end
     return tohex(bswap(self.a)) .. tohex(bswap(self.b)) .. tohex(bswap(self.c)) .. tohex(bswap(self.d))
 end
 
@@ -148,6 +155,10 @@ function md5.new()
         update = md5_update,
         finish = md5_finish,
     }
+end
+
+function md5.sum(s)
+    return md5.new():update(s):finish()
 end
 
 return md5
