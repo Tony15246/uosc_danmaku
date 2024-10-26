@@ -275,7 +275,7 @@ mp.register_script_message("add-source-event", function(query)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
     end
-    add_danmaku_source(query)
+    add_danmaku_source(query, true)
 end)
 
 mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
@@ -314,6 +314,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
             else
                 get_danmaku_with_hash(filename, path)
             end
+            addon_danmaku(path)
         end
         return
     end
