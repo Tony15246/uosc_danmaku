@@ -575,7 +575,39 @@ function fetch_danmaku_all(episodeId, from_menu)
 end
 
 --通过输入源url获取弹幕库
-function add_danmaku_source(query)
+function add_danmaku_source(query, from_menu)
+    from_menu = from_menu or false
+    if from_menu and options.add_from_source then
+        local path = mp.get_property("path")
+        if path == nil then
+            goto continue
+        end
+
+        local history_json = read_file(history_path)
+        if history_json == nil then
+            goto continue
+        end
+
+        local history = utils.parse_json(history_json) or {}
+        history[path] = history[path] or {}
+        local flag = false
+
+        for _, source in ipairs(history[path]) do
+            if source == query then
+                flag = true
+                break
+            end
+        end
+
+        if flag then
+            goto continue
+        end
+
+        table.insert(history[path], query)
+        write_json_file(history_path, history)
+
+    end
+    ::continue::
     if is_protocol(query) then
         add_danmaku_source_online(query)
     else
@@ -837,6 +869,21 @@ function load_local_danmaku(danmaku_xml)
     mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
 end
 
+-- 从用户添加过的弹幕源添加弹幕
+function addon_danmaku(path)
+    local history_json = read_file(history_path)
+
+    if history_json ~= nil then
+        local history = utils.parse_json(history_json) or {}
+        local history_record = history[path]
+        if history_record ~= nil then
+            for _, source in ipairs(history_record) do
+                add_danmaku_source(source)
+            end
+        end
+    end
+end
+
 -- 自动加载上次匹配的弹幕
 function auto_load_danmaku(path, dir, filename, number)
     if dir ~= nil then
@@ -921,6 +968,10 @@ mp.register_event("file-loaded", function()
     end
     if options.auto_load then
         auto_load_danmaku(path, dir, filename)
+    end
+
+    if options.add_from_source then
+        addon_danmaku(path)
     end
 end)
 

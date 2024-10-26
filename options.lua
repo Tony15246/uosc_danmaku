@@ -7,12 +7,13 @@ local options = {
     auto_load = false,
     autoload_local_danmaku = false,
     autoload_for_url = false,
+    add_from_source = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
     -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
     -- 留空（默认值）会在脚本同目录的 bin 中查找
     -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
-    DanmakuFactory_Path = '',
+    DanmakuFactory_Path = "",
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
