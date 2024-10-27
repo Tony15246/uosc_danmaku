@@ -320,10 +320,8 @@ function get_episode_number(filename, fname)
         if #match > 0 then
             -- 返回集数，通常是匹配的第一个捕获
             local episode_number = tonumber(match[1])
-            if episode_number then
-                if episode_number < 1000 then
-                    return episode_number
-                end
+            if episode_number and episode_number < 1000 then
+                return episode_number
             end
         end
     end
@@ -579,35 +577,28 @@ function add_danmaku_source(query, from_menu)
     from_menu = from_menu or false
     if from_menu and options.add_from_source then
         local path = mp.get_property("path")
-        if path == nil then
-            goto continue
-        end
+        if path then
+            local history_json = read_file(history_path)
+            if history_json then
+                local history = utils.parse_json(history_json) or {}
+                history[path] = history[path] or {}
 
-        local history_json = read_file(history_path)
-        if history_json == nil then
-            goto continue
-        end
+                local flag = false
+                for _, source in ipairs(history[path]) do
+                    if source == query then
+                        flag = true
+                        break
+                    end
+                end
 
-        local history = utils.parse_json(history_json) or {}
-        history[path] = history[path] or {}
-        local flag = false
-
-        for _, source in ipairs(history[path]) do
-            if source == query then
-                flag = true
-                break
+                if not flag then
+                    table.insert(history[path], query)
+                    write_json_file(history_path, history)
+                end
             end
         end
-
-        if flag then
-            goto continue
-        end
-
-        table.insert(history[path], query)
-        write_json_file(history_path, history)
-
     end
-    ::continue::
+
     if is_protocol(query) then
         add_danmaku_source_online(query)
     else

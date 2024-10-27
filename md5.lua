@@ -6,20 +6,151 @@
 local byte, char, sub, rep = string.byte, string.char, string.sub, string.rep
 
 local tobit, tohex, bnot, bor, band, bxor, lshift, rshift, rol, bswap
-local ok, bit = pcall(require, 'bit')
+local ok, bit = pcall(require, 'bit')  --LuaJIT
 if ok then
     tobit, tohex = bit.tobit or bit.cast, bit.tohex
     bnot, bor, band, bxor, lshift, rshift = bit.bnot, bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift
     rol, bswap = bit.rol, bit.bswap
 else
-    local bit = require('bit32')
-    local bit32_bnot = bit.bnot
-    tobit = function(a) return a <= 0x7fffffff and a or -(bit32_bnot(a) + 1) end
-    bnot = function(a) return tobit(bit32_bnot(tobit(a))) end
-    bor, band, bxor, lshift, rshift, rol = bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift, bit.lrotate
+    local ok, bit = pcall(require, 'bit32')  --Lua 5.2
+    if ok then
+        local bit32_bnot = bit.bnot
+        tobit = function(a) return a <= 0x7fffffff and a or -(bit32_bnot(a) + 1) end
+        bnot = function(a) return tobit(bit32_bnot(tobit(a))) end
+        bor, band, bxor, lshift, rshift, rol = bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift, bit.lrotate
+    else  --Lua 5.1
+        local function tbl2number(tbl)
+            local result = 0
+            local power = 1
+            for i = 1, #tbl do
+                result = result + tbl[i] * power
+                power = power * 2
+            end
+            return result
+        end
+
+        local function expand(t1, t2)
+            local big, small = t1, t2
+            if #big < #small then
+                big, small = small, big
+            end
+            -- expand small
+            for i = #small + 1, #big do
+                small[i] = 0
+            end
+        end
+
+        local tobit -- needs to be declared before bnot
+
+        bnot = function(n)
+            local tbl = tobit(n)
+            local size = math.max(#tbl, 32)
+            for i = 1, size do
+                if tbl[i] == 1 then
+                    tbl[i] = 0
+                else
+                    tbl[i] = 1
+                end
+            end
+            return tbl2number(tbl)
+        end
+
+        -- defined as local above
+        tobit = function (n)
+            if n < 0 then
+                -- negative
+                return tobit(bnot(math.abs(n)) + 1)
+            end
+            -- to bits table
+            local tbl = {}
+            local cnt = 1
+            local last
+            while n > 0 do
+                last = n % 2
+                tbl[cnt] = last
+                n = (n - last) / 2
+                cnt = cnt + 1
+            end
+            return tbl
+        end
+
+        bor = function(m, n)
+            local tbl_m = tobit(m)
+            local tbl_n = tobit(n)
+            expand(tbl_m, tbl_n)
+            local tbl = {}
+            for i = 1, #tbl_m do
+                if tbl_m[i] == 0 and tbl_n[i] == 0 then
+                    tbl[i] = 0
+                else
+                    tbl[i] = 1
+                end
+            end
+            return tbl2number(tbl)
+        end
+
+        band = function(m, n)
+            local tbl_m = tobit(m)
+            local tbl_n = tobit(n)
+            expand(tbl_m, tbl_n)
+            local tbl = {}
+            for i = 1, #tbl_m do
+                if tbl_m[i] == 0 or tbl_n[i] == 0 then
+                    tbl[i] = 0
+                else
+                    tbl[i] = 1
+                end
+            end
+            return tbl2number(tbl)
+        end
+
+        bxor = function(m, n)
+            local tbl_m = tobit(m)
+            local tbl_n = tobit(n)
+            expand(tbl_m, tbl_n)
+            local tbl = {}
+            for i = 1, #tbl_m do
+                if tbl_m[i] ~= tbl_n[i] then
+                    tbl[i] = 1
+                else
+                    tbl[i] = 0
+                end
+            end
+            return tbl2number(tbl)
+        end
+
+        lshift = function(n, bits)
+            if n < 0 then
+                -- negative
+                n = bnot(math.abs(n)) + 1
+            end
+            for i = 1, bits do
+                n = n * 2
+            end
+            return band(n, 0xFFFFFFFF)
+        end
+
+        rshift = function(n, bits)
+            local high_bit = 0
+            if n < 0 then
+                -- negative
+                n = bnot(math.abs(n)) + 1
+                high_bit = 0x80000000
+            end
+            local floor = math.floor
+            for i = 1, bits do
+                n = n / 2
+                n = bor(floor(n), high_bit)
+            end
+            return floor(n)
+        end
+    end
 end
 if not tohex then
     tohex = function(a) return string.sub(string.format('%08x', a), -8) end
+end
+if not rol then
+    rol = function(a, b) return bor(lshift(a, b), rshift(a, 32-b)) end
 end
 if not bswap then
     bswap = function(a)
