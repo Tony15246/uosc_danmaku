@@ -8,6 +8,8 @@ local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path
 local history_path = mp.command_native({"expand-path", options.history_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
+danmaku = {}
+
 -- url编码转换
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
@@ -361,6 +363,8 @@ function set_episode_id(input, from_menu)
                 history = utils.parse_json(history_json) or {}
             end
             history[dir] = {}
+            history[dir].animeTitle = danmaku.anime
+            history[dir].episodeTitle = danmaku.episode
             history[dir].episodeId = episodeId
             history[dir].episodeNumber = episodeNumber
             history[dir].fname = fname
@@ -423,7 +427,12 @@ local function load_danmaku(comments, from_menu)
             show_danmaku_func()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
-        mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        if danmaku.anime and danmaku.episode then
+            mp.osd_message(danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+            msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
+        else
+            mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        end
     else
         msg.verbose("保存 JSON 文件出错")
     end
@@ -842,6 +851,9 @@ function get_danmaku_with_hash(file_name, file_path)
         return
     end
 
+    danmaku.anime = match_data.matches[1].animeTitle
+    danmaku.episode = match_data.matches[1].episodeTitle
+
     -- 获取并加载弹幕数据
     set_episode_id(match_data.matches[1].episodeId, true)
 end
@@ -885,10 +897,13 @@ function auto_load_danmaku(path, dir, filename, number)
             local history_dir = history[dir]
             if history_dir ~= nil then
                 --2.如果存在，则获取number和id
+                danmaku.anime = history[dir].animeTitle
+                danmaku.episode = history[dir].episodeTitle
                 local history_number = history[dir].episodeNumber
                 local history_id = history[dir].episodeId
                 local history_fname = history[dir].fname
                 local playing_number = nil
+
                 if history_fname then
                     if filename ~= history_fname then
                         if number then
