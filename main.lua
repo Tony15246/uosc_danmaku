@@ -54,7 +54,7 @@ function get_animes(query)
                 "script-message-to",
                 mp.get_script_name(),
                 "search-episodes-event",
-                utils.format_json(anime.episodes),
+                anime.animeTitle, utils.format_json(anime.episodes),
             },
         })
     end
@@ -69,12 +69,12 @@ function get_animes(query)
     end
 end
 
-function get_episodes(episodes)
+function get_episodes(animeTitle, episodes)
     local items = {}
     for _, episode in ipairs(episodes) do
         table.insert(items, {
             title = episode.episodeTitle,
-            value = { "script-message-to", mp.get_script_name(), "load-danmaku", episode.episodeId },
+            value = { "script-message-to", mp.get_script_name(), "load-danmaku", animeTitle, episode.episodeTitle, episode.episodeId },
             keep_open = false,
             selectable = true,
         })
@@ -258,15 +258,17 @@ mp.register_script_message("search-anime-event", function(query)
     end
     get_animes(query)
 end)
-mp.register_script_message("search-episodes-event", function(episodes)
+mp.register_script_message("search-episodes-event", function(animeTitle, episodes)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
     end
-    get_episodes(utils.parse_json(episodes))
+    get_episodes(animeTitle, utils.parse_json(episodes))
 end)
 
 -- Register script message to show the input menu
-mp.register_script_message("load-danmaku", function(episodeId)
+mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
+    danmaku.anime = animeTitle
+    danmaku.episode = episodeTitle
     set_episode_id(episodeId, true)
 end)
 
@@ -323,6 +325,9 @@ mp.register_script_message("show_danmaku_keyboard", function()
         hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
     else
+        if danmaku.anime and danmaku.episode then
+            mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+        end
         show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     end
