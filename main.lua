@@ -268,7 +268,7 @@ end)
 -- Register script message to show the input menu
 mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
     danmaku.anime = animeTitle
-    danmaku.episode = episodeTitle
+    danmaku.episode = episodeTitle:match("(第%d+[话回集]+)")
     set_episode_id(episodeId, true)
 end)
 
