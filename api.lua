@@ -852,7 +852,7 @@ function get_danmaku_with_hash(file_name, file_path)
     end
 
     danmaku.anime = match_data.matches[1].animeTitle
-    danmaku.episode = match_data.matches[1].episodeTitle
+    danmaku.episode = match_data.matches[1].episodeTitle:match("(第%d+[话回集]+)")
 
     -- 获取并加载弹幕数据
     set_episode_id(match_data.matches[1].episodeId, true)
@@ -898,7 +898,7 @@ function auto_load_danmaku(path, dir, filename, number)
             if history_dir ~= nil then
                 --2.如果存在，则获取number和id
                 danmaku.anime = history[dir].animeTitle
-                danmaku.episode = history[dir].episodeTitle
+                local episode_number = history[dir].episodeTitle and history[dir].episodeTitle:match("%d+")
                 local history_number = history[dir].episodeNumber
                 local history_id = history[dir].episodeId
                 local history_fname = history[dir].fname
@@ -920,6 +920,7 @@ function auto_load_danmaku(path, dir, filename, number)
                 if playing_number ~= nil then
                     local x = playing_number - history_number --获取集数差值
                     local tmp_id = tostring(x + history_id)
+                    danmaku.episode = episode_number and string.format("第%s话", episode_number + x)
                     mp.osd_message("自动加载上次匹配的弹幕", 3)
                     set_episode_id(tmp_id)
                 else
