@@ -320,9 +320,15 @@ mp.register_script_message("show_danmaku_keyboard", function()
     end
 
     if sec_sid ~= "no" then
+        if danmaku.anime and danmaku.episode then
+            mp.osd_message("关闭弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+        end
         hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
     else
+        if danmaku.anime and danmaku.episode then
+            mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+        end
         show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     end

@@ -8,6 +8,8 @@ local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path
 local history_path = mp.command_native({"expand-path", options.history_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
+danmaku = {}
+
 -- url编码转换
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
@@ -329,11 +331,29 @@ function get_episode_number(filename, fname)
     return nil
 end
 
+function get_episode_info(episodeId)
+    local animeId = math.floor(episodeId / 10000)
+    local episodeNumber = episodeId % 10000
+    local url = options.api_server .. "/api/v2/bangumi/" .. animeId
+    local res = get_danmaku_contents(url)
+    if res.status ~= 0 then
+        mp.osd_message("获取数据失败", 3)
+        msg.error("HTTP 请求失败：" .. res.stderr)
+        return
+    end
+    local response = utils.parse_json(res.stdout)
+    local animeTitle = response.bangumi.animeTitle
+    local episodeTitle = response.bangumi.episodes[episodeNumber].episodeTitle
+    danmaku.anime = animeTitle
+    danmaku.episode = episodeTitle
+end
+
 -- 写入history.json
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
     local episodeId = tonumber(input)
+    get_episode_info(episodeId)
     if from_menu and options.auto_load or options.autoload_for_url then
         local history = {}
         local path = mp.get_property("path")
@@ -423,7 +443,12 @@ local function load_danmaku(comments, from_menu)
             show_danmaku_func()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
-        mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        if danmaku.anime and danmaku.episode then
+            mp.osd_message(danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+            msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
+        else
+            mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        end
     else
         msg.verbose("保存 JSON 文件出错")
     end
