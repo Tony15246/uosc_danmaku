@@ -438,6 +438,27 @@ local function load_danmaku(comments, from_menu)
     end
 end
 
+function get_video_data(url)
+    local arg = {
+        "curl",
+        "--header",
+        "Range: bytes=0-16777215",
+        "--output",
+        danmaku_path .. "temp.mp4",
+        url,
+    }
+
+    local cmd = {
+        name = 'subprocess',
+        capture_stdout = true,
+        capture_stderr = true,
+        playback_only = true,
+        args = arg,
+    }
+
+    return mp.command_native(cmd)
+end
+
 -- Use curl command to get the JSON data
 function get_danmaku_contents(url)
     local arg = {
@@ -811,7 +832,14 @@ end
 -- 通过文件前 16M 的 hash 值进行弹幕匹配
 function get_danmaku_with_hash(file_name, file_path)
     if is_protocol(file_path) then
-        return
+        local res = get_video_data(file_path)
+        if res.status ~= 0 then
+            print(res.stderr)
+            mp.osd_message("获取数据失败", 3)
+            msg.error("HTTP 请求失败：" .. res.stderr)
+            return
+        end
+        file_path = danmaku_path .. "temp.mp4"
     end
     -- 计算文件哈希
     local file, error = io.open(normalize(file_path), 'rb')
@@ -985,6 +1013,8 @@ end)
 mp.add_hook("on_unload", 50, function()
     local rm1 = utils.join_path(danmaku_path, "danmaku.json")
     local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
+    local rm3 = utils.join_path(danmaku_path, "temp.mp4")
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then os.remove(rm2) end
+    if file_exists(rm3) then os.remove(rm3) end
 end)
