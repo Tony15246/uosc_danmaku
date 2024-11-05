@@ -448,6 +448,11 @@ function get_video_data(url)
         url,
     }
 
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local cmd = {
         name = 'subprocess',
         capture_stdout = true,
