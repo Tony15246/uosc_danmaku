@@ -834,7 +834,6 @@ function get_danmaku_with_hash(file_name, file_path)
     if is_protocol(file_path) then
         local res = get_video_data(file_path)
         if res.status ~= 0 then
-            print(res.stderr)
             mp.osd_message("获取数据失败", 3)
             msg.error("HTTP 请求失败：" .. res.stderr)
             return
@@ -988,6 +987,8 @@ mp.register_event("file-loaded", function()
             filename = url_decode(mp.get_property("media-title"))
             auto_load_danmaku(path, dir, filename, episod_number)
             return
+        else
+            get_danmaku_with_hash(filename, path)
         end
     end
 
