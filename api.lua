@@ -441,12 +441,13 @@ end
 function get_video_data(url)
     local arg = {
         "curl",
-        "--header",
-        "Range: bytes=0-16777215",
-        "--output",
-        utils.join_path(danmaku_path, "temp.mp4"),
+        "--range",
+        "0-16777215",
         "--user-agent",
         options.user_agent,
+        "--output",
+        utils.join_path(danmaku_path, "temp.mp4"),
+        "-L",
         url,
     }
 
