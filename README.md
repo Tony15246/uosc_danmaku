@@ -281,6 +281,8 @@ autoload_for_url=yes
 > [!NOTE]
 >
 > User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
+>
+> 若想提高URL播放的哈希匹配成功率，可以将此项设为`mpv`或浏览器的User-Agent
 
 ```
 user_agent=mpv_danmaku/1.0
