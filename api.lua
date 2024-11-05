@@ -444,7 +444,9 @@ function get_video_data(url)
         "--header",
         "Range: bytes=0-16777215",
         "--output",
-        danmaku_path .. "temp.mp4",
+        utils.join_path(danmaku_path, "temp.mp4"),
+        "--user-agent",
+        options.user_agent,
         url,
     }
 
@@ -843,9 +845,17 @@ function get_danmaku_with_hash(file_name, file_path)
             msg.error("HTTP 请求失败：" .. res.stderr)
             return
         end
-        file_path = danmaku_path .. "temp.mp4"
+        file_path = utils.join_path(danmaku_path, "temp.mp4")
+        if not file_exists(file_path) then
+            return
+        end
     end
     -- 计算文件哈希
+    local file_info = utils.file_info(file_path)
+    if file_info and file_info.size < 16 * 1024 * 1024 then
+        msg.verbose("文件小于 16M，无法计算 hash")
+        return
+    end
     local file, error = io.open(normalize(file_path), 'rb')
     if error ~= nil then
         return msg.error(error)
