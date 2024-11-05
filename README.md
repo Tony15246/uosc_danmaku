@@ -1,9 +1,12 @@
 # uosc_danmaku
 在MPV播放器中加载弹弹play弹幕，基于 uosc UI框架和弹弹play API的mpv弹幕扩展插件
+
+> [!IMPORTANT]
+> mpv 需基于 LuaJIT 或 Lua 5.2 构建，脚本不支持 Lua 5.1
+
 > [!NOTE]
-> 
 > 已添加对mpv内部`mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
-> 
+>
 > 欲启用此支持mpv最低版本要求：0.39.0
 
 ## 项目简介
