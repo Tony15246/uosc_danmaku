@@ -1,7 +1,7 @@
 local opt = require("mp.options")
 
 -- 选项
-local options = {
+options = {
     api_server = "https://api.dandanplay.net",
     load_more_danmaku = false,
     auto_load = false,
@@ -10,6 +10,8 @@ local options = {
     add_from_source = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
+    -- 透明度：0（不透明）到255（完全透明）
+    transparency = 0x30,
     -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
     -- 留空（默认值）会在脚本同目录的 bin 中查找
     -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
@@ -18,16 +20,12 @@ local options = {
     history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
-    --分辨率
-    resolution = "1920 1080",
     --速度
-    scrolltime = "12",
+    scrolltime = "15",
     --字体
     fontname = "sans-serif",
     --大小 
     fontsize = "50",
-    --透明度(1-255)  255 为不透明
-    opacity = "150",
     --阴影
     shadow = "0",
     --粗体 true false
@@ -37,7 +35,7 @@ local options = {
     --全部弹幕的显示范围(0.0-1.0)
     displayarea = "0.85",
     --描边 0-4
-    outline = "1",
+    outline = "1.0",
     -- 指定不会显示在屏幕上的弹幕类型。使用“-”连接类型名称，例如“L2R-TOP-BOTTOM”。可用的类型包括：L2R,R2L,TOP,BOTTOM,SPECIAL,COLOR,REPEAT
     blockmode = "",
     --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
@@ -45,5 +43,3 @@ local options = {
 }
 
 opt.read_options(options, mp.get_script_name(), function() end)
-
-return options
