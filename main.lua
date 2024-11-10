@@ -1,7 +1,9 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
-local options = require("options")
+
+require("options")
 require("api")
+require('render')
 
 local input_loaded, input = pcall(require, "mp.input")
 local uosc_available = false
@@ -221,6 +223,23 @@ function open_add_menu()
     end
 end
 
+local function init()
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path)
+    local filename = mp.get_property('filename/no-ext')
+    if filename then
+        if dir then
+            local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+            if file_exists(danmaku_xml) then
+                load_local_danmaku(danmaku_xml)
+                return
+            end
+        end
+        get_danmaku_with_hash(filename, path)
+        addon_danmaku(path)
+    end
+end
+
 mp.commandv(
     "script-message-to",
     "uosc",
@@ -294,43 +313,33 @@ mp.register_script_message("set", function(prop, value)
 
     mp.commandv("script-message-to", "uosc", "set", "show_danmaku", value)
 end)
+
+mp.register_event("file-loaded", function(event)
+    if event.error then
+        return msg.error(event.error)
+    end
+    if enabled and comments == nil then
+        init()
+    end
+end)
+
 mp.register_script_message("show_danmaku_keyboard", function()
-    local has_danmaku = false
-    local sec_sid = mp.get_property("secondary-sid")
-    local tracks = mp.get_property_native("track-list")
-    for i = #tracks, 1, -1 do
-        if tracks[i].type == "sub" and tracks[i].title == "danmaku" then
-            has_danmaku = true
-            break
-        end
-    end
-
-    if sec_sid == "no" and has_danmaku == false then
-        local path = mp.get_property("path")
-        local dir = get_parent_directory(path)
-        local filename = mp.get_property('filename/no-ext')
-        if filename then
-            if dir then
-                local danmaku_xml = utils.join_path(dir, filename .. ".xml")
-                if file_exists(danmaku_xml) then
-                    load_local_danmaku(danmaku_xml)
-                    return
-                end
+    enabled = not enabled
+    if enabled then
+        if comments == nil then
+            init()
+        else
+            if danmaku.anime and danmaku.episode then
+                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+            else
+                mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
-            get_danmaku_with_hash(filename, path)
-            addon_danmaku(path)
+            show_danmaku_func()
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
-        return
-    end
-
-    if sec_sid ~= "no" then
+    else
+        mp.osd_message("关闭弹幕", 2)
         hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
-    else
-        if danmaku.anime and danmaku.episode then
-            mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
-        end
-        show_danmaku_func()
-        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     end
 end)

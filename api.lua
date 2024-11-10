@@ -1,7 +1,6 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
 local md5 = require("md5")
-local options = require("options")
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
@@ -128,35 +127,6 @@ function set_danmaku_visibility(flag)
     end
     history["show_danmaku"] = flag
     write_json_file(history_path, history)
-end
-
--- 弹幕加载相关。 移除弹幕轨道
-function remove_danmaku_track()
-    local tracks = mp.get_property_native("track-list")
-    for i = #tracks, 1, -1 do
-        if tracks[i].type == "sub" and tracks[i].title == "danmaku" then
-            mp.commandv("sub-remove", tracks[i].id)
-            break
-        end
-    end
-end
-
-function show_danmaku_func()
-    local tracks = mp.get_property_native("track-list")
-    for i = #tracks, 1, -1 do
-        if tracks[i].type == "sub" and tracks[i].title == "danmaku" then
-            mp.set_property("secondary-sub-ass-override", "yes")
-            mp.set_property("secondary-sid", tracks[i].id)
-            break
-        end
-    end
-
-    set_danmaku_visibility(true)
-end
-
-function hide_danmaku_func()
-    mp.set_property("secondary-sid", "no")
-    set_danmaku_visibility(false)
 end
 
 -- 拆分字符串中的字符和数字
@@ -407,35 +377,12 @@ local function match_file(file_name, file_hash)
 end
 
 -- 加载弹幕
-local function load_danmaku(comments, from_menu)
-    local success = save_json_for_factory(comments)
-    if success then
-        local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-        convert_with_danmaku_factory(danmaku_json)
-
-        remove_danmaku_track()
-        local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-        if not file_exists(danmaku_file) then
-            mp.osd_message("未找到弹幕文件", 3)
-            return
-        end
-        mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
-        if from_menu then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        elseif get_danmaku_visibility() then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        end
-        if danmaku.anime and danmaku.episode then
-            mp.osd_message(danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-            msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
-        else
-            mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-        end
-    else
-        msg.verbose("保存 JSON 文件出错")
+local function load_danmaku(danmaku_file, from_menu)
+    if not file_exists(danmaku_file) then
+        msg.verbose("未找到弹幕文件")
+        return
     end
+    parse_danmaku(danmaku_file, from_menu)
 end
 
 function get_video_data(url)
@@ -512,7 +459,13 @@ function fetch_danmaku(episodeId, from_menu)
                 mp.osd_message("该集弹幕内容为空，结束加载", 3)
                 return
             end
-            load_danmaku(response["comments"], from_menu)
+            local success = save_json_for_factory(response["comments"])
+            if success then
+                local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+                convert_with_danmaku_factory(danmaku_json)
+            end
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            load_danmaku(danmaku_file, from_menu)
         else
             mp.osd_message("无数据", 3)
             msg.verbose("无数据")
@@ -607,7 +560,14 @@ function fetch_danmaku_all(episodeId, from_menu)
         return
     end
 
-    load_danmaku(comments, from_menu)
+    local success = save_json_for_factory(comments)
+    if success then
+        local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+        convert_with_danmaku_factory(danmaku_json)
+    end
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    load_danmaku(danmaku_file, from_menu)
+
 end
 
 --通过输入源url获取弹幕库
@@ -660,16 +620,9 @@ function add_danmaku_source_local(query)
         table.insert(danmaku_input, old_danmaku)
     end
     convert_with_danmaku_factory(danmaku_input)
-    remove_danmaku_track()
+
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    if not file_exists(danmaku_file) then
-        mp.osd_message("未找到弹幕文件", 3)
-        return
-    end
-    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
-    show_danmaku_func()
-    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-    mp.osd_message("弹幕添加成功", 3)
+    load_danmaku(danmaku_file)
 end
 
 --通过输入源url获取弹幕库
@@ -720,16 +673,9 @@ function add_danmaku_source_online(query)
         table.insert(danmaku_input, old_danmaku)
     end
     convert_with_danmaku_factory(danmaku_input)
-    remove_danmaku_track()
+
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    if not file_exists(danmaku_file) then
-        mp.osd_message("未找到弹幕文件", 3)
-        return
-    end
-    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
-    show_danmaku_func()
-    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-    mp.osd_message("弹幕添加成功", 3)
+    load_danmaku(danmaku_file)
 end
 
 -- 将弹幕转换为factory可读的json格式
@@ -787,11 +733,9 @@ function convert_with_danmaku_factory(danmaku_input)
         utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
         "--ignore-warnings",
-        "--resolution", options.resolution,
         "--scrolltime", options.scrolltime,
         "--fontname", options.fontname,
         "--fontsize", options.fontsize,
-        "--opacity", options.opacity,
         "--shadow", options.shadow,
         "--bold", options.bold,
         "--density", options.density,
@@ -904,15 +848,9 @@ end
 -- 加载本地 xml 弹幕
 function load_local_danmaku(danmaku_xml)
     convert_with_danmaku_factory(danmaku_xml)
-    remove_danmaku_track()
+
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    if not file_exists(danmaku_file) then
-        msg.verbose("xml 弹幕文件未转换成功")
-        return
-    end
-    mp.commandv("sub-add", danmaku_file, "auto", "danmaku")
-    show_danmaku_func()
-    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+    load_danmaku(danmaku_file)
 end
 
 -- 从用户添加过的弹幕源添加弹幕

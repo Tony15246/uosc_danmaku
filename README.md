@@ -65,6 +65,8 @@
     │   ├── DanmakuFactory
     │   └── DanmakuFactory.exe
     └── main.lua
+    └── md5.lua
+    └── render.lua
 ```
 ### 基本配置
 
@@ -129,6 +131,14 @@ j script-message show_danmaku_keyboard
 ```
 open_search_danmaku_menu_key=Ctrl+i
 show_danmaku_keyboard_key=i
+```
+
+#### 设置弹幕延迟（可选）
+
+可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。可以为负数
+
+```
+key script-message danmaku-delay <seconds>
 ```
 
 #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
@@ -305,6 +315,20 @@ user_agent=mpv_danmaku/1.0
 proxy=127.0.0.1:7890
 ```
 
+### transparency
+
+#### 功能说明
+
+自定义弹幕的透明度，0（不透明）到255（完全透明）。默认值：48
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+transparency=48
+```
+
 ### DanmakuFactory_Path
 
 #### 功能说明
@@ -342,16 +366,12 @@ history_path=/path/to/your/danmaku-history.json
 想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
 
 ```
-#分辨率
-resolution=1920 1080
 #速度
-scrolltime=12
+scrolltime=15
 #字体
 fontname=sans-serif
 #大小 
 fontsize=50
-#透明度(1-255)  255 为不透明
-opacity=150
 #阴影
 shadow=0
 #粗体 true false
