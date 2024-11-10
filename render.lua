@@ -4,7 +4,7 @@ local msg = require('mp.msg')
 
 local INTERVAL = 0.01
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
-enabled, comments = false, nil
+comments = nil
 
 -- 从时间字符串转换为秒数
 local function time_to_seconds(time_str)
@@ -116,14 +116,13 @@ end
 local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu)
-    enabled = true
     comments, err = parse_ass(ass_file_path)
     if not comments then
         msg.error("ASS 解析错误:", err)
         return
     end
 
-    if enabled then
+    if get_danmaku_visibility() then
         if from_menu then
             show_danmaku_func()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
@@ -132,6 +131,8 @@ function parse_danmaku(ass_file_path, from_menu)
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
         show_loaded()
+    else
+        mp.osd_message("")
     end
 end
 
@@ -155,7 +156,7 @@ mp.observe_property('pause', 'bool', function(_, value)
     if value ~= nil then
         pause = value
     end
-    if enabled then
+    if get_danmaku_visibility() then
         if pause then
             timer:kill()
         elseif comments ~= nil then
@@ -175,7 +176,7 @@ mp.register_event('playback-restart', function(event)
     if event.error then
         return msg.error(event.error)
     end
-    if enabled and comments ~= nil then
+    if get_danmaku_visibility() and comments ~= nil then
         render()
     end
 end)
@@ -186,7 +187,7 @@ mp.register_script_message("danmaku-delay", function(number)
         return msg.error('command danmaku-delay: invalid time')
     end
     delay = delay + value
-    if enabled and comments ~= nil then
+    if get_danmaku_visibility() and comments ~= nil then
         render()
     end
     mp.osd_message('设置弹幕延迟: ' .. (delay * 1000) .. ' ms')

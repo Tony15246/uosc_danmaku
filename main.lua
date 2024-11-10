@@ -318,14 +318,14 @@ mp.register_event("file-loaded", function(event)
     if event.error then
         return msg.error(event.error)
     end
-    if enabled and comments == nil then
+    if get_danmaku_visibility() and comments == nil then
         init()
     end
 end)
 
 mp.register_script_message("show_danmaku_keyboard", function()
-    enabled = not enabled
-    if enabled then
+    set_danmaku_visibility(not get_danmaku_visibility())
+    if get_danmaku_visibility() then
         if comments == nil then
             init()
         else
