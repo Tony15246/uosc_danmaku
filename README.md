@@ -66,6 +66,7 @@
     │   └── DanmakuFactory.exe
     └── main.lua
     └── md5.lua
+    └── options.lua
     └── render.lua
 ```
 ### 基本配置
