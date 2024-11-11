@@ -291,10 +291,9 @@ mp.register_script_message("set", function(prop, value)
     if value == "on" then
         if comments == nil then
             init(mp.get_property("path"))
-        end
-        if comments ~= nil then
+        else
             if danmaku.anime and danmaku.episode then
-                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
             else
                 mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
@@ -312,10 +311,9 @@ mp.register_script_message("show_danmaku_keyboard", function()
     if not enabled then
         if comments == nil then
             init(mp.get_property("path"))
-        end
-        if comments ~= nil then
+        else
             if danmaku.anime and danmaku.episode then
-                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode, 3)
+                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
             else
                 mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
