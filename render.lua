@@ -109,7 +109,7 @@ end
 
 local function show_loaded()
     if danmaku.anime and danmaku.episode then
-        mp.osd_message(danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        mp.osd_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
         msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
     else
         mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
