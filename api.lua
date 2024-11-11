@@ -382,6 +382,7 @@ local function load_danmaku(danmaku_file, from_menu)
         msg.verbose("未找到弹幕文件")
         return
     end
+    enabled = true
     parse_danmaku(danmaku_file, from_menu)
 end
 

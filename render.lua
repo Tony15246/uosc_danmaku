@@ -70,6 +70,8 @@ end
 local overlay = mp.create_osd_overlay('ass-events')
 
 local function render()
+    if comments == nil then return end
+
     local pos, err = mp.get_property_number('time-pos')
     if err ~= nil then
         return msg.error(err)
@@ -86,6 +88,7 @@ local function render()
     end
 
     local ass_events = {}
+
     for _, event in ipairs(comments) do
         if pos >= event.start_time + delay and pos <= event.end_time + delay then
             local text = apply_moving_text(event, pos)
@@ -116,7 +119,6 @@ end
 local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu)
-    enabled = true
     comments, err = parse_ass(ass_file_path)
     if not comments then
         msg.error("ASS 解析错误:", err)
@@ -126,12 +128,13 @@ function parse_danmaku(ass_file_path, from_menu)
     if enabled then
         if from_menu then
             show_danmaku_func()
+            show_loaded()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         elseif get_danmaku_visibility() then
             show_danmaku_func()
+            show_loaded()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
-        show_loaded()
     end
 end
 
@@ -140,12 +143,14 @@ function show_danmaku_func()
     if not pause then
         timer:resume()
     end
+    enabled = true
     set_danmaku_visibility(true)
 end
 
 function hide_danmaku_func()
     timer:kill()
     overlay:remove()
+    enabled = false
     set_danmaku_visibility(false)
 end
 
