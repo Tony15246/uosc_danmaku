@@ -116,22 +116,18 @@ end
 local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu)
-    enabled = true
     comments, err = parse_ass(ass_file_path)
     if not comments then
         msg.error("ASS 解析错误:", err)
         return
     end
 
-    if enabled then
-        if from_menu then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        elseif get_danmaku_visibility() then
-            show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        end
+    if enabled and (from_menu or get_danmaku_visibility()) then
+        show_danmaku_func()
+        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         show_loaded()
+    else
+        mp.osd_message("")
     end
 end
 
@@ -140,12 +136,14 @@ function show_danmaku_func()
     if not pause then
         timer:resume()
     end
+    enabled = true
     set_danmaku_visibility(true)
 end
 
 function hide_danmaku_func()
     timer:kill()
     overlay:remove()
+    enabled = false
     set_danmaku_visibility(false)
 end
 
