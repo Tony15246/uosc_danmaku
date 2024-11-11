@@ -211,8 +211,12 @@ function get_title(from_menu)
     local thin_space = string.char(0xE2, 0x80, 0x89)
 
     if path and not is_protocol(path) then
-        local dir = get_parent_directory(path)
-        local _, title = utils.split_path(dir:sub(1, -2))
+        local directory = get_parent_directory(path)
+        local dir, title = utils.split_path(directory:sub(1, -2))
+        if title:lower():match("^%s*seasons?%s*%d+%s*$") or title:lower():match("^%s*specials?%s*$") or title:match("^%s*SPs?%s*$")
+        or title:match("^%s*O[VAD]+s?%s*$") or title:match("^%s*第.-[季部]+%s*$") then
+            directory, title = utils.split_path(dir:sub(1, -2))
+        end
         title = title
                 :gsub(thin_space, " ")
                 :gsub("%[.-%]", "")
