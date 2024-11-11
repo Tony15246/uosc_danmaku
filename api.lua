@@ -917,6 +917,25 @@ function auto_load_danmaku(path, dir, filename, number)
     end
 end
 
+function init(path)
+    if not path then return end
+    local dir = get_parent_directory(path)
+    local filename = mp.get_property('filename/no-ext')
+    if filename then
+        if dir then
+            local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+            if file_exists(danmaku_xml) then
+                load_local_danmaku(danmaku_xml)
+                return
+            end
+        end
+        get_danmaku_with_hash(filename, path)
+        if options.add_from_source then
+            addon_danmaku(path)
+        end
+    end
+end
+
 mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function ()
     mp.commandv("script-message", "open_search_danmaku_menu")
 end)
@@ -957,12 +976,19 @@ mp.register_event("file-loaded", function()
             return
         end
     end
-    if options.auto_load then
-        auto_load_danmaku(path, dir, filename)
+
+    if options.auto_load or options.add_from_source then
+        if options.auto_load then
+            auto_load_danmaku(path, dir, filename)
+        end
+        if options.add_from_source then
+            addon_danmaku(path)
+        end
+        return
     end
 
-    if options.add_from_source then
-        addon_danmaku(path)
+    if enabled and comments == nil then
+        init(path)
     end
 end)
 
