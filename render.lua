@@ -70,6 +70,8 @@ end
 local overlay = mp.create_osd_overlay('ass-events')
 
 local function render()
+    if comments == nil then return end
+
     local pos, err = mp.get_property_number('time-pos')
     if err ~= nil then
         return msg.error(err)
@@ -86,6 +88,7 @@ local function render()
     end
 
     local ass_events = {}
+
     for _, event in ipairs(comments) do
         if pos >= event.start_time + delay and pos <= event.end_time + delay then
             local text = apply_moving_text(event, pos)
