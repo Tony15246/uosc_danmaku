@@ -177,10 +177,12 @@ mp.add_hook("on_unload", 50, function()
     local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
     local rm3 = utils.join_path(danmaku_path, "danmaku.xml")
     local rm4 = utils.join_path(danmaku_path, "temp.mp4")
+    local rm5 = utils.join_path(danmaku_path, "bahamut.json")
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then os.remove(rm2) end
     if file_exists(rm3) then os.remove(rm3) end
-    if file_exists(rm3) then os.remove(rm4) end
+    if file_exists(rm4) then os.remove(rm4) end
+    if file_exists(rm5) then os.remove(rm5) end
 end)
 
 mp.register_event('playback-restart', function(event)
