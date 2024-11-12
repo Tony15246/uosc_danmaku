@@ -1001,10 +1001,8 @@ function load_danmaku_for_bilibili(path)
 end
 
 function load_danmaku_for_bahamut(path)
-    print(path)
     path = path:gsub('%%(%x%x)', hex_to_char)
     local sn = extract_between_colons(path)
-    print(sn)
     if sn == nil then
         return
     end
@@ -1033,6 +1031,11 @@ function load_danmaku_for_bahamut(path)
         url,
     }
 
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     local cmd = {
         name = 'subprocess',
         capture_stdout = true,
@@ -1043,7 +1046,6 @@ function load_danmaku_for_bahamut(path)
 
     local res = mp.command_native(cmd)
     if res.status ~= 0 or not file_exists(danmaku_json) then
-        print("error curl")
         return
     end
 
@@ -1052,7 +1054,6 @@ function load_danmaku_for_bahamut(path)
     local comments = utils.parse_json(comments_json)
 
     if not comments then
-        print("error parsefile")
         return
     end
 
