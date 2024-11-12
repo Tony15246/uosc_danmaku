@@ -944,26 +944,21 @@ function load_danmaku_for_bilibili(path)
     if cid == nil then
         cid = mp.get_opt('cid')
         if not cid then
-            local pat = "bilivideo%.c[nom]+.*/resource/(%d+)%D+.*"  -- com cn
-            for _, url in pairs({
-                    path,
-                    mp.get_property("stream-open-filename", ''),
-                    }) do
-                if url:find(pat) then
-                    cid = url:match(pat)
-                    break
-                end
-            end
-        end
-        if not cid then
-            local pat = "bilivideo%.c[nom]+.*/(%d+)-%d+-%d+%..*%?"  -- com cn
-            for _, url in pairs({
-                    path,
-                    mp.get_property("stream-open-filename", ''),
-                    }) do
-                if url:find(pat) then
-                    cid = url:match(pat)
-                    break
+            local patterns = {
+                "bilivideo%.c[nom]+.*/resource/(%d+)%D+.*",
+                "bilivideo%.c[nom]+.*/(%d+)-%d+-%d+%..*%?",
+            }
+            local urls = {
+                path,
+                mp.get_property("stream-open-filename", ''),
+            }
+
+            for _, pattern in ipairs(patterns) do
+                for _, url in ipairs(urls) do
+                    if url:find(pattern) then
+                        cid = url:match(pattern)
+                        break
+                    end
                 end
             end
         end
@@ -992,10 +987,8 @@ function load_danmaku_for_bilibili(path)
         }
 
         local res = mp.command_native(cmd)
-        if res.status == 0 then
-            if file_exists(danmaku_xml) then
-                add_danmaku_source_local(danmaku_xml)
-            end
+        if res.status == 0 and file_exists(danmaku_xml) then
+            add_danmaku_source_local(danmaku_xml)
         end
     end
 end
