@@ -53,6 +53,19 @@ function file_exists(path)
     return false
 end
 
+local function get_cid()
+    local cid, danmaku_id = nil, nil
+    local tracks = mp.get_property_native("track-list")
+    for _, track in ipairs(tracks) do
+        if track["lang"] == "danmaku" then
+            cid = track["external-filename"]:match("/(%d-)%.xml$")
+            danmaku_id = track["id"]
+            break
+        end
+    end
+    return cid, danmaku_id
+end
+
 --读history 和 写history
 function read_file(file_path)
     local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
@@ -850,14 +863,6 @@ function get_danmaku_with_hash(file_name, file_path)
     set_episode_id(match_data.matches[1].episodeId, true)
 end
 
--- 加载本地 xml 弹幕
-function load_local_danmaku(danmaku_xml)
-    convert_with_danmaku_factory(danmaku_xml)
-
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file)
-end
-
 -- 从用户添加过的弹幕源添加弹幕
 function addon_danmaku(path)
     local history_json = read_file(history_path)
@@ -868,6 +873,67 @@ function addon_danmaku(path)
         if history_record ~= nil then
             for _, source in ipairs(history_record) do
                 add_danmaku_source(source)
+            end
+        end
+    end
+end
+
+-- 为 bilibli 网站的视频加载弹幕
+function load_danmaku_for_bilibili(path)
+    local cid, danmaku_id = get_cid()
+    if danmaku_id ~= nil then
+        mp.commandv('sub-remove', danmaku_id)
+    end
+    if path:match("^https://www.bilibili.com/video/BV.-") then
+        if path:match("video/BV.-/.*") then
+            path = path:gsub("/[^/]+$", "")
+        end
+        add_danmaku_source_online(path)
+        return
+    end
+
+    if cid == nil then
+        cid = mp.get_opt('cid')
+        if not cid then
+            local pat = "bilivideo%.c[nom]+.*/resource/(%d+)%D+.*"  -- com cn
+            for _, url in pairs({
+                    path,
+                    mp.get_property("stream-open-filename", ''),
+                    }) do
+                if url:find(pat) then
+                    cid = url:match(pat)
+                    break
+                end
+            end
+        end
+    end
+    if cid ~= nil then
+        local url = "https://comment.bilibili.com/" .. cid .. ".xml"
+        local danmaku_xml = utils.join_path(danmaku_path, "danmaku.xml")
+        local arg = {
+            "curl",
+            "-L",
+            "-s",
+            "--compressed",
+            "--user-agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+            "--output",
+            danmaku_xml,
+            url,
+        }
+
+        local cmd = {
+            name = 'subprocess',
+            capture_stdout = true,
+            capture_stderr = true,
+            playback_only = true,
+            args = arg,
+        }
+
+        local res = mp.command_native(cmd)
+        if res.status == 0 then
+            if file_exists(danmaku_xml) then
+                add_danmaku_source_local(danmaku_xml)
             end
         end
     end
@@ -929,7 +995,7 @@ function init(path)
         if dir then
             local danmaku_xml = utils.join_path(dir, filename .. ".xml")
             if file_exists(danmaku_xml) then
-                load_local_danmaku(danmaku_xml)
+                add_danmaku_source_local(danmaku_xml)
                 return
             end
         end
@@ -953,6 +1019,11 @@ mp.register_event("file-loaded", function()
     local filename = mp.get_property('filename/no-ext')
 
     if options.autoload_for_url and is_protocol(path) then
+        if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
+            load_danmaku_for_bilibili(path)
+            return
+        end
+
         local title, season_num, episod_num = get_title()
         local episod_number = nil
         if title and episod_num then
@@ -976,7 +1047,7 @@ mp.register_event("file-loaded", function()
     local danmaku_xml = utils.join_path(dir, filename .. ".xml")
     if options.autoload_local_danmaku then
         if file_exists(danmaku_xml) then
-            load_local_danmaku(danmaku_xml)
+            add_danmaku_source_local(danmaku_xml)
             return
         end
     end
@@ -994,13 +1065,4 @@ mp.register_event("file-loaded", function()
     if enabled and comments == nil then
         init(path)
     end
-end)
-
-mp.add_hook("on_unload", 50, function()
-    local rm1 = utils.join_path(danmaku_path, "danmaku.json")
-    local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
-    local rm3 = utils.join_path(danmaku_path, "temp.mp4")
-    if file_exists(rm1) then os.remove(rm1) end
-    if file_exists(rm2) then os.remove(rm2) end
-    if file_exists(rm3) then os.remove(rm3) end
 end)
