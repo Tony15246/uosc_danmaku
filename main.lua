@@ -295,6 +295,10 @@ mp.register_script_message("set", function(prop, value)
                 load_danmaku_for_bilibili(path)
                 return
             end
+            if is_protocol(path) and (path:find('bahamut.akamaized.net')) then
+                load_danmaku_for_bahamut(path)
+                return
+            end
             init(path)
         else
             if danmaku.anime and danmaku.episode then
@@ -320,7 +324,11 @@ mp.register_script_message("show_danmaku_keyboard", function()
                 load_danmaku_for_bilibili(path)
                 return
             end
-            init(path)
+            if is_protocol(path) and (path:find('bahamut.akamaized.net')) then
+                load_danmaku_for_bahamut(path)
+                return
+            end
+           init(path)
         else
             if danmaku.anime and danmaku.episode then
                 mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
