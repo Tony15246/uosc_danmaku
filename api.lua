@@ -20,12 +20,12 @@ function url_encode(str)
     return str
 end
 
+function hex_to_char(x)
+    return string.char(tonumber(x, 16))
+end
+
 -- url解码转换
 function url_decode(str)
-    local function hex_to_char(x)
-        return string.char(tonumber(x, 16))
-    end
-
     if str ~= nil then
         str = str:gsub('^%a[%a%d-_]+://', '')
               :gsub('^%a[%a%d-_]+:\\?', '')
@@ -64,6 +64,55 @@ local function get_cid()
         end
     end
     return cid, danmaku_id
+end
+
+function extract_between_colons(input_string)
+    local start_index = 0
+    local end_index = 0
+    local count = 0
+    for i = 1, #input_string do
+        if input_string:sub(i, i) == ":" then
+            count = count + 1
+            if count == 2 then
+                start_index = i
+            elseif count == 3 then
+                end_index = i
+                break
+            end
+        end
+    end
+    if start_index > 0 and end_index > 0 then
+        return input_string:sub(start_index + 1, end_index - 1)
+    else
+        return nil
+    end
+end
+
+
+function hex_to_int_color(hex_color)
+    -- 移除颜色代码中的'#'字符
+    hex_color = hex_color:sub(2)  -- 只保留颜色代码部分
+
+    -- 提取R, G, B的十六进制值并转为整数
+    local r = tonumber(hex_color:sub(1, 2), 16)
+    local g = tonumber(hex_color:sub(3, 4), 16)
+    local b = tonumber(hex_color:sub(5, 6), 16)
+
+    -- 计算32位整数值
+    local color_int = (r * 256 * 256) + (g * 256) + b
+
+    return color_int
+end
+
+
+function get_type_from_position(position)
+    if position == 0 then
+        return 1
+    end
+    if position == 1 then
+        return 4
+    end
+    return 5
 end
 
 --读history 和 写history
@@ -939,6 +988,88 @@ function load_danmaku_for_bilibili(path)
     end
 end
 
+function load_danmaku_for_bahamut(path)
+    print(path)
+    path = path:gsub('%%(%x%x)', hex_to_char)
+    local sn = extract_between_colons(path)
+    print(sn)
+    if sn == nil then
+        return
+    end
+    local url = "https://ani.gamer.com.tw/ajax/danmuGet.php"
+    local danmaku_json = utils.join_path(danmaku_path, "bahamut.json")
+    local arg = {
+        "curl",
+        "-X",
+        "POST",
+        "-d",
+        "sn=" .. sn,
+        "-L",
+        "-s",
+        "--user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36",
+        "--header",
+        "Origin: https://ani.gamer.com.tw",
+        "--header",
+        "Content-Type: application/x-www-form-urlencoded;charset=utf-8",
+        "--header",
+        "Accept: application/json",
+        "--header",
+        "Authority: ani.gamer.com.tw",
+        "--output",
+        danmaku_json,
+        url,
+    }
+
+    local cmd = {
+        name = 'subprocess',
+        capture_stdout = true,
+        capture_stderr = true,
+        playback_only = true,
+        args = arg,
+    }
+
+    local res = mp.command_native(cmd)
+    if res.status ~= 0 or not file_exists(danmaku_json) then
+        print("error curl")
+        return
+    end
+
+    local comments_json = read_file(danmaku_json)
+
+    local comments = utils.parse_json(comments_json)
+
+    if not comments then
+        print("error parsefile")
+        return
+    end
+
+    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
+    local json_file = io.open(json_filename, "w")
+
+    if json_file then
+        json_file:write("[\n")
+        for _, comment in ipairs(comments) do
+            local m = comment["text"]
+            local color = hex_to_int_color(comment["color"])
+            local mode = get_type_from_position(comment["position"])
+            local time = tonumber(comment["time"]) / 10
+            local c = time .. "," .. color .. "," .. mode .. ",25,,,"
+
+            -- Write the JSON object as a single line, no spaces or extra formatting
+            local json_entry = string.format('{"c":"%s","m":"%s"},\n', c, m)
+            json_file:write(json_entry)
+        end
+        json_file:write("]")
+        json_file:close()
+    end
+
+    convert_with_danmaku_factory(json_filename)
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    load_danmaku(danmaku_file)
+
+end
+
 -- 自动加载上次匹配的弹幕
 function auto_load_danmaku(path, dir, filename, number)
     if dir ~= nil then
@@ -1021,6 +1152,11 @@ mp.register_event("file-loaded", function()
     if options.autoload_for_url and is_protocol(path) then
         if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
             load_danmaku_for_bilibili(path)
+            return
+        end
+
+        if path:find('bahamut.akamaized.net') then
+            load_danmaku_for_bahamut(path)
             return
         end
 
