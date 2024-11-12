@@ -906,6 +906,18 @@ function load_danmaku_for_bilibili(path)
                 end
             end
         end
+        if not cid then
+            local pat = "bilivideo%.c[nom]+.*/(%d+)-%d+-%d+%..*%?"  -- com cn
+            for _, url in pairs({
+                    path,
+                    mp.get_property("stream-open-filename", ''),
+                    }) do
+                if url:find(pat) then
+                    cid = url:match(pat)
+                    break
+                end
+            end
+        end
     end
     if cid ~= nil then
         local url = "https://comment.bilibili.com/" .. cid .. ".xml"
