@@ -1,6 +1,7 @@
 -- modified from https://github.com/rkscv/danmaku/blob/main/danmaku.lua
 
 local msg = require('mp.msg')
+local utils = require("mp.utils")
 
 local INTERVAL = 0.01
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
@@ -170,6 +171,16 @@ mp.add_hook("on_unload", 50, function()
     comments, delay = nil, 0
     timer:kill()
     overlay:remove()
+
+    local danmaku_path = os.getenv("TEMP") or "/tmp/"
+    local rm1 = utils.join_path(danmaku_path, "danmaku.json")
+    local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
+    local rm3 = utils.join_path(danmaku_path, "danmaku.xml")
+    local rm4 = utils.join_path(danmaku_path, "temp.mp4")
+    if file_exists(rm1) then os.remove(rm1) end
+    if file_exists(rm2) then os.remove(rm2) end
+    if file_exists(rm3) then os.remove(rm3) end
+    if file_exists(rm3) then os.remove(rm4) end
 end)
 
 mp.register_event('playback-restart', function(event)

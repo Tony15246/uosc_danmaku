@@ -290,7 +290,12 @@ mp.register_script_message("set", function(prop, value)
 
     if value == "on" then
         if comments == nil then
-            init(mp.get_property("path"))
+            local path = mp.get_property("path")
+            if is_protocol(path) and (path:find('bilibili.com') or path:find('bilivideo.c[nom]+')) then
+                load_danmaku_for_bilibili(path)
+                return
+            end
+            init(path)
         else
             if danmaku.anime and danmaku.episode then
                 mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
@@ -310,7 +315,12 @@ end)
 mp.register_script_message("show_danmaku_keyboard", function()
     if not enabled then
         if comments == nil then
-            init(mp.get_property("path"))
+            local path = mp.get_property("path")
+            if is_protocol(path) and (path:find('bilibili.com') or path:find('bilivideo.c[nom]+')) then
+                load_danmaku_for_bilibili(path)
+                return
+            end
+            init(path)
         else
             if danmaku.anime and danmaku.episode then
                 mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
