@@ -117,8 +117,6 @@ local function show_loaded()
     end
 end
 
-local timer = mp.add_periodic_timer(INTERVAL, render, true)
-
 function parse_danmaku(ass_file_path, from_menu)
     comments, err = parse_ass(ass_file_path)
     if not comments then
@@ -154,6 +152,16 @@ end
 
 mp.observe_property('osd-width', 'number', function(_, value) osd_width = value or osd_width end)
 mp.observe_property('osd-height', 'number', function(_, value) osd_height = value or osd_height end)
+mp.observe_property('display-fps', 'number', function(_, value)
+    if value ~= nil then
+        local interval = 1 / value / 10
+        if interval > INTERVAL then
+            timer = mp.add_periodic_timer(interval, render, true)
+        else
+            timer = mp.add_periodic_timer(INTERVAL, render, true)
+        end
+    end
+end)
 mp.observe_property('pause', 'bool', function(_, value)
     if value ~= nil then
         pause = value
