@@ -3,7 +3,7 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
 
-local INTERVAL = 0.01
+local INTERVAL = 0.001
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
 enabled, comments = false, nil
 
@@ -131,6 +131,7 @@ function parse_danmaku(ass_file_path, from_menu)
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         show_loaded()
     else
+        enabled = false
         mp.osd_message("")
     end
 end
