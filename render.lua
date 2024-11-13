@@ -160,6 +160,8 @@ mp.observe_property('display-fps', 'number', function(_, value)
         else
             timer = mp.add_periodic_timer(INTERVAL, render, true)
         end
+    else
+        timer = mp.add_periodic_timer(INTERVAL, render, true)
     end
 end)
 mp.observe_property('pause', 'bool', function(_, value)
