@@ -927,7 +927,7 @@ function addon_danmaku(path)
     end
 end
 
--- 为 bilibli 网站的视频加载弹幕
+-- 为 bilibli 网站的视频播放加载弹幕
 function load_danmaku_for_bilibili(path)
     local cid, danmaku_id = get_cid()
     if danmaku_id ~= nil then
@@ -993,8 +993,9 @@ function load_danmaku_for_bilibili(path)
     end
 end
 
+-- 为 bahamut 网站的视频播放加载弹幕
 function load_danmaku_for_bahamut(path)
-    path = path:gsub('%%(%x%x)', hex_to_char)
+    local path = path:gsub('%%(%x%x)', hex_to_char)
     local sn = extract_between_colons(path)
     if sn == nil then
         return
@@ -1039,6 +1040,8 @@ function load_danmaku_for_bahamut(path)
 
     local res = mp.command_native(cmd)
     if res.status ~= 0 or not file_exists(danmaku_json) then
+        local url = "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn
+        add_danmaku_source_online(url)
         return
     end
 
