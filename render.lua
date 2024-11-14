@@ -108,6 +108,8 @@ local function render()
     overlay:update()
 end
 
+local timer = mp.add_periodic_timer(INTERVAL, render, true)
+
 local function show_loaded()
     if danmaku.anime and danmaku.episode then
         mp.osd_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
@@ -156,12 +158,10 @@ mp.observe_property('display-fps', 'number', function(_, value)
     if value ~= nil then
         local interval = 1 / value / 10
         if interval > INTERVAL then
+            timer:kill()
             timer = mp.add_periodic_timer(interval, render, true)
-        else
-            timer = mp.add_periodic_timer(INTERVAL, render, true)
+            timer:resume()
         end
-    else
-        timer = mp.add_periodic_timer(INTERVAL, render, true)
     end
 end)
 mp.observe_property('pause', 'bool', function(_, value)
