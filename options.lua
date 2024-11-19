@@ -12,6 +12,8 @@ options = {
     proxy = "",
     -- 透明度：0（不透明）到255（完全透明）
     transparency = 0x30,
+    -- 指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
+    merge_tolerance = -1,
     -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
     -- 留空（默认值）会在脚本同目录的 bin 中查找
     -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
