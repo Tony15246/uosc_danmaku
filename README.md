@@ -332,6 +332,22 @@ proxy=127.0.0.1:7890
 transparency=48
 ```
 
+### merge_tolerance
+
+#### 功能说明
+
+指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
+
+当值设为0时会合并同一时间相同内容的弹幕，值大于0时会合并指定秒数误差内的相同内容的弹幕
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+merge_tolerance=1
+```
+
 ### DanmakuFactory_Path
 
 #### 功能说明
