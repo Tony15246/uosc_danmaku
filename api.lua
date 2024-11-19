@@ -284,6 +284,7 @@ function get_title(from_menu)
                 :gsub("%[.-%]", "")
                 :gsub("^%s*%(%d+.?%d*.?%d*%)", "")
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
+                :gsub("[%._]", " ")
                 :gsub("^%s*(.-)%s*$", "%1")
         return title
     end
@@ -294,13 +295,16 @@ function get_title(from_menu)
         title = title:gsub(thin_space, " ")
         if title:match(".*S%d+:E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
-            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
         elseif title:match(".*S%d+E%d+") ~= nil then
             title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
-            title = title and url_decode(title):gsub("%s*%[.-%]s*", "")
+            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
+        elseif title:match(".*%d%d?[xX]%d%d%d?[^%d%-pPkKxXbBfF][^%d]") ~= nil then
+            title, season_num, episod_num = title:match("(.-)%s*(%d%d?)[xX](%d%d%d?)")
+            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
         else
             title = url_decode(title)
             episod_num = get_episode_number(title)
@@ -310,6 +314,7 @@ function get_title(from_menu)
                         :gsub("%[.*", "")
                         :gsub("[%-#].*", "")
                         :gsub("第.*", "")
+                        :gsub("[%._]", " ")
                         :gsub("^%s*(.-)%s*$", "%1")
             else
                 title = nil
@@ -348,8 +353,10 @@ function get_episode_number(filename, fname)
         "第(%d+)话",
         -- 匹配 -/# 第数字 格式
         "[%-#]%s*(%d+)%s*",
+        -- 匹配 01x02 格式
+        "%d%d?[xX](%d%d%d?)[^%d%-pPkKxXbBfF][^%d]",
         -- 匹配 直接跟随的数字 格式
-        "[^%dhHxXvV](%d%d%d?)[^%dpPkKxXbBfF][^%d]*$",
+        "[^%dhHxXvV](%d%d%d?)[^%d%-pPkKxXbBfF][^%d]*$",
     }
 
     -- 尝试匹配文件名中的集数
