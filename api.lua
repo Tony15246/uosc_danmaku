@@ -933,13 +933,6 @@ function load_danmaku_for_bilibili(path)
     if danmaku_id ~= nil then
         mp.commandv('sub-remove', danmaku_id)
     end
-    if path:match("^https://www.bilibili.com/video/BV.-") then
-        if path:match("video/BV.-/.*") then
-            path = path:gsub("/[^/]+$", "")
-        end
-        add_danmaku_source_online(path)
-        return
-    end
 
     if cid == nil then
         cid = mp.get_opt('cid')
@@ -962,6 +955,13 @@ function load_danmaku_for_bilibili(path)
                 end
             end
         end
+    end
+    if cid == nil and path:match("/video/BV.-") then
+        if path:match("video/BV.-/.*") then
+            path = path:gsub("/[^/]+$", "")
+        end
+        add_danmaku_source_online(path)
+        return
     end
     if cid ~= nil then
         local url = "https://comment.bilibili.com/" .. cid .. ".xml"
