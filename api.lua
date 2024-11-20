@@ -672,13 +672,13 @@ function add_danmaku_source(query, from_menu)
     end
 
     if is_protocol(query) then
-        add_danmaku_source_online(query)
+        add_danmaku_source_online(query, from_menu)
     else
-        add_danmaku_source_local(query)
+        add_danmaku_source_local(query, from_menu)
     end
 end
 
-function add_danmaku_source_local(query)
+function add_danmaku_source_local(query, from_menu)
     local path = normalize(query)
     if not file_exists(path) then
         msg.verbose("无效的文件路径")
@@ -696,11 +696,11 @@ function add_danmaku_source_local(query)
     convert_with_danmaku_factory(danmaku_input)
 
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file)
+    load_danmaku(danmaku_file, from_menu)
 end
 
 --通过输入源url获取弹幕库
-function add_danmaku_source_online(query)
+function add_danmaku_source_online(query, from_menu)
     local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     mp.osd_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
@@ -749,7 +749,7 @@ function add_danmaku_source_online(query)
     convert_with_danmaku_factory(danmaku_input)
 
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file)
+    load_danmaku(danmaku_file, from_menu)
 end
 
 -- 将弹幕转换为factory可读的json格式
@@ -920,7 +920,7 @@ function get_danmaku_with_hash(file_name, file_path)
 end
 
 -- 从用户添加过的弹幕源添加弹幕
-function addon_danmaku(path)
+function addon_danmaku(path, from_menu)
     local history_json = read_file(history_path)
 
     if history_json ~= nil then
@@ -928,7 +928,7 @@ function addon_danmaku(path)
         local history_record = history[path]
         if history_record ~= nil then
             for _, source in ipairs(history_record) do
-                add_danmaku_source(source)
+                add_danmaku_source(source, from_menu)
             end
         end
     end
@@ -967,7 +967,7 @@ function load_danmaku_for_bilibili(path)
         if path:match("video/BV.-/.*") then
             path = path:gsub("/[^/]+$", "")
         end
-        add_danmaku_source_online(path)
+        add_danmaku_source_online(path, true)
         return
     end
     if cid ~= nil then
@@ -995,7 +995,7 @@ function load_danmaku_for_bilibili(path)
 
         local res = mp.command_native(cmd)
         if res.status == 0 and file_exists(danmaku_xml) then
-            add_danmaku_source_local(danmaku_xml)
+            add_danmaku_source_local(danmaku_xml, true)
         end
     end
 end
@@ -1048,7 +1048,7 @@ function load_danmaku_for_bahamut(path)
     local res = mp.command_native(cmd)
     if res.status ~= 0 or not file_exists(danmaku_json) then
         local url = "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn
-        add_danmaku_source_online(url)
+        add_danmaku_source_online(url, true)
         return
     end
 
@@ -1082,7 +1082,7 @@ function load_danmaku_for_bahamut(path)
 
     convert_with_danmaku_factory(json_filename)
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file)
+    load_danmaku(danmaku_file, true)
 
 end
 
@@ -1142,13 +1142,13 @@ function init(path)
         if dir then
             local danmaku_xml = utils.join_path(dir, filename .. ".xml")
             if file_exists(danmaku_xml) then
-                add_danmaku_source_local(danmaku_xml)
+                add_danmaku_source_local(danmaku_xml, true)
                 return
             end
         end
         get_danmaku_with_hash(filename, path)
         if options.add_from_source then
-            addon_danmaku(path)
+            addon_danmaku(path, true)
         end
     end
 end

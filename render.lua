@@ -176,11 +176,11 @@ function parse_danmaku(ass_file_path, from_menu)
 
     if enabled and (from_menu or get_danmaku_visibility()) then
         show_danmaku_func()
-        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         show_loaded()
+        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     else
-        enabled = false
         mp.osd_message("")
+        hide_danmaku_func()
     end
 end
 
