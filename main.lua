@@ -328,7 +328,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
                 load_danmaku_for_bahamut(path)
                 return
             end
-           init(path)
+            init(path)
         else
             if danmaku.anime and danmaku.episode then
                 mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
