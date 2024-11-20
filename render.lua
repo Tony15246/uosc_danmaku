@@ -175,13 +175,23 @@ function parse_danmaku(ass_file_path, from_menu)
     end
 
     if enabled and (from_menu or get_danmaku_visibility()) then
+        show_loaded()
         show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        show_loaded()
     else
-        enabled = false
         mp.osd_message("")
+        hide_danmaku_func()
     end
+end
+
+local function filter_state(label, key, value)
+    local filters = mp.get_property_native("vf")
+    for _, filter in pairs(filters) do
+        if filter["label"] == label and (not key or key and filter[key] == value) then
+            return true
+        end
+    end
+    return false
 end
 
 function show_danmaku_func()
@@ -191,6 +201,14 @@ function show_danmaku_func()
     end
     enabled = true
     set_danmaku_visibility(true)
+    if options.vf_fps then
+        local display_fps = mp.get_property_number('display-fps')
+        local video_fps = mp.get_property_number('estimated-vf-fps')
+        if (display_fps and display_fps < 58) or (video_fps and video_fps > 58) then
+            return
+        end
+        mp.commandv("vf", "append", "@danmaku:fps=fps=60/1.001")
+    end
 end
 
 function hide_danmaku_func()
@@ -198,6 +216,9 @@ function hide_danmaku_func()
     overlay:remove()
     enabled = false
     set_danmaku_visibility(false)
+    if filter_state("danmaku") then
+        mp.commandv("vf", "remove", "@danmaku")
+    end
 end
 
 mp.observe_property('osd-width', 'number', function(_, value) osd_width = value or osd_width end)
@@ -234,6 +255,9 @@ mp.add_hook("on_unload", 50, function()
     comments, delay = nil, 0
     timer:kill()
     overlay:remove()
+    if filter_state("danmaku") then
+        mp.commandv("vf", "remove", "@danmaku")
+    end
 
     local danmaku_path = os.getenv("TEMP") or "/tmp/"
     local rm1 = utils.join_path(danmaku_path, "danmaku.json")

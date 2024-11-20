@@ -10,6 +10,8 @@ options = {
     add_from_source = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
+    -- 使用 fps 视频滤镜，大幅提升弹幕平滑度。默认禁用
+    vf_fps = false,
     -- 透明度：0（不透明）到255（完全透明）
     transparency = 0x30,
     -- 指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
