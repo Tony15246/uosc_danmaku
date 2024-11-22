@@ -5,7 +5,6 @@ local md5 = require("md5")
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
 local history_path = mp.command_native({"expand-path", options.history_path})
-local save_danmaku_path = mp.command_native({"expand-path", options.save_danmaku_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
 danmaku = {}
@@ -52,27 +51,6 @@ function file_exists(path)
         return meta and meta.is_file
     end
     return false
-end
-
-function copy_file(source, destination)
-    local src_file = io.open(source, "r")
-    if not src_file then
-        mp.osd_message("打开源文件失败", 3)
-        return
-    end
-    local content = src_file:read("*a")
-    src_file:close()
-
-    local dest_file = io.open(destination, "w")
-    if not dest_file then
-        print(destination)
-        mp.osd_message("打开目标文件失败", 3)
-        return
-    end
-    dest_file:write(content)
-    dest_file:close()
-
-    mp.osd_message("成功保存弹幕至" .. destination, 3)
 end
 
 local function get_cid()
@@ -558,7 +536,7 @@ function fetch_danmaku(episodeId, from_menu)
             local success = save_json_for_factory(response["comments"])
             if success then
                 local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-                convert_with_danmaku_factory(danmaku_json)
+                convert_with_danmaku_factory(danmaku_json, utils.join_path(danmaku_path, "danmaku.ass"))
             end
             local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
             load_danmaku(danmaku_file, from_menu)
@@ -659,7 +637,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     local success = save_json_for_factory(comments)
     if success then
         local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-        convert_with_danmaku_factory(danmaku_json)
+        convert_with_danmaku_factory(danmaku_json, utils.join_path(danmaku_path, "danmaku.ass"))
     end
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     load_danmaku(danmaku_file, from_menu)
@@ -715,7 +693,7 @@ function add_danmaku_source_local(query, from_menu)
     if file_exists(old_danmaku) then
         table.insert(danmaku_input, old_danmaku)
     end
-    convert_with_danmaku_factory(danmaku_input)
+    convert_with_danmaku_factory(danmaku_input, utils.join_path(danmaku_path, "danmaku.ass"))
 
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     load_danmaku(danmaku_file, from_menu)
@@ -768,7 +746,7 @@ function add_danmaku_source_online(query, from_menu)
     if file_exists(old_danmaku) then
         table.insert(danmaku_input, old_danmaku)
     end
-    convert_with_danmaku_factory(danmaku_input)
+    convert_with_danmaku_factory(danmaku_input, utils.join_path(danmaku_path, "danmaku.ass"))
 
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     load_danmaku(danmaku_file, from_menu)
@@ -812,7 +790,7 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory(danmaku_input)
+function convert_with_danmaku_factory(danmaku_input, danmaku_output)
     if exec_path == "" then
         exec_path = utils.join_path(mp.get_script_directory(), "bin")
         if platform == "windows" then
@@ -826,7 +804,7 @@ function convert_with_danmaku_factory(danmaku_input)
     local arg = {
         danmaku_factory_path,
         "-o",
-        utils.join_path(danmaku_path, "danmaku.ass"),
+        danmaku_output,
         "-i",
         "--ignore-warnings",
         "--scrolltime", options.scrolltime,
@@ -1102,7 +1080,7 @@ function load_danmaku_for_bahamut(path)
         json_file:close()
     end
 
-    convert_with_danmaku_factory(json_filename)
+    convert_with_danmaku_factory(json_filename, utils.join_path(danmaku_path, "danmaku.ass"))
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     load_danmaku(danmaku_file, true)
 
@@ -1242,7 +1220,24 @@ mp.register_event("file-loaded", function()
 end)
 
 mp.register_script_message("save-danmaku", function ()
-    local source = utils.join_path(danmaku_path, "danmaku.ass")
-    local dest = save_danmaku_path
-    copy_file(source, dest)
+    local input = utils.join_path(danmaku_path, "danmaku.ass")
+    if not file_exists(input) then
+        mp.osd_message("未找到当前弹幕文件", 3)
+    end
+    local path = mp.get_property("path")
+    if not path or is_protocol(path) then
+        return
+    end
+    local dir = get_parent_directory(path)
+    local filename = mp.get_property('filename/no-ext')
+    if not dir or not filename then
+        return
+    end
+    local output = utils.join_path(dir, filename .. ".xml")
+    convert_with_danmaku_factory(input, output)
+    if file_exists(output) then
+        mp.osd_message("当前弹幕已保存到" .. output, 3)
+    else
+        mp.osd_message("弹幕保存失败", 3)
+    end
 end)

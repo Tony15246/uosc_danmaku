@@ -22,7 +22,6 @@ options = {
     DanmakuFactory_Path = "",
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
-    save_danmaku_path = "~~/danmaku.ass",
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
     --速度
