@@ -1,11 +1,12 @@
 -- modified from https://github.com/rkscv/danmaku/blob/main/danmaku.lua
-
 local msg = require('mp.msg')
 local utils = require("mp.utils")
 
 local INTERVAL = 0.001
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
 enabled, comments = false, nil
+local delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
+mp.set_property_native(delay_property, 0)
 
 -- 从时间字符串转换为秒数
 local function time_to_seconds(time_str)
@@ -290,5 +291,6 @@ mp.register_script_message("danmaku-delay", function(number)
     if enabled and comments ~= nil then
         render()
     end
-    mp.osd_message('设置弹幕延迟: ' .. (delay * 1000) .. ' ms')
+    mp.osd_message('设置弹幕延迟: ' .. delay .. ' s')
+    mp.set_property_native(delay_property, delay)
 end)
