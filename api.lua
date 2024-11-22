@@ -5,6 +5,7 @@ local md5 = require("md5")
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
 local history_path = mp.command_native({"expand-path", options.history_path})
+local save_danmaku_path = mp.command_native({"expand-path", options.save_danmaku_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
 danmaku = {}
@@ -51,6 +52,27 @@ function file_exists(path)
         return meta and meta.is_file
     end
     return false
+end
+
+function copy_file(source, destination)
+    local src_file = io.open(source, "r")
+    if not src_file then
+        mp.osd_message("打开源文件失败", 3)
+        return
+    end
+    local content = src_file:read("*a")
+    src_file:close()
+
+    local dest_file = io.open(destination, "w")
+    if not dest_file then
+        print(destination)
+        mp.osd_message("打开目标文件失败", 3)
+        return
+    end
+    dest_file:write(content)
+    dest_file:close()
+
+    mp.osd_message("成功保存弹幕至" .. destination, 3)
 end
 
 local function get_cid()
@@ -1217,4 +1239,10 @@ mp.register_event("file-loaded", function()
     if enabled and comments == nil then
         init(path)
     end
+end)
+
+mp.register_script_message("save-danmaku", function ()
+    local source = utils.join_path(danmaku_path, "danmaku.ass")
+    local dest = save_danmaku_path
+    copy_file(source, dest)
 end)
