@@ -177,6 +177,16 @@ C:\Users\Tony\Downloads\example.xml
 
 ## 配置选项（可选）
 
+
+
+> [!NOTE]
+>
+> 该脚本的选项支持运行时更新，故可以通过键绑定的方式动态切换脚本选项状态。示例：
+>
+> ```
+> key cycle-values script-opts  uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
+> ```
+
 ### api_server
 
 #### 功能说明
@@ -299,6 +309,20 @@ autoload_for_url=yes
 
 ```
 add_from_source=yes
+```
+
+### save_danmaku
+
+#### 功能说明
+
+当文件关闭时自动保存弹幕文件（xml）至视频同目录。默认禁用
+
+#### 使用方法
+
+想要启用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并指定如下内容：
+
+```
+save_danmaku=yes
 ```
 
 ### user_agent

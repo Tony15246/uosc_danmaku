@@ -790,7 +790,7 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory(danmaku_input)
+function convert_with_danmaku_factory(danmaku_input, danmaku_out)
     if exec_path == "" then
         exec_path = utils.join_path(mp.get_script_directory(), "bin")
         if platform == "windows" then
@@ -804,7 +804,7 @@ function convert_with_danmaku_factory(danmaku_input)
     local arg = {
         danmaku_factory_path,
         "-o",
-        utils.join_path(danmaku_path, "danmaku.ass"),
+        danmaku_out and danmaku_out or utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
         "--ignore-warnings",
         "--scrolltime", options.scrolltime,
