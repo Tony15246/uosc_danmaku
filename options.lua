@@ -8,6 +8,7 @@ options = {
     autoload_local_danmaku = false,
     autoload_for_url = false,
     add_from_source = false,
+    save_danmaku = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
     -- 使用 fps 视频滤镜，大幅提升弹幕平滑度。默认禁用
