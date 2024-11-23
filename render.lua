@@ -230,11 +230,15 @@ mp.observe_property('display-fps', 'number', function(_, value)
         if interval > INTERVAL then
             timer:kill()
             timer = mp.add_periodic_timer(interval, render, true)
-            timer:resume()
+            if enabled then
+                timer:resume()
+            end
         else
             timer:kill()
             timer = mp.add_periodic_timer(INTERVAL, render, true)
-            timer:resume()
+            if enabled then
+                timer:resume()
+            end
         end
     end
 end)
