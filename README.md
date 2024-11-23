@@ -315,11 +315,11 @@ add_from_source=yes
 
 #### 功能说明
 
-当文件关闭时自动保存弹幕文件（xml）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。此功能默认禁用
+当文件关闭时自动保存弹幕文件（xml）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
 
 > [!NOTE]
 >
-> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请在保存完弹幕之后转移弹幕文件至其他路径并关闭`save_danmaku`选项。
+> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭`save_danmaku`选项。
 >
 > `save_danmaku`选项的打开和关闭可以运行时实时更新。在`input.conf`中添加如下内容，可通过快捷键实时控制`save_danmaku`选项的打开和关闭
 >
