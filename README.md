@@ -184,7 +184,7 @@ C:\Users\Tony\Downloads\example.xml
 > 该脚本的选项支持运行时更新，故可以通过键绑定的方式动态切换脚本选项状态。示例：
 >
 > ```
-> key cycle-values script-opts  uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
+> key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
 > ```
 
 ### api_server
@@ -315,7 +315,17 @@ add_from_source=yes
 
 #### 功能说明
 
-当文件关闭时自动保存弹幕文件（xml）至视频同目录。默认禁用
+当文件关闭时自动保存弹幕文件（xml）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。此功能默认禁用
+
+> [!NOTE]
+>
+> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请在保存完弹幕之后转移弹幕文件至其他路径并关闭`save_danmaku`选项。
+>
+> `save_danmaku`选项的打开和关闭可以运行时实时更新。在`input.conf`中添加如下内容，可通过快捷键实时控制`save_danmaku`选项的打开和关闭
+>
+> ```
+> key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
+> ```
 
 #### 使用方法
 
