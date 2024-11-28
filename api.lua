@@ -1160,6 +1160,19 @@ mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", f
     mp.commandv("script-message", "show_danmaku_keyboard")
 end)
 
+mp.register_script_message("clear-source", function ()
+    local path = mp.get_property("path")
+    local history_json = read_file(history_path)
+
+    if history_json ~= nil then
+        local history = utils.parse_json(history_json) or {}
+        if path and history[path] ~= nil then
+            history[path] = nil
+            write_json_file(history_path, history)
+        end
+    end
+end)
+
 mp.register_event("file-loaded", function()
     local path = mp.get_property("path")
     local dir = get_parent_directory(path)
