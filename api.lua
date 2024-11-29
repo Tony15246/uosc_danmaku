@@ -1169,6 +1169,7 @@ mp.register_script_message("clear-source", function ()
         if path and history[path] ~= nil then
             history[path] = nil
             write_json_file(history_path, history)
+            mp.osd_message("已清空当前视频所关联的弹幕源", 3)
         end
     end
 end)
