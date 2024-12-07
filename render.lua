@@ -6,6 +6,7 @@ local INTERVAL = 0.001
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
 enabled, comments = false, nil
 local delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
+local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
 mp.set_property_native(delay_property, 0)
 
 -- 从时间字符串转换为秒数
@@ -51,8 +52,53 @@ local function apply_moving_text(event, pos)
     end
 end
 
+local function ch_convert(ass_path, case)
+    if case == 0 then
+        return
+    end
+
+    if opencc_path == "" then
+        opencc_path = utils.join_path(mp.get_script_directory(), "bin")
+        if platform == "windows" then
+            opencc_path = utils.join_path(opencc_path, "OpenCC_Windows/opencc.exe")
+        else
+            opencc_path = utils.join_path(opencc_path, "OpenCC_Linux/opencc")
+        end
+    end
+    opencc_path = os.getenv("OPENCC") or opencc_path
+
+    local config
+    if case == 1 then
+        config = "t2s.json"
+    elseif case == 2 then
+        config = "s2t.json"
+    else
+        return
+    end
+
+    local arg = {
+        opencc_path,
+        "-i",
+        ass_path,
+        "-o",
+        ass_path,
+        "-c",
+        config,
+    }
+
+    mp.command_native({
+        name = 'subprocess',
+        playback_only = false,
+        capture_stdout = true,
+        args = arg,
+    })
+
+end
+
 -- 从 ASS 文件中解析样式和事件
 local function parse_ass(ass_path)
+    ch_convert(ass_path, options.chConvert)
+
     local ass_file = io.open(ass_path, "r")
     if not ass_file then
         return nil
