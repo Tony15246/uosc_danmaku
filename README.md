@@ -37,7 +37,10 @@
 
 插件本身支持Linux和Windows平台。项目依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)。欲使用本插件强烈建议为mpv播放器中安装uosc。uosc的安装步骤可以参考其[官方安装教程](https://github.com/tomasklaen/uosc?tab=readme-ov-file#install)。当然，如果使用[MPV_lazy](https://github.com/hooke007/MPV_lazy)等内置了uosc的懒人包则只需安装本插件即可。
 
-另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台上本插件调用DanmakuFactory官方release版的DanmakuFactory.exe文件，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
+另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台和Linux平台上本插件均调用作者自己编译构建的可执行文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
+
+字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
+
 
 ## 安装
 
@@ -67,10 +70,22 @@
     ├── api.lua
     ├── bin
     │   ├── DanmakuFactory
-    │   └── DanmakuFactory.exe
-    └── main.lua
-    └── md5.lua
-    └── options.lua
+    │   │   ├── DanmakuFactory
+    │   │   └── DanmakuFactory.exe
+    │   ├── OpenCC_Linux
+    │   │   └── opencc
+    │   └── OpenCC_Windows
+    │       ├── opencc.dll
+    │       ├── opencc.exe
+    │       ├── s2t.json
+    │       ├── STCharacters.ocd2
+    │       ├── STPhrases.ocd2
+    │       ├── t2s.json
+    │       ├── TSCharacters.ocd2
+    │       └── TSPhrases.ocd2
+    ├── main.lua
+    ├── md5.lua
+    ├── options.lua
     └── render.lua
 ```
 ### 基本配置
@@ -536,3 +551,14 @@ blacklist_path=
 可能是Windows系统的病毒威胁与保护误查杀了本插件使用的DanmakuFactory.exe，把DanmakuFactory.exe当成了病毒。找到下图中的界面还原DanmakuFactory.exe并允许此应用
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
+
+## 特别感谢
+
+感谢以下项目为本项目提供了实现参考或者外部依赖
+
+- 菜单api：[uosc](https://github.com/tomasklaen/uosc)
+- 弹幕格式转换：[DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
+- 简繁转换：[OpenCC](https://github.com/BYVoid/OpenCC)
+- lua原生md5计算实现：https://github.com/rkscv/danmaku
+- b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
+- 巴哈姆特在线播放弹幕获取实现参考：[MPV-Play-BAHA-Comments](https://github.com/s594569321/MPV-Play-BAHA-Comments)
