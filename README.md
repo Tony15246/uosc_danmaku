@@ -29,6 +29,9 @@
 8. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
 9. 自定义弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
 10. 在使用如[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段时，自动加载弹幕（注意⚠️：目前支持自动加载bilibili和巴哈姆特这两个网站的弹幕，具体说明查看[autoload_for_url配置项说明](#autoload_for_url)）
+11. 保存当前弹幕到本地（详细功能说明见[save_danmaku配置项说明](#save_danmaku)）
+12. 可以合并一定时间段内同时出现的大量重复弹幕（具体设置方法详见[merge_tolerance配置项说明](#merge_tolerance)）
+13. 弹幕简体字繁体字转换，解决弹幕简繁混杂问题（具体设置方法详见[chConvert配置项说明](#chConvert)）
 
 无需亲自下载整合弹幕文件资源，无需亲自处理文件格式转换，在mpv播放器中一键加载包含了哔哩哔哩、巴哈姆特等弹幕网站弹幕的弹弹play的动画弹幕。
 
@@ -142,6 +145,7 @@ show_danmaku_keyboard_key=i
 ```
 key script-message danmaku-delay <seconds>
 ```
+> 当前弹幕延迟的值可以从`user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
 
 #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
 
@@ -175,9 +179,17 @@ Ctrl+j script-message open_add_source_menu
 C:\Users\Tony\Downloads\example.xml
 ```
 
+#### 清空当前视频关联的弹幕源（可选）
+
+可以清空当前视频所关联的弹幕源。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
+
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`clear-source`。
+
+```
+key script-message clear-source
+```
+
 ## 配置选项（可选）
-
-
 
 > [!NOTE]
 >
@@ -416,6 +428,21 @@ transparency=48
 merge_tolerance=1
 ```
 
+### chConvert
+
+
+#### 功能说明
+
+中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体。默认值: 0，不转换简繁字体，按照弹幕源原本字体显示
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+chConvert=0
+```
+
 ### DanmakuFactory_Path
 
 #### 功能说明
@@ -434,6 +461,26 @@ merge_tolerance=1
 
 ```
 DanmakuFactory_Path=/path/to/your/DanmakuFactory
+```
+
+### OpenCC_Path
+
+#### 功能说明
+
+指定 OpenCC 程序的路径，支持绝对路径和相对路径
+不特殊指定或者留空（默认值）会在脚本同目录的 bin 中查找，调用本人构建好的 OpenCC 可执行文件
+示例：`OpenCC_Path=opencc` 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+
+#### 使用示例
+
+想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+
+
+> [!IMPORTANT]
+> 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
+
+```
+OpenCC_Path=/path/to/your/opencc
 ```
 
 ### history_path
