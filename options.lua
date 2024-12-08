@@ -25,6 +25,12 @@ options = {
     history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
+    -- 中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体
+    chConvert = 0,
+    -- 指定 OpenCC 程序的路径，支持绝对路径和相对路径
+    -- 留空（默认值）会在脚本同目录的 bin 中查找
+    -- 示例：OpenCC_Path = 'opencc' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+    OpenCC_Path = "",
     --速度
     scrolltime = "15",
     --字体
