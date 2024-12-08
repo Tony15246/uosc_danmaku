@@ -143,7 +143,7 @@ function itable_index_of(itable, value)
     end
 end
 
-local platform = (function()
+platform = (function()
     local platform = mp.get_property_native("platform")
     if platform then
         if itable_index_of({ "windows", "darwin" }, platform) then
@@ -792,7 +792,7 @@ end
 -- Function to convert JSON file using DanmakuFactory
 function convert_with_danmaku_factory(danmaku_input, danmaku_out)
     if exec_path == "" then
-        exec_path = utils.join_path(mp.get_script_directory(), "bin")
+        exec_path = utils.join_path(mp.get_script_directory(), "bin/DanmakuFactory")
         if platform == "windows" then
             exec_path = utils.join_path(exec_path, "DanmakuFactory.exe")
         else
