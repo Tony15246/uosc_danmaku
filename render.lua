@@ -207,10 +207,10 @@ local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 local function show_loaded()
     if danmaku.anime and danmaku.episode then
-        mp.osd_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\n弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        show_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\\N弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
         msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
     else
-        mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
     end
 end
 
@@ -226,7 +226,7 @@ function parse_danmaku(ass_file_path, from_menu)
         show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     else
-        mp.osd_message("")
+        show_message("")
         hide_danmaku_func()
     end
 end
@@ -266,6 +266,28 @@ function hide_danmaku_func()
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")
     end
+end
+
+local message_overlay = mp.create_osd_overlay('ass-events')
+local message_timer = mp.add_timeout(3, function ()
+    message_overlay:remove()
+end, true)
+
+function show_message(text, time)
+    message_timer.timeout = time or 3
+    message_timer:kill()
+    message_overlay:remove()
+    local message = string.format("{\\an7\\pos(%d,%d)}%s", options.message_x, options.message_y, text)
+    local width, height = 1920, 1080
+    local ratio = osd_width / osd_height
+    if width / height < ratio then
+        height = width / ratio
+    end
+    message_overlay.res_x = width
+    message_overlay.res_y = height
+    message_overlay.data = message
+    message_overlay:update()
+    message_timer:resume()
 end
 
 mp.observe_property('osd-width', 'number', function(_, value) osd_width = value or osd_width end)
@@ -355,6 +377,6 @@ mp.register_script_message("danmaku-delay", function(number)
     if enabled and comments ~= nil then
         render()
     end
-    mp.osd_message('设置弹幕延迟: ' .. delay .. ' s')
+    show_message('设置弹幕延迟: ' .. delay .. ' s')
     mp.set_property_native(delay_property, delay)
 end)
