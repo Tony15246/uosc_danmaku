@@ -19,7 +19,7 @@ function get_animes(query)
     if uosc_available then
         update_menu(menu_item(message), query)
     else
-        mp.osd_message(message, 30)
+        show_message(message, 30)
     end
     msg.verbose("尝试获取番剧数据：" .. full_url)
 
@@ -30,7 +30,7 @@ function get_animes(query)
         if uosc_available then
             update_menu(menu_item(message), query)
         else
-            mp.osd_message(message, 3)
+            show_message(message, 3)
         end
         msg.error("HTTP 请求失败：" .. res.stderr)
     end
@@ -42,7 +42,7 @@ function get_animes(query)
         if uosc_available then
             update_menu(menu_item(message), query)
         else
-            mp.osd_message(message, 3)
+            show_message(message, 3)
         end
         msg.verbose("无结果")
         return
@@ -64,7 +64,7 @@ function get_animes(query)
     if uosc_available then
         update_menu(items, query)
     elseif input_loaded then
-        mp.osd_message("", 0)
+        show_message("", 0)
         mp.add_timeout(0.1, function()
             open_menu_select(items)
         end)
@@ -302,14 +302,14 @@ mp.register_script_message("set", function(prop, value)
             init(path)
         else
             if danmaku.anime and danmaku.episode then
-                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
+                show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
             else
-                mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+                show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
             show_danmaku_func()
         end
     else
-        mp.osd_message("关闭弹幕", 2)
+        show_message("关闭弹幕", 2)
         hide_danmaku_func()
     end
 
@@ -331,15 +331,15 @@ mp.register_script_message("show_danmaku_keyboard", function()
             init(path)
         else
             if danmaku.anime and danmaku.episode then
-                mp.osd_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "，共计" .. #comments .. "条弹幕", 3)
+                show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
             else
-                mp.osd_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+                show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
             show_danmaku_func()
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
     else
-        mp.osd_message("关闭弹幕", 2)
+        show_message("关闭弹幕", 2)
         hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
     end

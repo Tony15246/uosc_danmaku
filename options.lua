@@ -51,6 +51,12 @@ options = {
     blockmode = "",
     --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
     blacklist_path = "",
+    --指定脚本相关消息显示的消息的对齐方式
+    message_anlignment = 7,
+    --指定脚本相关消息显示的消息的x轴坐标
+    message_x = 30,
+    --指定脚本相关消息显示的消息的y轴坐标
+    message_y = 30,
 }
 
 opt.read_options(options, mp.get_script_name(), function() end)
