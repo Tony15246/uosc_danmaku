@@ -2,7 +2,7 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
 
-local INTERVAL = 0.001
+local INTERVAL = options.vf_fps and 0.01 or 0.001
 local osd_width, osd_height, delay, pause = 0, 0, 0, true
 enabled, comments = false, nil
 local delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
