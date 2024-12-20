@@ -9,6 +9,26 @@ local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path
 
 danmaku = {}
 
+-- 判断字符串是否全部为整数或小数
+function is_strict_number(str)
+    -- 去除前后空白字符
+    str = string.match(str, "^%s*(.-)%s*$")
+    
+    -- 检查是否为空字符串
+    if str == "" then return false end
+    
+    -- 特殊情况：单独的零或带符号的零
+    if str == "0" or str == "-0" or str == "0.0" or str == "-0.0" then
+        return true
+    end
+    
+    -- 定义严格匹配模式，允许整数和小数（包括正数、负数和零）
+    -- local pattern = "^%-?%d+([%.%d])?%d*$"
+    local pattern = "^%-?%d*%.?%d+$"
+    -- 检查是否完全匹配模式
+    return string.match(str, pattern) ~= nil
+end
+
 -- url编码转换
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
