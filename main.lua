@@ -8,30 +8,24 @@ require('render')
 local input_loaded, input = pcall(require, "mp.input")
 local uosc_available = false
 
-
 local menu_items_config = {
-	bold = { title = "粗体", query = "bold", hint = options.bold },
-	fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
-	shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
-	outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
-	density = { title = "弹幕密度", query = "density", hint = options.density, scope = { min = "-1", max = "inf"} },
-	scrolltime = { title = "弹幕速度", query = "scrolltime", hint = options.scrolltime, scope = { min = "1", max = "inf"} },
-	transparency = { title = "透明度", query = "transparency", hint = options.transparency, scope = { min = "0", max = "255"} },
-	displayarea = { title = "弹幕显示范围", query = "displayarea", hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
+    bold = { title = "粗体", query = "bold", hint = options.bold },
+    fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
+    outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
+    shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
+    transparency = { title = "透明度", query = "transparency", hint = options.transparency, scope = { min = "0", max = "255"} },
+    displayarea = { title = "弹幕显示范围", query = "displayarea", hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
 }
 local footnote_table = {
-	bold = "true / false",
-	fontsize = "请输入整数(>=0)",
-	shadow = "请输入整数(>=0)",
-	outline = "输入范围：(0.0-4.0)",
-	transparency = "  输入范围：0(不透明)到255(完全透明)",
-	scrolltime = "请输入整数(>=1)，数字越大速度越慢",
-	density = "  请输入整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数",
-	displayarea = "显示范围(0.0-1.0)",
+    bold = "true / false",
+    fontsize = "请输入整数(>=0)",
+    outline = "输入范围：(0.0-4.0)",
+    shadow = "请输入整数(>=0)",
+    transparency = "  输入范围：0(不透明)到255(完全透明)",
+    displayarea = "显示范围(0.0-1.0)",
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "fontsize", "shadow", "outline", "transparency", "scrolltime", "density", "displayarea"}
-
+local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
 
 function get_animes(query)
     local encoded_query = url_encode(query)
@@ -248,21 +242,20 @@ function open_add_menu()
     end
 end
 
-
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived)
-	local items = {}
-	for _, key in ipairs(ordered_keys) do
-		local config = menu_items_config[key]
-		table.insert(items, {
-			title = config.title,
-			hint = "目前：" .. tostring(config.hint),
-			value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
-			active = key == actived,
-			keep_open = true,
-			selectable = true,
-		})
-	end
+    local items = {}
+    for _, key in ipairs(ordered_keys) do
+        local config = menu_items_config[key]
+        table.insert(items, {
+            title = config.title,
+            hint = "目前：" .. tostring(config.hint),
+            value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
+            active = key == actived,
+            keep_open = true,
+            selectable = true,
+        })
+    end
 
     local menu_props = {
         type = "menu_style",
@@ -276,19 +269,18 @@ end
 
 -- 更新弹幕样式设置菜单
 function updata_danmaku_setup(actived, status)
-	local items = {}
-	for _, key in ipairs(ordered_keys) do
-		local config = menu_items_config[key]
-		table.insert(items, {
-			title = config.title,
-			hint = "目前：" .. tostring(config.hint),
---            icon = 'history',
-			value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
-			active = key == actived,
-			keep_open = true,
-			selectable = true,
-		})
-	end
+    local items = {}
+    for _, key in ipairs(ordered_keys) do
+        local config = menu_items_config[key]
+        table.insert(items, {
+            title = config.title,
+            hint = "目前：" .. tostring(config.hint),
+            value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
+            active = key == actived,
+            keep_open = true,
+            selectable = true,
+        })
+    end
 
     local menu_props = {
         type = "menu_style",
@@ -296,39 +288,39 @@ function updata_danmaku_setup(actived, status)
         search_style = "palette",
         search_debounce = "submit",
         footnote = footnote_table[actived] or "",
-		on_search = { "script-message-to", mp.get_script_name(), "update-danmaku-style", actived },
+        on_search = { "script-message-to", mp.get_script_name(), "update-danmaku-style", actived },
         items = items,
     }
-	local actions = "update-menu"
+    local actions = "update-menu"
     if status and status == "error" then
         menu_props.title = "输入非数字字符或范围出错"
-		-- 创建一个定时器，在2秒后触发回调函数，删除搜索栏错误信息
-		mp.add_timeout(2.0, function() updata_danmaku_setup(actived) end)
-		actions = "open-menu"
+        -- 创建一个定时器，在2秒后触发回调函数，删除搜索栏错误信息
+        mp.add_timeout(2.0, function() updata_danmaku_setup(actived) end)
+        actions = "open-menu"
     elseif status and status == "updata" then
         menu_props.title = footnote_table[actived]
-		actions = "open-menu"
-	end
+        actions = "open-menu"
+    end
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", actions, json_props)
 end
 
 -- 总集合弹幕菜单
 function open_add_total_menu_uosc()
-	local items = {}
-	local total_menu_items_config = {
-		{ title = "弹幕搜索", action = "open_search_danmaku_menu" },
-		{ title = "从源添加弹幕", action = "open_add_source_menu" },
-		{ title = "弹幕设置", action = "open_setup_danmaku_menu" },
-	}
-	for _, config in ipairs(total_menu_items_config) do
-		table.insert(items, {
-			title = config.title,
-			value = { "script-message-to", mp.get_script_name(), config.action },
-			keep_open = false,
-			selectable = true,
-		})
-	end
+    local items = {}
+    local total_menu_items_config = {
+        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
+        { title = "从源添加弹幕", action = "open_add_source_menu" },
+        { title = "弹幕设置", action = "open_setup_danmaku_menu" },
+    }
+    for _, config in ipairs(total_menu_items_config) do
+        table.insert(items, {
+            title = config.title,
+            value = { "script-message-to", mp.get_script_name(), config.action },
+            keep_open = false,
+            selectable = true,
+        })
+    end
 
     local menu_props = {
         type = "menu_total",
@@ -340,6 +332,34 @@ function open_add_total_menu_uosc()
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
+function open_add_total_menu_select()
+    local item_titles, item_values = {}, {}
+    local total_menu_items_config = {
+        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
+        { title = "从源添加弹幕", action = "open_add_source_menu" },
+    }
+    for i, config in ipairs(total_menu_items_config) do
+        item_titles[i] = config.title
+        item_values[i] = { "script-message-to", mp.get_script_name(), config.action }
+    end
+
+    mp.commandv('script-message-to', 'console', 'disable')
+    input.select({
+        prompt = '选择:',
+        items = item_titles,
+        submit = function(id)
+            mp.commandv(unpack(item_values[id]))
+        end,
+    })
+end
+
+function open_add_total_menu()
+    if uosc_available then
+        open_add_total_menu_uosc()
+    elseif input_loaded then
+        open_add_total_menu_select()
+    end
+end
 
 mp.commandv(
     "script-message-to",
@@ -475,7 +495,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
     end
 end)
 
-mp.register_script_message("open_add_total_menu", open_add_total_menu_uosc)
+mp.register_script_message("open_add_total_menu", open_add_total_menu)
 mp.register_script_message("open_setup_danmaku_menu", function()
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
@@ -483,41 +503,40 @@ mp.register_script_message("open_setup_danmaku_menu", function()
     add_danmaku_setup()
 end)
 
-
 mp.register_script_message("setup-danmaku-style", function(query)
     if type(query) == "string" and menu_items_config[query] then
-		if query == "bold" then
-			options.bold = options.bold == "true" and "false" or "true"
-			menu_items_config.bold.hint = options.bold
-		end
-		updata_danmaku_setup(query)
-	else
-		add_danmaku_setup()
+        if query == "bold" then
+            options.bold = options.bold == "true" and "false" or "true"
+            menu_items_config.bold.hint = options.bold
+        end
+        updata_danmaku_setup(query)
+    else
+        add_danmaku_setup()
     end
 end)
 
 mp.register_script_message("update-danmaku-style", function(query, text)
-	-- mp.commandv("script-message-to", "uosc", "close-menu", "menu_style")
-	msg.info(text:gsub("%s",""))
-	local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
-	if text == nil or text == "" then
-		return
-	elseif query == "bold" then
-		options.bold = options.bold == "true" and "false" or "true"
-		menu_items_config.bold.hint = options.bold
-		updata_danmaku_setup(query, "updata")
-	elseif tonumber(newText) ~= nil then
-		local num = tonumber(newText)
-		local status = "error"
-		local min_num = tonumber(menu_items_config[query]["scope"]["min"]) or 0
-		local max_num = tonumber(menu_items_config[query]["scope"]["max"]) or math.huge
-		if num and min_num <= num and num <= max_num then
-			options[query] = tonumber(text)
-			status = "updata"
-		end
-		menu_items_config[query]["hint"] = options[query]
-		updata_danmaku_setup(query, status)
-	else
-		updata_danmaku_setup(query, "error")
-	end
+    -- mp.commandv("script-message-to", "uosc", "close-menu", "menu_style")
+    msg.info(text:gsub("%s",""))
+    local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
+    if text == nil or text == "" then
+        return
+    elseif query == "bold" then
+        options.bold = options.bold == "true" and "false" or "true"
+        menu_items_config.bold.hint = options.bold
+        updata_danmaku_setup(query, "updata")
+    elseif tonumber(newText) ~= nil then
+        local num = tonumber(newText)
+        local status = "error"
+        local min_num = tonumber(menu_items_config[query]["scope"]["min"]) or 0
+        local max_num = tonumber(menu_items_config[query]["scope"]["max"]) or math.huge
+        if num and min_num <= num and num <= max_num then
+            options[query] = tonumber(text)
+            status = "updata"
+        end
+        menu_items_config[query]["hint"] = options[query]
+        updata_danmaku_setup(query, status)
+    else
+        updata_danmaku_setup(query, "error")
+    end
 end)
