@@ -25,9 +25,12 @@ local function parse_move_tag(text)
     return nil
 end
 
-local function apply_moving_text(event, pos)
+local function parse_comment(event, pos, height)
     local x1, y1, x2, y2 = parse_move_tag(event.text)
+    local displayarea = tonumber(height * options.displayarea)
     if not x1 then
+        local current_x, current_y = event.text:match("\\pos%((%-?[%d%.]+),%s*(%-?[%d%.]+).*%)")
+        if tonumber(current_y) > displayarea then return end
         if event.style ~= "SP" and event.style ~= "MSG" then
             return string.format("{\\an8}%s", event.text)
         else
@@ -36,15 +39,16 @@ local function apply_moving_text(event, pos)
     end
 
     -- 计算移动的时间范围
-    local duration = options.scrolltime
+    local duration = event.end_time - event.start_time  --mean: options.scrolltime
     local progress = (pos - event.start_time - delay) / duration  -- 移动进度 [0, 1]
 
     -- 计算当前坐标
-    local current_x = x1 + (x2 - x1) * progress
-    local current_y = y1 + (y2 - y1) * progress
+    local current_x = tonumber(x1 + (x2 - x1) * progress)
+    local current_y = tonumber(y1 + (y2 - y1) * progress)
 
     -- 移除 \move 标签并应用当前坐标
     local clean_text = event.text:gsub("\\move%(.-%)", "")
+    if current_y > displayarea then return end
     if event.style ~= "SP" and event.style ~= "MSG" then
         return string.format("{\\pos(%.1f,%.1f)\\an8}%s", current_x, current_y, clean_text)
     else
@@ -181,15 +185,15 @@ local function render()
 
     for _, event in ipairs(comments) do
         if pos >= event.start_time + delay and pos <= event.end_time + delay then
-            local text = apply_moving_text(event, pos)
+            local text = parse_comment(event, pos, height)
 
-            if text:match("\\fs%d+") then
+            if text and text:match("\\fs%d+") then
                 local font_size = text:match("\\fs(%d+)") * 1.5
                 text = text:gsub("\\fs%d+", string.format("\\fs%s", font_size))
             end
 
             -- 构建 ASS 字符串
-            local ass_text = string.format("{\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
+            local ass_text = text and string.format("{\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
                 fontname, text:match("{\\b1\\i1}x%d+$") and fontsize + text:match("x(%d+)$") or fontsize,
                 options.transparency, options.outline, options.shadow, options.bold == "true" and "1" or "0", text)
 
@@ -328,6 +332,7 @@ mp.add_hook("on_unload", 50, function()
     comments, delay = nil, 0
     timer:kill()
     overlay:remove()
+    mp.set_property_native(delay_property, 0)
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")
     end

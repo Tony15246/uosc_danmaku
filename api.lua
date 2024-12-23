@@ -813,7 +813,7 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out)
         "--shadow", options.shadow,
         "--bold", options.bold,
         "--density", options.density,
-        "--displayarea", options.displayarea,
+    --  "--displayarea", options.displayarea,
         "--outline", options.outline,
     }
 
