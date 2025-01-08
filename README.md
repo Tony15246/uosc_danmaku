@@ -23,15 +23,17 @@
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
 3. 通过点击加入uosc control bar中的弹幕开关控件可以控制弹幕的开关
 4. 通过点击加入uosc control bar中的[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)按钮可以通过受支持的网络源或本地文件添加弹幕
-5. 记忆型全自动弹幕填装，在为某个文件夹下的某一集番剧加载过一次弹幕后，加载过的弹幕会自动关联到该集；之后每次重新播放该文件就会自动加载弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕，无需再重复手动输入番剧名进行搜索（注意⚠️：全自动弹幕填装默认关闭，如需开启请阅读[auto_load配置项说明](#auto_load)）
-6. 在没有手动加载过弹幕，没有填装自动弹幕记忆之前，通过文件哈希匹配的方式自动添加弹幕（~仅限本地文件~，现已支持网络视频），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
-7. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
-8. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
-9. 自定义弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
-10. 在使用如[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段时，自动加载弹幕（注意⚠️：目前支持自动加载bilibili和巴哈姆特这两个网站的弹幕，具体说明查看[autoload_for_url配置项说明](#autoload_for_url)）
-11. 保存当前弹幕到本地（详细功能说明见[save_danmaku配置项说明](#save_danmaku)）
-12. 可以合并一定时间段内同时出现的大量重复弹幕（具体设置方法详见[merge_tolerance配置项说明](#merge_tolerance)）
-13. 弹幕简体字繁体字转换，解决弹幕简繁混杂问题（具体设置方法详见[chConvert配置项说明](#chConvert)）
+5. 通过点击加入uosc control bar中的[弹幕设置](#弹幕设置可选)按钮可以打开多级功能复合菜单，包含了插件目前所有的图形化功能，另外插件的**弹幕样式实时修改功能**目前只存在于这个菜单中。
+6. 记忆型全自动弹幕填装，在为某个文件夹下的某一集番剧加载过一次弹幕后，加载过的弹幕会自动关联到该集；之后每次重新播放该文件就会自动加载弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕，无需再重复手动输入番剧名进行搜索（注意⚠️：全自动弹幕填装默认关闭，如需开启请阅读[auto_load配置项说明](#auto_load)）
+7. 在没有手动加载过弹幕，没有填装自动弹幕记忆之前，通过文件哈希匹配的方式自动添加弹幕（~仅限本地文件~，现已支持网络视频），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
+8. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
+9. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
+10. 自定义弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
+11. 在使用如[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段时，自动加载弹幕（注意⚠️：目前支持自动加载bilibili和巴哈姆特这两个网站的弹幕，具体说明查看[autoload_for_url配置项说明](#autoload_for_url)）
+12. 保存当前弹幕到本地（详细功能说明见[save_danmaku配置项说明](#save_danmaku)）
+13. 可以合并一定时间段内同时出现的大量重复弹幕（具体设置方法详见[merge_tolerance配置项说明](#merge_tolerance)）
+14. 弹幕简体字繁体字转换，解决弹幕简繁混杂问题（具体设置方法详见[chConvert配置项说明](#chConvert)）
+15. 自定义插件相关提示的显示位置，可以自由调节距离画面左上角的两个维度的距离（具体设置方法详见[message_x配置项说明](#message_x)和[message_y配置项说明](#message_y)）
 
 无需亲自下载整合弹幕文件资源，无需亲自处理文件格式转换，在mpv播放器中一键加载包含了哔哩哔哩、巴哈姆特等弹幕网站弹幕的弹弹play的动画弹幕。
 
@@ -192,6 +194,17 @@ Ctrl+j script-message open_add_source_menu
 /home/tony/Downloads/example.xml
 #Windows下示例
 C:\Users\Tony\Downloads\example.xml
+```
+
+#### 弹幕设置（可选）
+
+打开多级功能复合菜单，包含了插件目前所有的图形化功能，另外插件的**弹幕样式实时修改功能**目前只存在于这个菜单中。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:add_box:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
+
+
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_total_menu`。
+
+```
+Ctrl+b script-message open_add_total_menu
 ```
 
 #### 清空当前视频关联的弹幕源（可选）
@@ -515,6 +528,36 @@ OpenCC_Path=/path/to/your/opencc
 history_path=/path/to/your/danmaku-history.json
 ```
 
+### message_x
+
+
+#### 功能说明
+
+自定义插件相关提示的显示位置，距离屏幕左上角的x轴的距离
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+message_x=30
+```
+
+### message_y
+
+
+#### 功能说明
+
+自定义插件相关提示的显示位置，距离屏幕左上角的y轴的距离
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+message_y=30
+```
+
 ### DanmakuFactory相关配置（自定义弹幕样式相关配置）
 
 默认配置如下，可根据需求更改并自定义弹幕样式
@@ -552,10 +595,15 @@ blacklist_path=
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
 
+### 简繁转换功能无法生效
+
+检查mpv及其本插件是否安装在了含中文字符的文件夹路径下。简繁转换功能所依赖的OpenCC第三方工具在非英文路径名下无法正常工作。想了解更多可以参考[此discussion](https://github.com/Tony15246/uosc_danmaku/discussions/92)
+
 ## 特别感谢
 
 感谢以下项目为本项目提供了实现参考或者外部依赖
 
+- 弹幕api：[弹弹play](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md)
 - 菜单api：[uosc](https://github.com/tomasklaen/uosc)
 - 弹幕格式转换：[DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
 - 简繁转换：[OpenCC](https://github.com/BYVoid/OpenCC)
