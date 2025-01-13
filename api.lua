@@ -7,7 +7,7 @@ local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path
 local history_path = mp.command_native({"expand-path", options.history_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
-danmaku = {}
+danmaku = {sources = {}}
 
 -- url编码转换
 function url_encode(str)
@@ -523,6 +523,10 @@ end
 -- Function to fetch danmaku from API
 function fetch_danmaku(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+    if danmaku.sources["-" .. url] ~= nil then
+        return
+    end
+    danmaku.sources[url] = {from = "api_server"}
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_contents(url)
@@ -572,11 +576,49 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     for _, related in ipairs(response["relateds"]) do
-        url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
-        local shift = related["shift"]
-        --show_message("正在从此地址加载弹幕：" .. related["url"], 30)
-        show_message("正在从第三方库装填弹幕", 30)
-        msg.verbose("正在从第三方库装填弹幕：" .. url)
+        if danmaku.sources["-" .. related["url"]] == nil then
+            danmaku.sources[related["url"]] = {from = "api_server"}
+            url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
+            local shift = related["shift"]
+            --show_message("正在从此地址加载弹幕：" .. related["url"], 30)
+            show_message("正在从第三方库装填弹幕", 30)
+            msg.verbose("正在从第三方库装填弹幕：" .. url)
+            res = get_danmaku_contents(url)
+            if res.status ~= 0 then
+                show_message("获取数据失败", 3)
+                msg.error("HTTP 请求失败：" .. res.stderr)
+                return
+            end
+
+            local response_comments = utils.parse_json(res.stdout)
+
+            if response_comments and response_comments["comments"] then
+                if response_comments["count"] == 0 then
+                    local start = os.time()
+                    while os.time() - start < 1 do
+                        -- 空循环，等待 1 秒
+                    end
+
+                    res = get_danmaku_contents(url)
+                    response_comments = utils.parse_json(res.stdout)
+                end
+
+                for _, comment in ipairs(response_comments["comments"]) do
+                    comment["shift"] = shift
+                    table.insert(comments, comment)
+                end
+            else
+                show_message("无数据", 3)
+                msg.verbose("无数据")
+            end
+        end
+    end
+
+    url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
+    if danmaku.sources["-" .. url] == nil then
+        danmaku.sources[url] = {from = "api_server"}
+        show_message("正在从弹弹Play库装填弹幕", 30)
+        msg.verbose("尝试获取弹幕：" .. url)
         res = get_danmaku_contents(url)
         if res.status ~= 0 then
             show_message("获取数据失败", 3)
@@ -584,49 +626,17 @@ function fetch_danmaku_all(episodeId, from_menu)
             return
         end
 
-        local response_comments = utils.parse_json(res.stdout)
+        response = utils.parse_json(res.stdout)
 
-        if response_comments and response_comments["comments"] then
-            if response_comments["count"] == 0 then
-                local start = os.time()
-                while os.time() - start < 1 do
-                    -- 空循环，等待 1 秒
-                end
-
-                res = get_danmaku_contents(url)
-                response_comments = utils.parse_json(res.stdout)
-            end
-
-            for _, comment in ipairs(response_comments["comments"]) do
-                comment["shift"] = shift
-                table.insert(comments, comment)
-            end
-        else
+        if not response or not response["comments"] then
             show_message("无数据", 3)
             msg.verbose("无数据")
+            return
         end
-    end
 
-    url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
-    show_message("正在从弹弹Play库装填弹幕", 30)
-    msg.verbose("尝试获取弹幕：" .. url)
-    res = get_danmaku_contents(url)
-    if res.status ~= 0 then
-        show_message("获取数据失败", 3)
-        msg.error("HTTP 请求失败：" .. res.stderr)
-        return
-    end
-
-    response = utils.parse_json(res.stdout)
-
-    if not response or not response["comments"] then
-        show_message("无数据", 3)
-        msg.verbose("无数据")
-        return
-    end
-
-    for _, comment in ipairs(response["comments"]) do
-        table.insert(comments, comment)
+        for _, comment in ipairs(response["comments"]) do
+            table.insert(comments, comment)
+        end
     end
 
     if #comments == 0 then
@@ -647,28 +657,9 @@ end
 --通过输入源url获取弹幕库
 function add_danmaku_source(query, from_menu)
     from_menu = from_menu or false
-    if from_menu and options.add_from_source then
-        local path = mp.get_property("path")
-        if path then
-            local history_json = read_file(history_path)
-            if history_json then
-                local history = utils.parse_json(history_json) or {}
-                history[path] = history[path] or {}
-
-                local flag = false
-                for _, source in ipairs(history[path]) do
-                    if source == query then
-                        flag = true
-                        break
-                    end
-                end
-
-                if not flag then
-                    table.insert(history[path], query)
-                    write_json_file(history_path, history)
-                end
-            end
-        end
+    if from_menu then
+        danmaku.sources[query] = {from = "user_custom"}
+        add_source_to_history(query)
     end
 
     if is_protocol(query) then
@@ -928,7 +919,70 @@ function addon_danmaku(path, from_menu)
         local history_record = history[path]
         if history_record ~= nil then
             for _, source in ipairs(history_record) do
-                add_danmaku_source(source, from_menu)
+                if not source:match("^-") then
+                    add_danmaku_source(source, from_menu)
+                end
+            end
+        end
+    end
+end
+
+function remove_source_from_history(rm_source)
+    local history_json = read_file(history_path)
+    local path = mp.get_property("path")
+
+    if history_json then
+        local history = utils.parse_json(history_json) or {}
+
+        if history[path] ~= nil then
+            for i, source in ipairs(history[path]) do
+                if source == rm_source then
+                    table.remove(history[path], i)
+                    break
+                end
+            end
+        end
+
+        write_json_file(history_path, history)
+    end
+end
+
+function add_source_to_history(add_source)
+    local history_json = read_file(history_path)
+    local path = mp.get_property("path")
+
+    if history_json then
+        local history = utils.parse_json(history_json) or {}
+        history[path] = history[path] or {}
+
+        local flag = false
+        for _, source in ipairs(history[path]) do
+            if source == add_source then
+                flag = true
+                break
+            end
+        end
+
+        if not flag then
+            table.insert(history[path], add_source)
+            write_json_file(history_path, history)
+        end
+    end
+end
+
+function read_danmaku_source_record(path)
+    local history_json = read_file(history_path)
+
+    if history_json ~= nil then
+        local history = utils.parse_json(history_json) or {}
+        local history_record = history[path]
+        if history_record ~= nil then
+            for _, source in ipairs(history_record) do
+                if source:match("^-") then
+                    danmaku.sources[source] = {from = "api_server"}
+                else
+                    danmaku.sources[source] = {from = "user_custom"}
+                end
             end
         end
     end
@@ -1147,9 +1201,7 @@ function init(path)
             end
         end
         get_danmaku_with_hash(filename, path)
-        if options.add_from_source then
-            addon_danmaku(path, true)
-        end
+        addon_danmaku(path, true)
     end
 end
 
@@ -1169,6 +1221,11 @@ mp.register_script_message("clear-source", function ()
         if path and history[path] ~= nil then
             history[path] = nil
             write_json_file(history_path, history)
+            for url, source in ipairs(danmaku.sources) do
+                if source.from == "user_custom" then
+                    danmaku.sources[url] = nil
+                end
+            end
             show_message("已清空当前视频所关联的弹幕源", 3)
         end
     end
@@ -1178,6 +1235,8 @@ mp.register_event("file-loaded", function()
     local path = mp.get_property("path")
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
+
+    read_danmaku_source_record(path)
 
     if options.autoload_for_url and is_protocol(path) then
         if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
@@ -1218,13 +1277,9 @@ mp.register_event("file-loaded", function()
         end
     end
 
-    if options.auto_load or options.add_from_source then
-        if options.auto_load then
-            auto_load_danmaku(path, dir, filename)
-        end
-        if options.add_from_source then
-            addon_danmaku(path)
-        end
+    if options.auto_load then
+        auto_load_danmaku(path, dir, filename)
+        addon_danmaku(path)
         return
     end
 
