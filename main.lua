@@ -205,22 +205,42 @@ function open_add_menu_get()
 end
 
 function open_add_menu_uosc()
+    local sources = {}
+    for url, source in pairs(danmaku.sources) do
+        local item = {title = url, value = url, keep_open = true,}
+        if source.from == "api_server" then
+            if url:match("^-") then
+                item.hint = "来源：弹幕服务器（已屏蔽）"
+                item.actions = {{icon = "check", name = "unblock"},}
+            else
+                item.hint = "来源：弹幕服务器（未屏蔽）"
+                item.actions = {{icon = "not_interested", name = "block"},}
+            end
+        else
+            item.hint = "来源：用户添加"
+            item.actions = {{icon = "delete", name = "delete"},}
+        end
+        table.insert(sources, item)
+    end
+    table.insert(sources, 1,
+        {
+            value = "",
+            hint = "对弹幕源的更改下次播放视频才会生效",
+            keep_open = true,
+            selectable = false,
+            align = "center",
+        }
+    )
     local menu_props = {
         type = "menu_source",
         title = "在此输入源地址url",
         search_style = "palette",
         search_debounce = "submit",
         on_search = { "script-message-to", mp.get_script_name(), "add-source-event" },
-        footnote = "使用enter或ctrl+enter进行搜索",
-        items = {
-            {
-                value = "",
-                hint = "使用enter或ctrl+enter进行搜索",
-                keep_open = true,
-                selectable = false,
-                align = "center",
-            },
-        },
+        footnote = "使用enter或ctrl+enter进行添加",
+        items = sources,
+        item_actions_place = "outside",
+        callback = {mp.get_script_name(), 'menu-event'},
     }
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
@@ -538,5 +558,35 @@ mp.register_script_message("update-danmaku-style", function(query, text)
         updata_danmaku_setup(query, status)
     else
         updata_danmaku_setup(query, "error")
+    end
+end)
+
+mp.register_script_message('menu-event', function(json)
+    local event = utils.parse_json(json)
+    if event.type == 'activate' then
+
+        if event.action == "delete" then
+            danmaku.sources[event.value] = nil
+            remove_source_from_history(event.value)
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
+            open_add_menu_uosc()
+        end
+
+        if event.action == "block" then
+            danmaku.sources["-" .. event.value] = danmaku.sources[event.value]
+            danmaku.sources[event.value] = nil
+            remove_source_from_history(event.value)
+            add_source_to_history("-" .. event.value)
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
+            open_add_menu_uosc()
+        end
+
+        if event.action == "unblock" then
+            danmaku.sources[event.value:sub(2)] = danmaku.sources[event.value]
+            danmaku.sources[event.value] = nil
+            remove_source_from_history(event.value)
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
+            open_add_menu_uosc()
+        end
     end
 end)

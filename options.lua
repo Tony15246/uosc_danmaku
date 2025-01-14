@@ -7,7 +7,6 @@ options = {
     auto_load = false,
     autoload_local_danmaku = false,
     autoload_for_url = false,
-    add_from_source = false,
     save_danmaku = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
