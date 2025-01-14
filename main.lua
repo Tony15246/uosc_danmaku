@@ -27,6 +27,53 @@ local footnote_table = {
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
 local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
 
+-- 视频播放时保存弹幕
+function save_danmaku_func(suffix)
+    -- show_message(suffix)
+    -- 检查 suffix 是否存在（不是 nil）并且是字符串类型
+    if type(suffix) == "string" then
+        -- 将字符串转换为小写以确保比较时不区分大小写
+        suffix = string.lower(suffix)
+        if suffix == "xml" or suffix == "ass" then
+            local danmaku_path = os.getenv("TEMP") or "/tmp/"
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            if file_exists(danmaku_file) then
+                local path = mp.get_property("path")
+                -- 排除网络播放场景
+                if not path or is_protocol(path) then
+                    show_message("此弹幕文件不支持保存至本地")
+                    msg.verbose("This danmaku file does not support saving.")
+                else
+                    local dir = get_parent_directory(path)
+                    local filename = mp.get_property('filename/no-ext') 
+                    local danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
+                    -- show_message(danmaku_out)
+                    if file_exists(danmaku_out) then
+                        show_message("已存在同名弹幕文件：" .. danmaku_out)
+                        msg.verbose("Danmaku file with the same name already exists: " .. danmaku_out)
+                        return
+                    else
+                        convert_with_danmaku_factory(danmaku_file, danmaku_out)
+                        if file_exists(danmaku_out) then
+                            if not options.save_danmaku then
+                                show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
+                            end
+                            msg.verbose("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
+                        end
+                    end
+                end
+            else
+                show_message("找不到弹幕文件：" .. danmaku_file)
+                msg.verbose("Can't find danmaku file：" .. danmaku_file)
+            end
+        else
+            msg.verbose("不支持的文件后缀: " .. (suffix or "未知"))
+        end
+    else
+        msg.verbose("Function value undefined" .. suffix)
+    end
+end
+
 function get_animes(query)
     local encoded_query = url_encode(query)
     local url = options.api_server .. "/api/v2/search/episodes"
@@ -420,6 +467,11 @@ mp.commandv(
 
 mp.register_script_message('uosc-version', function()
     uosc_available = true
+end)
+
+-- 视频播放时保存弹幕
+mp.register_script_message("immediately_save_danmaku", function(event)
+    save_danmaku_func(event)
 end)
 
 -- 注册函数给 uosc 按钮使用
