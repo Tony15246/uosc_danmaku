@@ -196,6 +196,8 @@ Ctrl+j script-message open_add_source_menu
 C:\Users\Tony\Downloads\example.xml
 ```
 
+现已更新增强了此菜单。现在在该菜单内可以可视化地控制所有弹幕源，删除或者屏蔽任何不想要的弹幕源。对于自己手动添加的弹幕源，可以进行移除。对于来自弹弹play的弹幕源，无法进行移除，但是可以进行屏蔽，将不会再从屏蔽过的弹幕源获取弹幕。当然，也可以解除对来自弹弹play的弹幕源的屏蔽。另外需要注意在菜单内对于弹幕源的可视化操作都需要下次打开视频，或者重新用弹幕搜索功能加载一次弹幕才会生效。
+
 #### 弹幕设置（可选）
 
 打开多级功能复合菜单，包含了插件目前所有的图形化功能，另外插件的**弹幕样式实时修改功能**目前只存在于这个菜单中。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:add_box:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
@@ -204,7 +206,7 @@ C:\Users\Tony\Downloads\example.xml
 想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_total_menu`。
 
 ```
-Ctrl+b script-message open_add_total_menu
+key script-message open_add_total_menu
 ```
 
 #### 清空当前视频关联的弹幕源（可选）
@@ -338,6 +340,10 @@ autoload_for_url=yes
 ```
 
 ### add_from_source
+
+> [!NOTE]
+>
+> 该可选配置项在Release v1.2.0之后已废除。现在通过`从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过`add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
 
 #### 功能说明
 
