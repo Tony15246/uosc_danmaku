@@ -346,16 +346,7 @@ mp.add_hook("on_unload", 50, function()
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then
         if options.save_danmaku then
-            local path = mp.get_property("path")
-            if not path or is_protocol(path) then return end
-            local dir = get_parent_directory(path)
-            local filename = mp.get_property('filename/no-ext') 
-            local danmaku_out = utils.join_path(dir, filename .. ".xml")
-            if file_exists(danmaku_out) then return end
-            convert_with_danmaku_factory(rm2, danmaku_out)
-            if file_exists(danmaku_out) then
-                msg.verbose("成功保存弹幕文件到视频文件同目录")
-            end
+            save_danmaku_func("xml")
         end
         os.remove(rm2)
     end
