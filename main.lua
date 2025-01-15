@@ -271,15 +271,6 @@ function open_add_menu_uosc()
         end
         table.insert(sources, item)
     end
-    table.insert(sources, 1,
-        {
-            value = "",
-            hint = "对弹幕源的更改下次播放视频才会生效",
-            keep_open = true,
-            selectable = false,
-            align = "center",
-        }
-    )
     local menu_props = {
         type = "menu_source",
         title = "在此输入源地址url",
@@ -636,6 +627,7 @@ mp.register_script_message('menu-event', function(json)
             remove_source_from_history(event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
+            load_danmaku(true)
         end
 
         if event.action == "block" then
@@ -645,6 +637,7 @@ mp.register_script_message('menu-event', function(json)
             add_source_to_history("-" .. event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
+            load_danmaku(true)
         end
 
         if event.action == "unblock" then
@@ -653,6 +646,7 @@ mp.register_script_message('menu-event', function(json)
             remove_source_from_history(event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
+            load_danmaku(true)
         end
     end
 end)

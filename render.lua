@@ -353,6 +353,11 @@ mp.add_hook("on_unload", 50, function()
     if file_exists(rm3) then os.remove(rm3) end
     if file_exists(rm4) then os.remove(rm4) end
     if file_exists(rm5) then os.remove(rm5) end
+    for _, source in pairs(danmaku.sources) do
+        if source.fname and file_exists(source.fname) then
+            os.remove(source.fname)
+        end
+    end
 end)
 
 mp.register_event('playback-restart', function(event)
