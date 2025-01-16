@@ -7,7 +7,7 @@ local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path
 local history_path = mp.command_native({"expand-path", options.history_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
-danmaku = {sources = {}}
+danmaku = {sources = {}, count = 1}
 
 -- url编码转换
 function url_encode(str)
@@ -450,11 +450,24 @@ local function match_file(file_name, file_hash)
 end
 
 -- 加载弹幕
-local function load_danmaku(danmaku_file, from_menu)
-    if not file_exists(danmaku_file) then
-        msg.verbose("未找到弹幕文件")
+function load_danmaku(from_menu)
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    local danmaku_input = {}
+    for url, source in pairs(danmaku.sources) do
+        if not url:match("^-") and source.fname then
+            if not file_exists(source.fname) then
+                msg.verbose("未找到弹幕文件")
+                return
+            end
+            table.insert(danmaku_input, source.fname)
+        end
+    end
+    if #danmaku_input == 0 then
+        show_message("该集弹幕内容为空，结束加载", 3)
+        comments = {}
         return
     end
+    convert_with_danmaku_factory(danmaku_input)
     enabled = true
     parse_danmaku(danmaku_file, from_menu)
 end
@@ -523,10 +536,6 @@ end
 -- Function to fetch danmaku from API
 function fetch_danmaku(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
-    if danmaku.sources["-" .. url] ~= nil then
-        return
-    end
-    danmaku.sources[url] = {from = "api_server"}
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_contents(url)
@@ -540,11 +549,17 @@ function fetch_danmaku(episodeId, from_menu)
             local success = save_json_for_factory(response["comments"])
             if success then
                 local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-                convert_with_danmaku_factory(danmaku_json)
+                local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
+                danmaku.count = danmaku.count + 1
+                convert_with_danmaku_factory(danmaku_json, danmaku_file)
+                if danmaku.sources["-" .. url] ~= nil then
+                    danmaku.sources["-" .. url]["fname"] = danmaku_file
+                else
+                    danmaku.sources[url] = {from = "api_server", fname = danmaku_file}
+                end
             end
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-            load_danmaku(danmaku_file, from_menu)
-        else
+            load_danmaku(from_menu)
+       else
             show_message("无数据", 3)
             msg.verbose("无数据")
         end
@@ -556,8 +571,8 @@ end
 
 -- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
 function fetch_danmaku_all(episodeId, from_menu)
-    local comments = {}
     local url = options.api_server .. "/api/v2/related/" .. episodeId
+    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_contents(url)
@@ -576,49 +591,11 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     for _, related in ipairs(response["relateds"]) do
-        if danmaku.sources["-" .. related["url"]] == nil then
-            danmaku.sources[related["url"]] = {from = "api_server"}
-            url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
-            local shift = related["shift"]
-            --show_message("正在从此地址加载弹幕：" .. related["url"], 30)
-            show_message("正在从第三方库装填弹幕", 30)
-            msg.verbose("正在从第三方库装填弹幕：" .. url)
-            res = get_danmaku_contents(url)
-            if res.status ~= 0 then
-                show_message("获取数据失败", 3)
-                msg.error("HTTP 请求失败：" .. res.stderr)
-                return
-            end
-
-            local response_comments = utils.parse_json(res.stdout)
-
-            if response_comments and response_comments["comments"] then
-                if response_comments["count"] == 0 then
-                    local start = os.time()
-                    while os.time() - start < 1 do
-                        -- 空循环，等待 1 秒
-                    end
-
-                    res = get_danmaku_contents(url)
-                    response_comments = utils.parse_json(res.stdout)
-                end
-
-                for _, comment in ipairs(response_comments["comments"]) do
-                    comment["shift"] = shift
-                    table.insert(comments, comment)
-                end
-            else
-                show_message("无数据", 3)
-                msg.verbose("无数据")
-            end
-        end
-    end
-
-    url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
-    if danmaku.sources["-" .. url] == nil then
-        danmaku.sources[url] = {from = "api_server"}
-        show_message("正在从弹弹Play库装填弹幕", 30)
-        msg.verbose("尝试获取弹幕：" .. url)
+        url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
+        local shift = related["shift"]
+        --show_message("正在从此地址加载弹幕：" .. related["url"], 30)
+        show_message("正在从第三方库装填弹幕", 30)
+        msg.verbose("正在从第三方库装填弹幕：" .. url)
         res = get_danmaku_contents(url)
         if res.status ~= 0 then
             show_message("获取数据失败", 3)
@@ -626,39 +603,89 @@ function fetch_danmaku_all(episodeId, from_menu)
             return
         end
 
-        response = utils.parse_json(res.stdout)
+        local response_comments = utils.parse_json(res.stdout)
 
-        if not response or not response["comments"] then
+        if response_comments and response_comments["comments"] then
+            if response_comments["count"] == 0 then
+                local start = os.time()
+                while os.time() - start < 1 do
+                    -- 空循环，等待 1 秒
+                end
+
+                res = get_danmaku_contents(url)
+                response_comments = utils.parse_json(res.stdout)
+            end
+
+            local comments = {}
+
+            for _, comment in ipairs(response_comments["comments"]) do
+                comment["shift"] = shift
+                table.insert(comments, comment)
+            end
+
+            if #comments == 0 then
+                if danmaku.sources["-" .. related["url"]] == nil then
+                    danmaku.sources[related["url"]] = {from = "api_server"}
+                end
+            else
+                local success = save_json_for_factory(comments)
+                if success then
+                    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
+                    danmaku.count = danmaku.count + 1
+                    convert_with_danmaku_factory(danmaku_json, danmaku_file)
+                    if danmaku.sources["-" .. related["url"]] ~= nil then
+                        danmaku.sources["-" .. related["url"]]["fname"] = danmaku_file
+                    else
+                        danmaku.sources[related["url"]] = {from = "api_server", fname = danmaku_file}
+                    end
+                end
+            end
+       else
             show_message("无数据", 3)
             msg.verbose("无数据")
-            return
-        end
-
-        for _, comment in ipairs(response["comments"]) do
-            table.insert(comments, comment)
         end
     end
 
-    if #comments == 0 then
-        show_message("该集弹幕内容为空，结束加载", 3)
+    url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
+    show_message("正在从弹弹Play库装填弹幕", 30)
+    msg.verbose("尝试获取弹幕：" .. url)
+    res = get_danmaku_contents(url)
+    if res.status ~= 0 then
+        show_message("获取数据失败", 3)
+        msg.error("HTTP 请求失败：" .. res.stderr)
         return
     end
 
+    response = utils.parse_json(res.stdout)
+
+    if not response or not response["comments"] then
+        show_message("无数据", 3)
+        msg.verbose("无数据")
+        return
+    end
+
+    local comments = response["comments"]
     local success = save_json_for_factory(comments)
     if success then
-        local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-        convert_with_danmaku_factory(danmaku_json)
+        local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
+        danmaku.count = danmaku.count + 1
+        convert_with_danmaku_factory(danmaku_json, danmaku_file)
+        if danmaku.sources["-" .. url] ~= nil then
+            danmaku.sources["-" .. url]["fname"] = danmaku_file
+        else
+            danmaku.sources[url] = {from = "api_server", fname = danmaku_file}
+        end
     end
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file, from_menu)
+    load_danmaku(from_menu)
 
 end
 
 --通过输入源url获取弹幕库
 function add_danmaku_source(query, from_menu)
+    danmaku.sources[query] = {from = "user_custom"}
+
     from_menu = from_menu or false
     if from_menu then
-        danmaku.sources[query] = {from = "user_custom"}
         add_source_to_history(query)
     end
 
@@ -679,15 +706,14 @@ function add_danmaku_source_local(query, from_menu)
         msg.verbose("仅支持弹幕文件")
         return
     end
-    local old_danmaku = utils.join_path(danmaku_path, "danmaku.ass")
-    local danmaku_input = {path}
-    if file_exists(old_danmaku) then
-        table.insert(danmaku_input, old_danmaku)
-    end
-    convert_with_danmaku_factory(danmaku_input)
 
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file, from_menu)
+    if danmaku.sources[query] ~= nil then
+        danmaku.sources[query]["fname"] = path
+    else
+        danmaku.sources[query] = {from = "user_custom", fname = path}
+    end
+
+    load_danmaku(from_menu)
 end
 
 --通过输入源url获取弹幕库
@@ -709,7 +735,7 @@ function add_danmaku_source_online(query, from_menu)
         return
     end
 
-    local new_comments = response["comments"]
+    local comments = response["comments"]
     local count = response["count"]
 
     if count == 0 then
@@ -722,7 +748,7 @@ function add_danmaku_source_online(query, from_menu)
 
         res = get_danmaku_contents(url)
         response = utils.parse_json(res.stdout)
-        new_comments = response["comments"]
+        comments = response["comments"]
         count = response["count"]
     end
 
@@ -731,16 +757,20 @@ function add_danmaku_source_online(query, from_menu)
         return
     end
 
-    save_json_for_factory(new_comments)
-    local old_danmaku = utils.join_path(danmaku_path, "danmaku.ass")
-    local danmaku_input = { utils.join_path(danmaku_path, "danmaku.json") }
-    if file_exists(old_danmaku) then
-        table.insert(danmaku_input, old_danmaku)
+    local success = save_json_for_factory(comments)
+    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+    if success then
+        local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
+        danmaku.count = danmaku.count + 1
+        convert_with_danmaku_factory(danmaku_json, danmaku_file)
+        if danmaku.sources[query] ~= nil then
+            danmaku.sources[query]["fname"] = danmaku_file
+        else
+            danmaku.sources[query] = {from = "user_custom", fname = danmaku_file}
+        end
     end
-    convert_with_danmaku_factory(danmaku_input)
 
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file, from_menu)
+    load_danmaku(from_menu)
 end
 
 -- 将弹幕转换为factory可读的json格式
@@ -1101,7 +1131,7 @@ function load_danmaku_for_bahamut(path)
 
     local res = mp.command_native(cmd)
     if res.status ~= 0 or not file_exists(danmaku_json) then
-        local url = "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn
+        url = "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn
         add_danmaku_source_online(url, true)
         return
     end
@@ -1134,9 +1164,15 @@ function load_danmaku_for_bahamut(path)
         json_file:close()
     end
 
-    convert_with_danmaku_factory(json_filename)
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-    load_danmaku(danmaku_file, true)
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
+    danmaku.count = danmaku.count + 1
+    convert_with_danmaku_factory(json_filename, danmaku_file)
+    if danmaku.sources[url] ~= nil then
+        danmaku.sources[url]["fname"] = danmaku_file
+    else
+        danmaku.sources[url] = {from = "user_custom", fname = danmaku_file}
+    end
+    load_danmaku(true)
 
 end
 
