@@ -456,6 +456,7 @@ function load_danmaku(from_menu)
     for url, source in pairs(danmaku.sources) do
         if not url:match("^-") and source.fname then
             if not file_exists(source.fname) then
+                show_message("未找到弹幕文件", 3)
                 msg.verbose("未找到弹幕文件")
                 return
             end
@@ -543,6 +544,9 @@ function fetch_danmaku(episodeId, from_menu)
         local response = utils.parse_json(res.stdout)
         if response and response["comments"] then
             if response["count"] == 0 then
+                if danmaku.sources["-" .. url] == nil then
+                    danmaku.sources[url] = {from = "api_server"}
+                end
                 show_message("该集弹幕内容为空，结束加载", 3)
                 return
             end
@@ -665,6 +669,16 @@ function fetch_danmaku_all(episodeId, from_menu)
     end
 
     local comments = response["comments"]
+    local count = response["count"]
+
+    if count == 0 then
+        if danmaku.sources["-" .. url] == nil then
+            danmaku.sources[url] = {from = "api_server"}
+        end
+        load_danmaku(from_menu)
+        return
+    end
+
     local success = save_json_for_factory(comments)
     if success then
         local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
