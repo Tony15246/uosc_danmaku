@@ -722,9 +722,10 @@ function add_danmaku_source_local(query, from_menu)
     end
 
     if danmaku.sources[query] ~= nil then
+        danmaku.sources[query]["from"] = "user_local"
         danmaku.sources[query]["fname"] = path
     else
-        danmaku.sources[query] = {from = "user_custom", fname = path}
+        danmaku.sources[query] = {from = "user_local", fname = path}
     end
 
     load_danmaku(from_menu)
