@@ -12,11 +12,10 @@ if ok then
     bnot, bor, band, bxor, lshift, rshift = bit.bnot, bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift
     rol, bswap = bit.rol, bit.bswap
 else
-    local bit = pcall(require, 'bit32')  --Lua 5.2
-    local bit32_bnot = bit.bnot
+    local bit32_bnot = bit32.bnot --Lua 5.2
     tobit = function(a) return a <= 0x7fffffff and a or -(bit32_bnot(a) + 1) end
     bnot = function(a) return tobit(bit32_bnot(tobit(a))) end
-    bor, band, bxor, lshift, rshift, rol = bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift, bit.lrotate
+    bor, band, bxor, lshift, rshift, rol = bit32.bor, bit32.band, bit32.bxor, bit32.lshift, bit32.rshift, bit32.lrotate
 end
 if not tohex then
     tohex = function(a) return string.sub(string.format('%08x', a), -8) end
