@@ -550,12 +550,10 @@ function fetch_danmaku(episodeId, from_menu)
                 show_message("该集弹幕内容为空，结束加载", 3)
                 return
             end
-            local success = save_json_for_factory(response["comments"])
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+            danmaku.count = danmaku.count + 1
+            local success = save_json_for_factory(response["comments"], danmaku_file)
             if success then
-                local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
-                local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
-                danmaku.count = danmaku.count + 1
-                convert_with_danmaku_factory(danmaku_json, danmaku_file)
                 if danmaku.sources["-" .. url] ~= nil then
                     danmaku.sources["-" .. url]["fname"] = danmaku_file
                 else
@@ -576,7 +574,6 @@ end
 -- 匹配多个弹幕库 related 包括如腾讯、优酷、b站等
 function fetch_danmaku_all(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/related/" .. episodeId
-    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local res = get_danmaku_contents(url)
@@ -632,11 +629,10 @@ function fetch_danmaku_all(episodeId, from_menu)
                     danmaku.sources[related["url"]] = {from = "api_server"}
                 end
             else
-                local success = save_json_for_factory(comments)
+                local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+                danmaku.count = danmaku.count + 1
+                local success = save_json_for_factory(comments, danmaku_file)
                 if success then
-                    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
-                    danmaku.count = danmaku.count + 1
-                    convert_with_danmaku_factory(danmaku_json, danmaku_file)
                     if danmaku.sources["-" .. related["url"]] ~= nil then
                         danmaku.sources["-" .. related["url"]]["fname"] = danmaku_file
                     else
@@ -679,11 +675,10 @@ function fetch_danmaku_all(episodeId, from_menu)
         return
     end
 
-    local success = save_json_for_factory(comments)
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+    danmaku.count = danmaku.count + 1
+    local success = save_json_for_factory(comments, danmaku_file)
     if success then
-        local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
-        danmaku.count = danmaku.count + 1
-        convert_with_danmaku_factory(danmaku_json, danmaku_file)
         if danmaku.sources["-" .. url] ~= nil then
             danmaku.sources["-" .. url]["fname"] = danmaku_file
         else
@@ -772,12 +767,10 @@ function add_danmaku_source_online(query, from_menu)
         return
     end
 
-    local success = save_json_for_factory(comments)
-    local danmaku_json = utils.join_path(danmaku_path, "danmaku.json")
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+    danmaku.count = danmaku.count + 1
+    local success = save_json_for_factory(comments, danmaku_file)
     if success then
-        local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
-        danmaku.count = danmaku.count + 1
-        convert_with_danmaku_factory(danmaku_json, danmaku_file)
         if danmaku.sources[query] ~= nil then
             danmaku.sources[query]["fname"] = danmaku_file
         else
@@ -789,8 +782,8 @@ function add_danmaku_source_online(query, from_menu)
 end
 
 -- 将弹幕转换为factory可读的json格式
-function save_json_for_factory(comments)
-    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
+function save_json_for_factory(comments, json_filename)
+    json_filename = json_filename or utils.join_path(danmaku_path, "danmaku.json")
     local json_file = io.open(json_filename, "w")
 
     if json_file then
@@ -1179,13 +1172,10 @@ function load_danmaku_for_bahamut(path)
         json_file:close()
     end
 
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".ass")
-    danmaku.count = danmaku.count + 1
-    convert_with_danmaku_factory(json_filename, danmaku_file)
     if danmaku.sources[url] ~= nil then
-        danmaku.sources[url]["fname"] = danmaku_file
+        danmaku.sources[url]["fname"] = json_filename
     else
-        danmaku.sources[url] = {from = "user_custom", fname = danmaku_file}
+        danmaku.sources[url] = {from = "user_custom", fname = json_filename}
     end
     load_danmaku(true)
 
