@@ -837,7 +837,7 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out)
         "-i",
         "--ignore-warnings",
         "--scrolltime", options.scrolltime,
-        "--fontname", options.fontname,
+        "--fontname", "sans-serif",
         "--fontsize", options.fontsize,
         "--shadow", options.shadow,
         "--bold", options.bold,
@@ -1262,11 +1262,15 @@ mp.register_script_message("clear-source", function ()
         if path and history[path] ~= nil then
             history[path] = nil
             write_json_file(history_path, history)
-            for url, source in ipairs(danmaku.sources) do
+            for url, source in pairs(danmaku.sources) do
                 if source.from == "user_custom" then
+                    if source.fname and file_exists(source.fname) then
+                        os.remove(source.fname)
+                    end
                     danmaku.sources[url] = nil
                 end
             end
+            load_danmaku(false)
             show_message("已清空当前视频所关联的弹幕源", 3)
         end
     end
