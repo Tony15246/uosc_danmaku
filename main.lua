@@ -623,6 +623,10 @@ mp.register_script_message('menu-event', function(json)
     if event.type == 'activate' then
 
         if event.action == "delete" then
+            local rm = danmaku.sources[event.value]["fname"]
+            if rm and file_exists(rm) then
+                os.remove(rm)
+            end
             danmaku.sources[event.value] = nil
             remove_source_from_history(event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
