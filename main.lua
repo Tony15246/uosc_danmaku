@@ -304,6 +304,11 @@ end
 
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived)
+    if not uosc_available then
+        show_message("无uosc_UI框架，不支持使用该功能", 2)
+        return
+    end
+    
     local items = {}
     for _, key in ipairs(ordered_keys) do
         local config = menu_items_config[key]
@@ -371,7 +376,7 @@ function open_add_total_menu_uosc()
     local total_menu_items_config = {
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
-        { title = "弹幕设置", action = "open_setup_danmaku_menu" },
+        { title = "弹幕样式", action = "open_setup_danmaku_menu" },
     }
 
 
@@ -454,6 +459,18 @@ mp.commandv(
         icon = "add_box",
         tooltip = "从源添加弹幕",
         command = "script-message open_add_source_menu",
+    })
+)
+
+mp.commandv(
+    "script-message-to",
+    "uosc",
+    "set-button",
+    "danmaku_styles",
+    utils.format_json({
+        icon = "palette",
+        tooltip = "弹幕样式",
+        command = "script-message open_setup_danmaku_menu",
     })
 )
 
@@ -594,7 +611,7 @@ end)
 
 mp.register_script_message("update-danmaku-style", function(query, text)
     -- mp.commandv("script-message-to", "uosc", "close-menu", "menu_style")
-    msg.info(text:gsub("%s",""))
+    -- msg.info(text:gsub("%s",""))
     local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
     if text == nil or text == "" then
         return
