@@ -28,7 +28,7 @@
 7. 在没有手动加载过弹幕，没有填装自动弹幕记忆之前，通过文件哈希匹配的方式自动添加弹幕（~仅限本地文件~，现已支持网络视频），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
 8. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
 9. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
-10. 自定义弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
+10. 自定义默认播放弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
 11. 在使用如[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段时，自动加载弹幕（注意⚠️：目前支持自动加载bilibili和巴哈姆特这两个网站的弹幕，具体说明查看[autoload_for_url配置项说明](#autoload_for_url)）
 12. 保存当前弹幕到本地（详细功能说明见[save_danmaku配置项说明](#save_danmaku)）
 13. 可以合并一定时间段内同时出现的大量重复弹幕（具体设置方法详见[merge_tolerance配置项说明](#merge_tolerance)）
@@ -155,15 +155,6 @@ open_search_danmaku_menu_key=Ctrl+i
 show_danmaku_keyboard_key=i
 ```
 
-#### 设置弹幕延迟（可选）
-
-可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。可以为负数
-
-```
-key script-message danmaku-delay <seconds>
-```
-> 当前弹幕延迟的值可以从`user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
-
 #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
 
 从弹幕源添加弹幕。在已经在播放弹幕的情况下会将添加的弹幕追加到现有弹幕中。
@@ -198,9 +189,20 @@ C:\Users\Tony\Downloads\example.xml
 
 现已更新增强了此菜单。现在在该菜单内可以可视化地控制所有弹幕源，删除或者屏蔽任何不想要的弹幕源。对于自己手动添加的弹幕源，可以进行移除。对于来自弹弹play的弹幕源，无法进行移除，但是可以进行屏蔽，将不会再从屏蔽过的弹幕源获取弹幕。当然，也可以解除对来自弹弹play的弹幕源的屏蔽。另外需要注意在菜单内对于弹幕源的可视化操作都需要下次打开视频，或者重新用弹幕搜索功能加载一次弹幕才会生效。
 
+#### 实时修改弹幕样式（可选）
+
+依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_styles`或`command:palette:script-message open_setup_danmaku_menu?弹幕样式`到`uosc.conf`的controls配置项中。
+
+
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_setup_danmaku_menu`。
+
+```
+key script-message open_setup_danmaku_menu
+```
+
 #### 弹幕设置（可选）
 
-打开多级功能复合菜单，包含了插件目前所有的图形化功能，另外插件的**弹幕样式实时修改功能**目前只存在于这个菜单中。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:add_box:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
+打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:add_box:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
 
 
 想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_total_menu`。
@@ -209,9 +211,18 @@ C:\Users\Tony\Downloads\example.xml
 key script-message open_add_total_menu
 ```
 
+#### 设置弹幕延迟（可选）
+
+可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。可以为负数
+
+```
+key script-message danmaku-delay <seconds>
+```
+> 当前弹幕延迟的值可以从`user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
+
 #### 清空当前视频关联的弹幕源（可选）
 
-可以清空当前视频所关联的弹幕源。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
+可以清空当前视频中，用户通过[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单手动添加的所有弹幕源（注意该功能不会删除来源于弹幕服务器的弹幕，此类弹幕只能屏蔽或者手动重新匹配新弹幕库）。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
 
 想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`clear-source`。
 
@@ -219,15 +230,19 @@ key script-message open_add_total_menu
 key script-message clear-source
 ```
 
-## 配置选项（可选）
+#### 保存当前视频弹幕（可选）
 
-> [!NOTE]
->
-> 该脚本的选项支持运行时更新，故可以通过键绑定的方式动态切换脚本选项状态。示例：
->
-> ```
-> key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
-> ```
+在视频播放时手动保存弹幕至视频所在文件夹，保存格式支持`xml`与`ass`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
+
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`immediately_save_danmaku "xml"`与`immediately_save_danmaku "ass"`。
+
+```
+key script-message immediately_save_danmaku "xml"
+key script-message immediately_save_danmaku "ass"
+```
+
+
+## 配置选项（可选）
 
 ### api_server
 
@@ -380,6 +395,7 @@ add_from_source=yes
 ```
 save_danmaku=yes
 ```
+
 
 ### user_agent
 
@@ -573,7 +589,7 @@ message_y=30
 ```
 #速度
 scrolltime=15
-#字体
+#字体(名称两边不需要使用引号""括住)
 fontname=sans-serif
 #大小 
 fontsize=50
