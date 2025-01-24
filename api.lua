@@ -421,7 +421,6 @@ function set_episode_id(input, from_menu)
     end
 end
 
--- 使用 curl 发送 HTTP POST 请求获取弹幕 episodeId
 local function match_file(file_name, file_hash)
     local url = options.api_server .. "/api/v2/match"
     local body = utils.format_json({
@@ -430,16 +429,27 @@ local function match_file(file_name, file_hash)
         matchMode = "hashAndFileName"
     })
 
-    local arg = {
-        "curl", "-s", "-X", "POST", url,
-        "-H", "Content-Type: application/json",
-        "-d", body
-    }
-
-    if options.proxy ~= "" then
-        table.insert(arg, '-x')
-        table.insert(arg, options.proxy)
+    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
+    if platform == "windows" then
+        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
+    else
+        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
     end
+
+    local arg = {
+        dandanplay_path,
+        url,
+        "--query-type",
+        "POST",
+        "--accept",
+        "application/json",
+        "--content-type",
+        "application/json",
+        "--user-agent",
+        options.user_agent,
+        "--body",
+        body
+    }
 
     local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
     if result.status == 0 then
@@ -502,24 +512,23 @@ function get_video_data(url)
     return mp.command_native(cmd)
 end
 
--- Use curl command to get the JSON data
 function get_danmaku_contents(url)
+    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
+    if platform == "windows" then
+        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
+    else
+        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
+    end
     local arg = {
-        "curl",
-        "-L",
-        "-X",
+        dandanplay_path,
+        "--query-type",
         "GET",
-        "--header",
-        "Accept: application/json",
+        "--accept",
+        "application/json",
         "--user-agent",
         options.user_agent,
         url,
     }
-
-    if options.proxy ~= "" then
-        table.insert(arg, '-x')
-        table.insert(arg, options.proxy)
-    end
 
     local cmd = {
         name = 'subprocess',
