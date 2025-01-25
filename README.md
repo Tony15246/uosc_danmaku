@@ -2,6 +2,9 @@
 在MPV播放器中加载弹弹play弹幕，基于 uosc UI框架和弹弹play API的mpv弹幕扩展插件
 
 > [!IMPORTANT]
+> Release1.2.0及Release1.2.0之前的发行版，都由于弹弹play接口使用政策改版，部分功能无法使用。如果发现插件功能异常，如搜索弹幕总是显示无结果，请拉取或下载主分支最新源代码。
+
+> [!IMPORTANT]
 > mpv 需基于 LuaJIT 或 Lua 5.2 构建，脚本不支持 Lua 5.1
 
 > [!NOTE]
@@ -72,9 +75,9 @@
 └── uosc_danmaku
     ├── api.lua
     ├── bin
-    │   ├── DanmakuFactory
-    │   │   ├── DanmakuFactory
-    │   │   └── DanmakuFactory.exe
+    │   ├── dandanplay
+    │   │   ├── dandanplay
+    │   │   └── dandanplay.exe
     │   ├── OpenCC_Linux
     │   │   └── opencc
     │   └── OpenCC_Windows
@@ -86,9 +89,11 @@
     │       ├── t2s.json
     │       ├── TSCharacters.ocd2
     │       └── TSPhrases.ocd2
+    ├── LICENSE
     ├── main.lua
     ├── md5.lua
     ├── options.lua
+    ├── README.md
     └── render.lua
 ```
 ### 基本配置
@@ -203,7 +208,7 @@ key script-message open_setup_danmaku_menu
 
 #### 弹幕设置（可选）
 
-打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:add_box:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
+打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:grid_view:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
 
 
 想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_total_menu`。
@@ -612,9 +617,9 @@ blacklist_path=
 
 ## 常见问题
 
-### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”
+### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”/搜索弹幕总是无结果/弹幕无法加载
 
-可能是Windows系统的病毒威胁与保护误查杀了本插件使用的DanmakuFactory.exe，把DanmakuFactory.exe当成了病毒。找到下图中的界面还原DanmakuFactory.exe并允许此应用
+可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有`bin\DanmakuFactory`文件夹下的DanmakuFactory.exe，和`bin\dandanplay`文件夹下的`dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
 
@@ -633,3 +638,4 @@ blacklist_path=
 - lua原生md5计算实现：https://github.com/rkscv/danmaku
 - b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
 - 巴哈姆特在线播放弹幕获取实现参考：[MPV-Play-BAHA-Comments](https://github.com/s594569321/MPV-Play-BAHA-Comments)
+- 向dandanplay开放平台发送请求时附加身份验证信息，避免应用凭证公开: https://github.com/zhongfly/dandanplay
