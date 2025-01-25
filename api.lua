@@ -438,17 +438,17 @@ local function match_file(file_name, file_hash)
 
     local arg = {
         dandanplay_path,
-        url,
-        "--query-type",
+        "-X",
         "POST",
-        "--accept",
-        "application/json",
-        "--content-type",
-        "application/json",
-        "--user-agent",
-        options.user_agent,
-        "--body",
-        body
+        "-H",
+        "Content-Type: application/json",
+        "-H",
+        "Accept: application/json",
+        "-H",
+        "User-Agent: " .. options.user_agent,
+        "-d",
+        body,
+        url,
     }
 
     local result = mp.command_native({ name = 'subprocess', capture_stdout = true, args = arg })
@@ -521,12 +521,12 @@ function get_danmaku_contents(url)
     end
     local arg = {
         dandanplay_path,
-        "--query-type",
+        "-X",
         "GET",
-        "--accept",
-        "application/json",
-        "--user-agent",
-        options.user_agent,
+        "-H",
+        "Accept: application/json",
+        "-H",
+        "User-Agent: " .. options.user_agent,
         url,
     }
 
