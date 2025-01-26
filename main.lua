@@ -8,72 +8,6 @@ require('render')
 local input_loaded, input = pcall(require, "mp.input")
 local uosc_available = false
 
-local menu_items_config = {
-    bold = { title = "粗体", query = "bold", hint = options.bold },
-    fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
-    outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
-    shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
-    transparency = { title = "透明度", query = "transparency", hint = options.transparency, scope = { min = "0", max = "255"} },
-    displayarea = { title = "弹幕显示范围", query = "displayarea", hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
-}
-local footnote_table = {
-    bold = "true / false",
-    fontsize = "请输入整数(>=0)",
-    outline = "输入范围：(0.0-4.0)",
-    shadow = "请输入整数(>=0)",
-    transparency = "  输入范围：0(不透明)到255(完全透明)",
-    displayarea = "显示范围(0.0-1.0)",
-}
--- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
-
--- 视频播放时保存弹幕
-function save_danmaku_func(suffix)
-    -- show_message(suffix)
-    -- 检查 suffix 是否存在（不是 nil）并且是字符串类型
-    if type(suffix) == "string" then
-        -- 将字符串转换为小写以确保比较时不区分大小写
-        suffix = string.lower(suffix)
-        if suffix == "xml" or suffix == "ass" then
-            local danmaku_path = os.getenv("TEMP") or "/tmp/"
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
-            if file_exists(danmaku_file) then
-                local path = mp.get_property("path")
-                -- 排除网络播放场景
-                if not path or is_protocol(path) then
-                    show_message("此弹幕文件不支持保存至本地")
-                    msg.verbose("This danmaku file does not support saving.")
-                else
-                    local dir = get_parent_directory(path)
-                    local filename = mp.get_property('filename/no-ext') 
-                    local danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
-                    -- show_message(danmaku_out)
-                    if file_exists(danmaku_out) then
-                        show_message("已存在同名弹幕文件：" .. danmaku_out)
-                        msg.verbose("Danmaku file with the same name already exists: " .. danmaku_out)
-                        return
-                    else
-                        convert_with_danmaku_factory(danmaku_file, danmaku_out)
-                        if file_exists(danmaku_out) then
-                            if not options.save_danmaku then
-                                show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
-                            end
-                            msg.verbose("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
-                        end
-                    end
-                end
-            else
-                show_message("找不到弹幕文件：" .. danmaku_file)
-                msg.verbose("Can't find danmaku file：" .. danmaku_file)
-            end
-        else
-            msg.verbose("不支持的文件后缀: " .. (suffix or "未知"))
-        end
-    else
-        msg.verbose("Function value undefined" .. suffix)
-    end
-end
-
 function get_animes(query)
     local encoded_query = url_encode(query)
     local url = options.api_server .. "/api/v2/search/episodes"
@@ -302,10 +236,22 @@ function open_add_menu()
     end
 end
 
+
+local menu_items_config = {
+    bold = { title = "粗体", query = "bold", hint = options.bold },
+    fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
+    outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
+    shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
+    transparency = { title = "透明度", query = "transparency", hint = options.transparency, scope = { min = "0", max = "255"} },
+    displayarea = { title = "弹幕显示范围", query = "displayarea", hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
+}
+-- 创建一个包含键顺序的表，这是样式菜单的排布顺序
+local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
+
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived)
     if not uosc_available then
-        show_message("无uosc_UI框架，不支持使用该功能", 2)
+        show_message("无uosc UI框架，不支持使用该功能", 2)
         return
     end
     
@@ -335,6 +281,14 @@ end
 -- 更新弹幕样式设置菜单
 function updata_danmaku_setup(actived, status)
     local items = {}
+    local footnote_table = {
+        bold = "true / false",
+        fontsize = "请输入整数(>=0)",
+        outline = "输入范围：(0.0-4.0)",
+        shadow = "请输入整数(>=0)",
+        transparency = "  输入范围：0(不透明)到255(完全透明)",
+        displayarea = "显示范围(0.0-1.0)",
+    }
     for _, key in ipairs(ordered_keys) do
         local config = menu_items_config[key]
         table.insert(items, {
@@ -438,6 +392,54 @@ function open_add_total_menu()
     end
 end
 
+-- 视频播放时保存弹幕
+function save_danmaku_func(suffix)
+    -- show_message(suffix)
+    -- 检查 suffix 是否存在（不是 nil）并且是字符串类型
+    if type(suffix) == "string" then
+        -- 将字符串转换为小写以确保比较时不区分大小写
+        suffix = string.lower(suffix)
+        if suffix == "xml" or suffix == "ass" then
+            local danmaku_path = os.getenv("TEMP") or "/tmp/"
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            if file_exists(danmaku_file) then
+                local path = mp.get_property("path")
+                -- 排除网络播放场景
+                if not path or is_protocol(path) then
+                    show_message("此弹幕文件不支持保存至本地")
+                    msg.verbose("This danmaku file does not support saving.")
+                else
+                    local dir = get_parent_directory(path)
+                    local filename = mp.get_property('filename/no-ext') 
+                    local danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
+                    -- show_message(danmaku_out)
+                    if file_exists(danmaku_out) then
+                        show_message("已存在同名弹幕文件：" .. danmaku_out)
+                        msg.verbose("Danmaku file with the same name already exists: " .. danmaku_out)
+                        return
+                    else
+                        convert_with_danmaku_factory(danmaku_file, danmaku_out)
+                        if file_exists(danmaku_out) then
+                            if not options.save_danmaku then
+                                show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
+                            end
+                            msg.verbose("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
+                        end
+                    end
+                end
+            else
+                show_message("找不到弹幕文件：" .. danmaku_file)
+                msg.verbose("Can't find danmaku file：" .. danmaku_file)
+            end
+        else
+            msg.verbose("不支持的文件后缀: " .. (suffix or "未知"))
+        end
+    else
+        msg.verbose("Function value undefined" .. suffix)
+    end
+end
+
+
 mp.commandv(
     "script-message-to",
     "uosc",
@@ -526,6 +528,14 @@ mp.register_script_message("add-source-event", function(query)
     add_danmaku_source(query, true)
 end)
 
+mp.register_script_message("open_add_total_menu", open_add_total_menu)
+mp.register_script_message("open_setup_danmaku_menu", function()
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
+    end
+    add_danmaku_setup()
+end)
+
 mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
 mp.register_script_message("set", function(prop, value)
     if prop ~= "show_danmaku" then
@@ -587,14 +597,6 @@ mp.register_script_message("show_danmaku_keyboard", function()
         hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
     end
-end)
-
-mp.register_script_message("open_add_total_menu", open_add_total_menu)
-mp.register_script_message("open_setup_danmaku_menu", function()
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
-    end
-    add_danmaku_setup()
 end)
 
 mp.register_script_message("setup-danmaku-style", function(query)
