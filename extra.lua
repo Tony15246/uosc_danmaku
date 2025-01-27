@@ -104,7 +104,7 @@ local function query_tmdb_tv(title, menu)
     end
 end
 
-local function get_episode_number(cat, id, site)
+local function get_number(cat, id, site)
     local url = string.format("https://api.web.360kan.com/v1/detail?cat=%s&id=%s&site=%s",
         cat, id, site)
 
@@ -151,7 +151,7 @@ function get_details(class, id, site, title, year, number, episodenum)
     end
 
     if not number and cat ~= 0 then
-        number = get_episode_number(cat, id, site)
+        number = get_number(cat, id, site)
     end
     if not number or cat == 0 then
         local message = "无结果"
@@ -332,7 +332,7 @@ function query_extra(name, class)
     end
 
     if title then
-        search_query(title, class)
+        search_query(title, class, menu)
     end
 end
 
@@ -349,7 +349,7 @@ mp.register_script_message("get-extra-event", function(cat, id, playlinks, sourc
         end
         danmaku.anime = title .. " (" .. year .. ")"
         danmaku.episode = "电影"
-        danmaku.source = "extra"
+        danmaku.source = source_id
         write_history()
         add_danmaku_source(play_url, true)
     else
