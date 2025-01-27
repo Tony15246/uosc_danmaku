@@ -3,10 +3,11 @@ local utils = require("mp.utils")
 
 require("options")
 require("api")
+require('extra')
 require('render')
 
-local input_loaded, input = pcall(require, "mp.input")
-local uosc_available = false
+input_loaded, input = pcall(require, "mp.input")
+uosc_available = false
 
 function get_animes(query)
     local encoded_query = url_encode(query)
@@ -16,8 +17,12 @@ function get_animes(query)
     local items = {}
 
     local message = "加载数据中..."
+    local menu_type = "menu_anime"
+    local menu_title = "在此处输入番剧名称"
+    local footnote = "使用enter或ctrl+enter进行搜索"
+    local menu_cmd = { "script-message-to", mp.get_script_name(), "search-anime-event" }
     if uosc_available then
-        update_menu(menu_item(message), query)
+        update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
     else
         show_message(message, 30)
     end
@@ -28,7 +33,7 @@ function get_animes(query)
     if res.status ~= 0 then
         local message = "获取数据失败"
         if uosc_available then
-            update_menu(menu_item(message), query)
+            update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
         else
             show_message(message, 3)
         end
@@ -40,7 +45,7 @@ function get_animes(query)
     if not response or not response.animes then
         local message = "无结果"
         if uosc_available then
-            update_menu(menu_item(message), query)
+            update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
         else
             show_message(message, 3)
         end
@@ -62,7 +67,7 @@ function get_animes(query)
     end
 
     if uosc_available then
-        update_menu(items, query)
+        update_menu_uosc(menu_type, menu_title, items, footnote, menu_cmd, query)
     elseif input_loaded then
         show_message("", 0)
         mp.add_timeout(0.1, function()
@@ -76,22 +81,19 @@ function get_episodes(animeTitle, episodes)
     for _, episode in ipairs(episodes) do
         table.insert(items, {
             title = episode.episodeTitle,
-            value = { "script-message-to", mp.get_script_name(), "load-danmaku", animeTitle, episode.episodeTitle, episode.episodeId },
+            value = { "script-message-to", mp.get_script_name(), "load-danmaku",
+            animeTitle, episode.episodeTitle, episode.episodeId },
             keep_open = false,
             selectable = true,
         })
     end
 
-    local menu_props = {
-        type = "menu_episodes",
-        title = "剧集信息",
-        search_style = "disabled",
-        items = items,
-    }
+    local menu_type = "menu_episodes"
+    local menu_title = "剧集信息"
+    local footnote = "使用 / 打开筛选"
 
-    local json_props = utils.format_json(menu_props)
     if uosc_available then
-        mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+        update_menu_uosc(menu_type, menu_title, items, footnote)
     elseif input_loaded then
         mp.add_timeout(0.1, function()
             open_menu_select(items)
@@ -99,20 +101,28 @@ function get_episodes(animeTitle, episodes)
     end
 end
 
-function menu_item(input)
+function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd, query)
     local items = {}
-    table.insert(items, { title = input, value = "" })
-    return items
-end
+    if type(menu_item) == "string" then
+        table.insert(items, {
+            title = menu_item,
+            value = "",
+            italic = true,
+            keep_open = true,
+            selectable = false,
+            align = "center",
+        })
+    else
+        items = menu_item
+    end
 
-function update_menu(items, query)
     local menu_props = {
-        type = "menu_anime",
-        title = "在此处输入番剧名称",
-        search_style = "palette",
+        type = menu_type,
+        title = menu_title,
+        search_style = menu_cmd and "palette" or "on_demand",
         search_debounce = "submit",
-        on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
-        footnote = "使用enter或ctrl+enter进行搜索",
+        on_search = menu_cmd,
+        footnote = menu_footnote,
         search_suggestion = query,
         items = items,
     }
@@ -161,6 +171,12 @@ function open_input_menu_uosc()
             selectable = false,
         }
     end
+
+    items[#items + 1] = {
+        hint = "追加|ds或|dy或|dm可搜索电视剧|电影|国漫",
+        keep_open = true,
+        selectable = false,
+    }
 
     local menu_props = {
         type = "menu_danmaku",
@@ -242,8 +258,10 @@ local menu_items_config = {
     fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
     outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
     shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
-    transparency = { title = "透明度", query = "transparency", hint = options.transparency, scope = { min = "0", max = "255"} },
-    displayarea = { title = "弹幕显示范围", query = "displayarea", hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
+    transparency = { title = "透明度", query = "transparency",
+        hint = options.transparency, scope = { min = "0", max = "255"} },
+    displayarea = { title = "弹幕显示范围", query = "displayarea",
+        hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
 local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
@@ -504,7 +522,12 @@ mp.register_script_message("search-anime-event", function(query)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_danmaku")
     end
-    get_animes(query)
+    local name, class = query:match("^(.-)%s*|%s*(.-)%s*$")
+    if name and class then
+        query_extra(name, class)
+    else
+        get_animes(query)
+    end
 end)
 mp.register_script_message("search-episodes-event", function(animeTitle, episodes)
     if uosc_available then
@@ -516,7 +539,7 @@ end)
 -- Register script message to show the input menu
 mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
     danmaku.anime = animeTitle
-    danmaku.episode = episodeTitle:match("(第%d+[话回集]+)") or episodeTitle
+    danmaku.episode = episodeTitle
     set_episode_id(episodeId, true)
 end)
 

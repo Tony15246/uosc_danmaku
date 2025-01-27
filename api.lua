@@ -36,8 +36,6 @@ function url_decode(str)
         str = str:gsub('%?.+', '')
               :gsub('%+', ' ')
         return str
-    else
-        return
     end
 end
 
@@ -133,6 +131,51 @@ function write_json_file(file_path, data)
     end
     file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
     file:close()
+end
+
+function write_history(episodeid)
+    local history = {}
+        local path = mp.get_property("path")
+        local dir = get_parent_directory(path)
+        local fname = mp.get_property('filename/no-ext')
+        local episodeNumber = 0
+        if episodeid then
+            episodeNumber = tonumber(episodeid) % 1000
+        elseif danmaku.extra then
+            episodeNumber = danmaku.extra.episodenum
+        end
+
+        if is_protocol(path) then
+            local title, season_num, episod_num = get_title()
+            if title and episod_num then
+                if season_num then
+                    dir = title .." Season".. season_num
+                else
+                    dir = title
+                end
+                fname = url_decode(mp.get_property("media-title"))
+                episodeNumber = episod_num
+            end
+        end
+
+        if dir ~= nil then
+            local history_json = read_file(history_path)
+            if history_json ~= nil then
+                history = utils.parse_json(history_json) or {}
+            end
+            history[dir] = {}
+            history[dir].fname = fname
+            history[dir].source = danmaku.source
+            history[dir].animeTitle = danmaku.anime
+            history[dir].episodeTitle = danmaku.episode
+            history[dir].episodeNumber = episodeNumber
+            if episodeid then
+                history[dir].episodeId = episodeid
+            elseif danmaku.extra then
+                history[dir].extra = danmaku.extra
+            end
+            write_json_file(history_path, history)
+        end
 end
 
 function itable_index_of(itable, value)
@@ -378,41 +421,10 @@ end
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
+    danmaku.source = "dandanplay"
     local episodeId = tonumber(input)
     if from_menu and options.auto_load or options.autoload_for_url then
-        local history = {}
-        local path = mp.get_property("path")
-        local dir = get_parent_directory(path)
-        local fname = mp.get_property('filename/no-ext')
-        local episodeNumber = tonumber(episodeId) % 1000 --动漫的集数
-
-        if is_protocol(path) then
-            local title, season_num, episod_num = get_title()
-            if title and episod_num then
-                if season_num then
-                    dir = title .." Season".. season_num
-                else
-                    dir = title
-                end
-                fname = url_decode(mp.get_property("media-title"))
-                episodeNumber = episod_num
-            end
-        end
-
-        --将文件名:episodeId写入history.json
-        if dir ~= nil then
-            local history_json = read_file(history_path)
-            if history_json ~= nil then
-                history = utils.parse_json(history_json) or {}
-            end
-            history[dir] = {}
-            history[dir].animeTitle = danmaku.anime
-            history[dir].episodeTitle = danmaku.episode
-            history[dir].episodeId = episodeId
-            history[dir].episodeNumber = episodeNumber
-            history[dir].fname = fname
-            write_json_file(history_path, history)
-        end
+        write_history(episodeid)
     end
     if options.load_more_danmaku then
         fetch_danmaku_all(episodeId, from_menu)
@@ -951,7 +963,7 @@ function get_danmaku_with_hash(file_name, file_path)
     end
 
     danmaku.anime = match_data.matches[1].animeTitle
-    danmaku.episode = match_data.matches[1].episodeTitle:match("(第%d+[话回集]+)") or match_data.matches[1].episodeTitle
+    danmaku.episode = match_data.matches[1].episodeTitle
 
     -- 获取并加载弹幕数据
     set_episode_id(match_data.matches[1].episodeId, true)
@@ -1205,6 +1217,7 @@ function auto_load_danmaku(path, dir, filename, number)
                 local history_number = history_dir.episodeNumber
                 local history_id = history_dir.episodeId
                 local history_fname = history_dir.fname
+                local history_extra = history_dir.extra
                 local playing_number = nil
 
                 if history_fname then
@@ -1222,10 +1235,16 @@ function auto_load_danmaku(path, dir, filename, number)
                 end
                 if playing_number ~= nil then
                     local x = playing_number - history_number --获取集数差值
-                    local tmp_id = tostring(x + history_id)
                     danmaku.episode = episode_number and string.format("第%s话", episode_number + x) or history_dir.episodeTitle
                     show_message("自动加载上次匹配的弹幕", 3)
-                    set_episode_id(tmp_id)
+                    if history_id then
+                        local tmp_id = tostring(x + history_id)
+                        set_episode_id(tmp_id)
+                    elseif history_extra and x ~= 0 then
+                        local episodenum = history_extra.episodenum + x
+                        get_details(history_extra.class, history_extra.id, history_extra.site,
+                            history_extra.title, history_extra.year, history_extra.number, episodenum)
+                    end
                 else
                     get_danmaku_with_hash(filename, path)
                 end
