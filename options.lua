@@ -3,6 +3,9 @@ local opt = require("mp.options")
 -- 选项
 options = {
     api_server = "https://api.dandanplay.net",
+    -- 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)
+    -- 请在 https://www.themoviedb.org 注册后去个人账号设置界面获取
+    tmdb_api_key= "",
     load_more_danmaku = false,
     auto_load = false,
     autoload_local_danmaku = false,
