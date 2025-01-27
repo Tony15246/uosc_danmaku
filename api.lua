@@ -146,7 +146,7 @@ function write_history(episodeid)
         end
 
         if is_protocol(path) then
-            local title, season_num, episod_num = get_title()
+            local title, season_num, episod_num = parse_title()
             if title and episod_num then
                 if season_num then
                     dir = title .." Season".. season_num
@@ -311,11 +311,26 @@ function get_parent_directory(path)
 end
 
 -- 获取播放文件标题信息
-function get_title(from_menu)
+function parse_title(from_menu)
     local path = mp.get_property("path")
+    local filename = mp.get_property("filename/no-ext")
     local thin_space = string.char(0xE2, 0x80, 0x89)
-
+    local filename = filename:gsub(thin_space, " ")
     if path and not is_protocol(path) then
+        local title = format_filename(filename)
+        if title then
+            local media_title, season, episode = title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
+            if season then
+                return media_title
+            else
+                local media_title, episode = title:match("^(.-)%s*[eE](%d+)")
+                if episode then
+                    return media_title
+                end
+            end
+            return title
+        end
+
         local directory = get_parent_directory(path)
         local dir, title = utils.split_path(directory:sub(1, -2))
         if title:lower():match("^%s*seasons?%s*%d+%s*$") or title:lower():match("^%s*specials?%s*$") or title:match("^%s*SPs?%s*$")
@@ -333,46 +348,33 @@ function get_title(from_menu)
     end
 
     local title = mp.get_property("media-title")
-    local season_num, episod_num = nil, nil
+    local media_title, season, episode = nil, nil, nil
     if title then
         title = title:gsub(thin_space, " ")
-        if title:match(".*S%d+:E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*S(%d+):E(%d+)")
-            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
-        elseif title:match(".*%-%s*S%d+E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*%-%s*S(%d+)E(%d+)")
-            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
-        elseif title:match(".*S%d+E%d+") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*S(%d+)E(%d+)")
-            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
-        elseif title:match(".*%d%d?[xX]%d%d%d?[^%d%-pPkKxXbBfF][^%d]") ~= nil then
-            title, season_num, episod_num = title:match("(.-)%s*(%d%d?)[xX](%d%d%d?)")
-            title = title and url_decode(title):gsub("[%._]", " "):gsub("%s*%[.-%]s*", "")
-        else
-            title = url_decode(title)
-            episod_num = get_episode_number(title)
-            if episod_num then
-                local parts = split(title, episod_num)
-                title = parts[1]:gsub("[%[%(].-[%)%]]", "")
-                        :gsub("%[.*", "")
-                        :gsub("[%-#].*", "")
-                        :gsub("第.*", "")
-                        :gsub("[%._]", " ")
-                        :gsub("^%s*(.-)%s*$", "%1")
+        local format_title = format_filename(url_decode(title))
+        if format_title then
+            media_title, season, episode = format_title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
+            if season then
+                title = media_title
             else
-                title = nil
+                media_title, episode = format_title:match("^(.-)%s*[eE](%d+)")
+                if episode then
+                    season = 1
+                    title = media_title
+                else
+                    title = format_title
+                end
             end
         end
     end
     if from_menu then
         return title
     end
-    return title, season_num, episod_num
+    return title, season, episode
 end
 
 -- 获取当前文件名所包含的集数
 function get_episode_number(filename, fname)
-
     -- 尝试对比记录文件名来获取当前集数
     if fname then
         local episode_num1, episode_num2 = compare_filenames(fname, filename)
@@ -386,34 +388,18 @@ function get_episode_number(filename, fname)
     local thin_space = string.char(0xE2, 0x80, 0x89)
     filename = filename:gsub(thin_space, " ")
 
-    -- 匹配模式：支持多种集数形式
-    local patterns = {
-        -- 匹配 [数字] 格式
-        "%[(%d+)v?%d?%]",
-        -- 匹配 S01E02 格式
-        "[S%d+]?E(%d+)",
-        -- 匹配 第04话 格式
-        "第(%d+)话",
-        -- 匹配 -/# 第数字 格式
-        "[%-#]%s*(%d+)%s*",
-        -- 匹配 01x02 格式
-        "%d%d?[xX](%d%d%d?)[^%d%-pPkKxXbBfF][^%d]",
-        -- 匹配 直接跟随的数字 格式
-        "[^%dhHxXvV](%d%d%d?)[^%d%-pPkKxXbBfF][^%d]*$",
-    }
-
-    -- 尝试匹配文件名中的集数
-    for _, pattern in ipairs(patterns) do
-        local match = {string.match(filename, pattern)}
-        if #match > 0 then
-            -- 返回集数，通常是匹配的第一个捕获
-            local episode_number = tonumber(match[1])
-            if episode_number and episode_number < 1000 then
-                return episode_number
+    local title = format_filename(filename)
+    if title then
+        local media_title, season, episode = title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
+        if season then
+            return tonumber(episode)
+        else
+            local media_title, episode = title:match("^(.-)%s*[eE](%d+)")
+            if episode then
+                return tonumber(episode)
             end
         end
     end
-    -- 未找到集数
     return nil
 end
 
@@ -1322,7 +1308,7 @@ mp.register_event("file-loaded", function()
             return
         end
 
-        local title, season_num, episod_num = get_title()
+        local title, season_num, episod_num = parse_title()
         local episod_number = nil
         if title and episod_num then
             if season_num then
