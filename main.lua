@@ -257,51 +257,28 @@ end
 
 
 local menu_items_config = {
-    bold = { title = "粗体", query = "bold", hint = options.bold },
-    fontsize = { title = "大小", query = "fontsize", hint = options.fontsize, scope = { min = "0", max = "inf"} },
-    outline = { title = "描边", query = "outline", hint = options.outline, scope = { min = "0.0", max = "4.0"} },
-    shadow = { title = "阴影", query = "shadow", hint = options.shadow, scope = { min = "0", max = "inf"} },
-    transparency = { title = "透明度", query = "transparency",
-        hint = options.transparency, scope = { min = "0", max = "255"} },
-    displayarea = { title = "弹幕显示范围", query = "displayarea",
-        hint = options.displayarea, scope = { min = "0.0", max = "1.0"} },
+    bold = { title = "粗体", hint = options.bold, original = options.bold },
+    fontsize = { title = "大小", hint = options.fontsize,
+        original = options.fontsize, scope = { min = 0, max = math.huge } },
+    outline = { title = "描边", hint = options.outline, 
+        original = options.outline, scope = { min = 0.0, max = 4.0 } },
+    shadow = { title = "阴影", hint = options.shadow, 
+        original = options.shadow, scope = { min = 0, max = math.huge } },
+    transparency = { title = "透明度", hint = options.transparency, 
+        original = options.transparency, scope = { min = 0, max = 255 } },
+    displayarea = { title = "弹幕显示范围", hint = options.displayarea, 
+        original = options.displayarea, scope = { min = 0.0, max = 1.0 } },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
 local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
 
 -- 设置弹幕样式菜单
-function add_danmaku_setup(actived)
+function add_danmaku_setup(actived, status)
     if not uosc_available then
         show_message("无uosc UI框架，不支持使用该功能", 2)
         return
     end
     
-    local items = {}
-    for _, key in ipairs(ordered_keys) do
-        local config = menu_items_config[key]
-        table.insert(items, {
-            title = config.title,
-            hint = "目前：" .. tostring(config.hint),
-            value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
-            active = key == actived,
-            keep_open = true,
-            selectable = true,
-        })
-    end
-
-    local menu_props = {
-        type = "menu_style",
-        title = "弹幕样式",
-        footnote = "样式更改仅在本次播放生效",
-        items = items,
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
-end
-
--- 更新弹幕样式设置菜单
-function updata_danmaku_setup(actived, status)
-    local items = {}
     local footnote_table = {
         bold = "true / false",
         fontsize = "请输入整数(>=0)",
@@ -310,40 +287,57 @@ function updata_danmaku_setup(actived, status)
         transparency = "  输入范围：0(不透明)到255(完全透明)",
         displayarea = "显示范围(0.0-1.0)",
     }
+    local items = {}
     for _, key in ipairs(ordered_keys) do
         local config = menu_items_config[key]
-        table.insert(items, {
+        local item_config = {
             title = config.title,
             hint = "目前：" .. tostring(config.hint),
-            value = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", config.query },
             active = key == actived,
             keep_open = true,
             selectable = true,
-        })
+        }
+        if config.hint ~= config.original then
+            item_config.actions = {{icon = "refresh", name = key, label = "恢复默认配置 < " .. config.original .. " >"}}
+        end
+        table.insert(items, item_config)
     end
 
     local menu_props = {
         type = "menu_style",
-        title = footnote_table[actived],
-        search_style = "palette",
-        search_debounce = "submit",
-        footnote = footnote_table[actived] or "",
-        on_search = { "script-message-to", mp.get_script_name(), "update-danmaku-style", actived },
+        title = "弹幕样式",
+        search_style = "disabled",
+        footnote = "样式更改仅在本次播放生效",
+        item_actions_place = "outside",
         items = items,
+        callback = { mp.get_script_name(), 'setup-danmaku-style'},
     }
-    local actions = "update-menu"
-    if status and status == "error" then
-        menu_props.title = "输入非数字字符或范围出错"
-        -- 创建一个定时器，在2秒后触发回调函数，删除搜索栏错误信息
-        mp.add_timeout(2.0, function() updata_danmaku_setup(actived) end)
-        actions = "open-menu"
-    elseif status and status == "updata" then
-        menu_props.title = footnote_table[actived]
-        actions = "open-menu"
+    
+    local actions = "open-menu"
+    if status ~= nil then
+        -- msg.info(status)
+        if status == "updata" then
+            -- "updata" 模式会保留输入框文字
+            menu_props.title = footnote_table[actived]
+            actions = "update-menu"
+        elseif status == "refresh" then
+            -- "refresh" 模式会清除输入框文字
+            menu_props.title = footnote_table[actived]
+        elseif status == "error" then
+            menu_props.title = "输入非数字字符或范围出错"
+            -- 创建一个定时器，在1秒后触发回调函数，删除搜索栏错误信息
+            mp.add_timeout(1.0, function() add_danmaku_setup(actived, "updata") end)
+        end
+        menu_props.search_style = "palette"
+        menu_props.search_debounce = "submit"
+        menu_props.footnote = footnote_table[actived] or ""
+        menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", actived }
     end
+    
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", actions, json_props)
 end
+
 
 -- 总集合弹幕菜单
 function open_add_total_menu_uosc()
@@ -461,6 +455,7 @@ function save_danmaku_func(suffix)
 end
 
 
+-- 添加 uosc 菜单栏按钮
 mp.commandv(
     "script-message-to",
     "uosc",
@@ -625,41 +620,45 @@ mp.register_script_message("show_danmaku_keyboard", function()
     end
 end)
 
-mp.register_script_message("setup-danmaku-style", function(query)
-    if type(query) == "string" and menu_items_config[query] then
-        if query == "bold" then
-            options.bold = options.bold == "true" and "false" or "true"
-            menu_items_config.bold.hint = options.bold
+mp.register_script_message("setup-danmaku-style", function(query, text)
+    local event = utils.parse_json(query)
+    if event ~= nil then
+        -- item点击 或 图标点击
+        if event.type == "activate" then
+            if not event.action then
+                if ordered_keys[event.index] == "bold" then
+                    options.bold = options.bold == "true" and "false" or "true"
+                    menu_items_config.bold.hint = options.bold
+                end
+                -- "updata" 模式会保留输入框文字
+                add_danmaku_setup(ordered_keys[event.index], "updata")
+                return
+            else
+                msg.info("options：" .. event.action)
+                options[event.action] = menu_items_config[event.action]["original"]
+                menu_items_config[event.action]["hint"] = options[event.action]
+                add_danmaku_setup(event.action, "updata")
+            end
         end
-        updata_danmaku_setup(query)
     else
-        add_danmaku_setup()
-    end
-end)
-
-mp.register_script_message("update-danmaku-style", function(query, text)
-    -- mp.commandv("script-message-to", "uosc", "close-menu", "menu_style")
-    -- msg.info(text:gsub("%s",""))
-    local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
-    if text == nil or text == "" then
-        return
-    elseif query == "bold" then
-        options.bold = options.bold == "true" and "false" or "true"
-        menu_items_config.bold.hint = options.bold
-        updata_danmaku_setup(query, "updata")
-    elseif tonumber(newText) ~= nil then
-        local num = tonumber(newText)
-        local status = "error"
-        local min_num = tonumber(menu_items_config[query]["scope"]["min"]) or 0
-        local max_num = tonumber(menu_items_config[query]["scope"]["max"]) or math.huge
-        if num and min_num <= num and num <= max_num then
-            options[query] = tonumber(text)
-            status = "updata"
+        -- 数值输入
+        if text == nil or text == "" then
+            return
         end
-        menu_items_config[query]["hint"] = options[query]
-        updata_danmaku_setup(query, status)
-    else
-        updata_danmaku_setup(query, "error")
+        local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
+        if tonumber(newText) ~= nil and menu_items_config[query]["scope"] ~= nil then
+            local num = tonumber(newText)
+            local min_num = menu_items_config[query]["scope"]["min"]
+            local max_num = menu_items_config[query]["scope"]["max"]
+            if num and min_num <= num and num <= max_num then
+                options[query] = num
+                menu_items_config[query]["hint"] = options[query]
+                -- "refresh" 模式会清除输入框文字
+                add_danmaku_setup(query, "refresh")
+                return
+            end
+        end
+        add_danmaku_setup(query, "error")
     end
 end)
 
