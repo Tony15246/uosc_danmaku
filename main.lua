@@ -166,8 +166,10 @@ function open_input_menu_uosc()
     local items = {}
 
     if danmaku.anime and danmaku.episode then
+        local episode = danmaku.episode:gsub("%s.-$","")
+        episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, danmaku.episode:gsub("%s.-$","")),
+            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
             bold = true,
             italic = true,
             keep_open = true,
@@ -350,8 +352,10 @@ function open_add_total_menu_uosc()
 
 
     if danmaku.anime and danmaku.episode then
+        local episode = danmaku.episode:gsub("%s.-$","")
+        episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, danmaku.episode:gsub("%s.-$","")),
+            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
             bold = true,
             italic = true,
             keep_open = true,
