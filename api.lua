@@ -135,47 +135,47 @@ end
 
 function write_history(episodeid)
     local history = {}
-        local path = mp.get_property("path")
-        local dir = get_parent_directory(path)
-        local fname = mp.get_property('filename/no-ext')
-        local episodeNumber = 0
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path)
+    local fname = mp.get_property('filename/no-ext')
+    local episodeNumber = 0
+    if episodeid then
+        episodeNumber = tonumber(episodeid) % 1000
+    elseif danmaku.extra then
+        episodeNumber = danmaku.extra.episodenum
+    end
+
+    if is_protocol(path) then
+        local title, season_num, episod_num = parse_title()
+        if title and episod_num then
+            if season_num then
+                dir = title .." Season".. season_num
+            else
+                dir = title
+            end
+            fname = url_decode(mp.get_property("media-title"))
+            episodeNumber = episod_num
+        end
+    end
+
+    if dir ~= nil then
+        local history_json = read_file(history_path)
+        if history_json ~= nil then
+            history = utils.parse_json(history_json) or {}
+        end
+        history[dir] = {}
+        history[dir].fname = fname
+        history[dir].source = danmaku.source
+        history[dir].animeTitle = danmaku.anime
+        history[dir].episodeTitle = danmaku.episode
+        history[dir].episodeNumber = episodeNumber
         if episodeid then
-            episodeNumber = tonumber(episodeid) % 1000
+            history[dir].episodeId = episodeid
         elseif danmaku.extra then
-            episodeNumber = danmaku.extra.episodenum
+            history[dir].extra = danmaku.extra
         end
-
-        if is_protocol(path) then
-            local title, season_num, episod_num = parse_title()
-            if title and episod_num then
-                if season_num then
-                    dir = title .." Season".. season_num
-                else
-                    dir = title
-                end
-                fname = url_decode(mp.get_property("media-title"))
-                episodeNumber = episod_num
-            end
-        end
-
-        if dir ~= nil then
-            local history_json = read_file(history_path)
-            if history_json ~= nil then
-                history = utils.parse_json(history_json) or {}
-            end
-            history[dir] = {}
-            history[dir].fname = fname
-            history[dir].source = danmaku.source
-            history[dir].animeTitle = danmaku.anime
-            history[dir].episodeTitle = danmaku.episode
-            history[dir].episodeNumber = episodeNumber
-            if episodeid then
-                history[dir].episodeId = episodeid
-            elseif danmaku.extra then
-                history[dir].extra = danmaku.extra
-            end
-            write_json_file(history_path, history)
-        end
+        write_json_file(history_path, history)
+    end
 end
 
 function itable_index_of(itable, value)
@@ -410,7 +410,7 @@ function set_episode_id(input, from_menu)
     danmaku.source = "dandanplay"
     local episodeId = tonumber(input)
     if from_menu and options.auto_load or options.autoload_for_url then
-        write_history(episodeid)
+        write_history(episodeId)
     end
     if options.load_more_danmaku then
         fetch_danmaku_all(episodeId, from_menu)
