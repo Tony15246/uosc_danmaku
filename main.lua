@@ -167,7 +167,7 @@ function open_input_menu_uosc()
 
     if danmaku.anime and danmaku.episode then
         local episode = danmaku.episode:gsub("%s.-$","")
-        local episode = episode:match("^(第.*[话回集]+)%s*") or episode
+        episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
             title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
             bold = true,
@@ -262,13 +262,13 @@ local menu_items_config = {
     bold = { title = "粗体", hint = options.bold, original = options.bold },
     fontsize = { title = "大小", hint = options.fontsize,
         original = options.fontsize, scope = { min = 0, max = math.huge } },
-    outline = { title = "描边", hint = options.outline, 
+    outline = { title = "描边", hint = options.outline,
         original = options.outline, scope = { min = 0.0, max = 4.0 } },
-    shadow = { title = "阴影", hint = options.shadow, 
+    shadow = { title = "阴影", hint = options.shadow,
         original = options.shadow, scope = { min = 0, max = math.huge } },
-    transparency = { title = "透明度", hint = options.transparency, 
+    transparency = { title = "透明度", hint = options.transparency,
         original = options.transparency, scope = { min = 0, max = 255 } },
-    displayarea = { title = "弹幕显示范围", hint = options.displayarea, 
+    displayarea = { title = "弹幕显示范围", hint = options.displayarea,
         original = options.displayarea, scope = { min = 0.0, max = 1.0 } },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
@@ -280,7 +280,7 @@ function add_danmaku_setup(actived, status)
         show_message("无uosc UI框架，不支持使用该功能", 2)
         return
     end
-    
+
     local footnote_table = {
         bold = "true / false",
         fontsize = "请输入整数(>=0)",
@@ -314,7 +314,7 @@ function add_danmaku_setup(actived, status)
         items = items,
         callback = { mp.get_script_name(), 'setup-danmaku-style'},
     }
-    
+
     local actions = "open-menu"
     if status ~= nil then
         -- msg.info(status)
@@ -335,7 +335,7 @@ function add_danmaku_setup(actived, status)
         menu_props.footnote = footnote_table[actived] or ""
         menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", actived }
     end
-    
+
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", actions, json_props)
 end
@@ -353,7 +353,7 @@ function open_add_total_menu_uosc()
 
     if danmaku.anime and danmaku.episode then
         local episode = danmaku.episode:gsub("%s.-$","")
-        local episode = episode:match("^(第.*[话回集]+)%s*") or episode
+        episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
             title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
             bold = true,
