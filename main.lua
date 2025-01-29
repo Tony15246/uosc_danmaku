@@ -178,7 +178,7 @@ function open_input_menu_uosc()
     end
 
     items[#items + 1] = {
-        hint = "追加|ds或|dy或|dm可搜索电视剧|电影|国漫",
+        hint = "  追加|ds或|dy或|dm可搜索电视剧|电影|国漫",
         keep_open = true,
         selectable = false,
     }
