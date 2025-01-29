@@ -50,13 +50,13 @@ local formatters = {
         end
     },
     {
-        regex = "^(.-)%s*[eEpP]+(%d+[%.v]?%d*)[_%.%s]%s*(%d%d%d%d)[^%dhHxXvVpPkKxXbBfF]",
+        regex = "^(.-)%s*[^dD][eEpP]+(%d+[%.v]?%d*)[_%.%s]%s*(%d%d%d%d)[^%dhHxXvVpPkKxXbBfF]",
         format = function(name, episode, year)
             return clean_name(name) .. " (" .. year .. ") E" .. episode:gsub("v%d+$","")
         end
     },
     {
-        regex = "^(.-)%s*[eEpP]+(%d+%.?%d*)",
+        regex = "^(.-)%s*[^dD][eEpP]+(%d+%.?%d*)",
         format = function(name, episode)
             return clean_name(name) .. " E" .. episode
         end
@@ -83,12 +83,6 @@ local formatters = {
         regex = "^(.-)%s*[%-#]%s*(%d+%.?%d*)%s*",
         format = function(name, episode)
             return clean_name(name) .. " E" .. episode
-        end
-    },
-    {
-        regex = "^(.-)%s*%[(%d+[%.v]?%d*)%]%D+",
-        format = function(name, episode)
-            return clean_name(name) .. " E" .. episode:gsub("v%d+$","")
         end
     },
     {

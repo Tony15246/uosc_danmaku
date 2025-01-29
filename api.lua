@@ -314,8 +314,12 @@ end
 function parse_title(from_menu)
     local path = mp.get_property("path")
     local filename = mp.get_property("filename/no-ext")
+
+    if not filename then
+        return
+    end
     local thin_space = string.char(0xE2, 0x80, 0x89)
-    local filename = filename:gsub(thin_space, " ")
+    filename = filename:gsub(thin_space, " ")
     if path and not is_protocol(path) then
         local title = format_filename(filename)
         if title then

@@ -276,7 +276,7 @@ local function search_query(query, class, menu)
                                 "script-message-to",
                                 mp.get_script_name(),
                                 "get-extra-event",
-                                item.cat_name, item.en_id, utils.format_json(item.playlinks), source_id,
+                                item.cat_name, item.en_id, item.playlinks[source_id], source_id,
                                 item.titleTxt, item.year,
                             },
                         })
@@ -336,22 +336,21 @@ function query_extra(name, class)
     end
 end
 
-mp.register_script_message("get-extra-event", function(cat, id, playlinks, source_id, title, year)
+mp.register_script_message("get-extra-event", function(cat, id, playlink, source_id, title, year)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
     end
     if cat == "电影" then
-        local playlinks = utils.parse_json(playlinks)
-        if playlinks[source_id]:match("^.-%.html") then
-            play_url = playlinks[source_id]:match("^(.-%.html).*")
+        if playlink:match("^.-%.html") then
+            playlink = playlink:match("^(.-%.html).*")
         else
-            play_url = playlinks[source_id]:gsub("%?bsource=360ogvys$","")
+            playlink = playlink:gsub("%?bsource=360ogvys$","")
         end
         danmaku.anime = title .. " (" .. year .. ")"
         danmaku.episode = "电影"
         danmaku.source = source_id
         write_history()
-        add_danmaku_source(play_url, true)
+        add_danmaku_source(playlink, true)
     else
         get_details(cat, id, source_id, title, year)
     end
