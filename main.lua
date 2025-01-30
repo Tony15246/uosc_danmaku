@@ -259,20 +259,25 @@ end
 
 
 local menu_items_config = {
-    bold = { title = "粗体", hint = options.bold, original = options.bold },
-    fontsize = { title = "大小", hint = options.fontsize,
-        original = options.fontsize, scope = { min = 0, max = math.huge } },
-    outline = { title = "描边", hint = options.outline,
-        original = options.outline, scope = { min = 0.0, max = 4.0 } },
-    shadow = { title = "阴影", hint = options.shadow,
-        original = options.shadow, scope = { min = 0, max = math.huge } },
-    transparency = { title = "透明度", hint = options.transparency,
-        original = options.transparency, scope = { min = 0, max = 255 } },
-    displayarea = { title = "弹幕显示范围", hint = options.displayarea,
-        original = options.displayarea, scope = { min = 0.0, max = 1.0 } },
+    bold = { title = "粗体", hint = options.bold, original = options.bold,
+        footnote = "true / false", },
+    fontsize = { title = "大小", hint = options.fontsize, original = options.fontsize,
+        scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
+    outline = { title = "描边", hint = options.outline, original = options.outline,
+        scope = { min = 0.0, max = 4.0 }, footnote = "输入范围：(0.0-4.0)" },
+    shadow = { title = "阴影", hint = options.shadow, original = options.shadow,
+        scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
+    density = { title = "密度", hint = options.density, original = options.density,
+        scope = { min = -1, max = math.huge }, footnote = "整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数", },
+    scrolltime = { title = "速度", hint = options.scrolltime, original = options.scrolltime,
+        scope = { min = 1, max = math.huge }, footnote = "请输入整数(>=1)", },
+    transparency = { title = "透明度", hint = options.transparency, original = options.transparency,
+        scope = { min = 0, max = 255 }, footnote = "输入整数：0(不透明)到255(完全透明)", },
+    displayarea = { title = "弹幕显示范围", hint = options.displayarea, original = options.displayarea,
+        scope = { min = 0.0, max = 1.0 }, footnote = "显示范围(0.0-1.0)", },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "fontsize", "outline", "shadow", "transparency", "displayarea"}
+local ordered_keys = {"bold", "fontsize", "outline", "shadow", "density", "scrolltime", "transparency", "displayarea"}
 
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived, status)
@@ -281,14 +286,6 @@ function add_danmaku_setup(actived, status)
         return
     end
 
-    local footnote_table = {
-        bold = "true / false",
-        fontsize = "请输入整数(>=0)",
-        outline = "输入范围：(0.0-4.0)",
-        shadow = "请输入整数(>=0)",
-        transparency = "  输入范围：0(不透明)到255(完全透明)",
-        displayarea = "显示范围(0.0-1.0)",
-    }
     local items = {}
     for _, key in ipairs(ordered_keys) do
         local config = menu_items_config[key]
@@ -320,11 +317,11 @@ function add_danmaku_setup(actived, status)
         -- msg.info(status)
         if status == "updata" then
             -- "updata" 模式会保留输入框文字
-            menu_props.title = footnote_table[actived]
+            menu_props.title = "  " .. menu_items_config[actived]["footnote"]
             actions = "update-menu"
         elseif status == "refresh" then
             -- "refresh" 模式会清除输入框文字
-            menu_props.title = footnote_table[actived]
+            menu_props.title = "  " .. menu_items_config[actived]["footnote"]
         elseif status == "error" then
             menu_props.title = "输入非数字字符或范围出错"
             -- 创建一个定时器，在1秒后触发回调函数，删除搜索栏错误信息
@@ -332,7 +329,7 @@ function add_danmaku_setup(actived, status)
         end
         menu_props.search_style = "palette"
         menu_props.search_debounce = "submit"
-        menu_props.footnote = footnote_table[actived] or ""
+        menu_props.footnote = menu_items_config[actived]["footnote"] or ""
         menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", actived }
     end
 
@@ -633,15 +630,18 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 if ordered_keys[event.index] == "bold" then
                     options.bold = options.bold == "true" and "false" or "true"
                     menu_items_config.bold.hint = options.bold
+                    add_danmaku_setup(ordered_keys[event.index], "updata")
+                    load_danmaku(true)
                 end
                 -- "updata" 模式会保留输入框文字
                 add_danmaku_setup(ordered_keys[event.index], "updata")
                 return
             else
-                msg.info("options：" .. event.action)
+                -- msg.info("event.action：" .. event.action)
                 options[event.action] = menu_items_config[event.action]["original"]
                 menu_items_config[event.action]["hint"] = options[event.action]
                 add_danmaku_setup(event.action, "updata")
+                load_danmaku(true)
             end
         end
     else
@@ -655,10 +655,15 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
             local min_num = menu_items_config[query]["scope"]["min"]
             local max_num = menu_items_config[query]["scope"]["max"]
             if num and min_num <= num and num <= max_num then
-                options[query] = num
+                if string.match(menu_items_config[query]["footnote"], "整数") then
+                    -- 输入范围为整数时向下取整
+                    num = tostring(math.floor(num))
+                end
+                options[query] = tostring(num)
                 menu_items_config[query]["hint"] = options[query]
                 -- "refresh" 模式会清除输入框文字
                 add_danmaku_setup(query, "refresh")
+                load_danmaku(true)
                 return
             end
         end
