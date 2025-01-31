@@ -630,8 +630,6 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 if ordered_keys[event.index] == "bold" then
                     options.bold = options.bold == "true" and "false" or "true"
                     menu_items_config.bold.hint = options.bold
-                    add_danmaku_setup(ordered_keys[event.index], "updata")
-                    load_danmaku(true)
                 end
                 -- "updata" 模式会保留输入框文字
                 add_danmaku_setup(ordered_keys[event.index], "updata")
@@ -641,7 +639,9 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 options[event.action] = menu_items_config[event.action]["original"]
                 menu_items_config[event.action]["hint"] = options[event.action]
                 add_danmaku_setup(event.action, "updata")
-                load_danmaku(true)
+                if event.action == "density" or event.action == "scrolltime" then
+                    load_danmaku(true)
+                end
             end
         end
     else
@@ -663,7 +663,9 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 menu_items_config[query]["hint"] = options[query]
                 -- "refresh" 模式会清除输入框文字
                 add_danmaku_setup(query, "refresh")
-                load_danmaku(true)
+                if query == "density" or query == "scrolltime" then
+                    load_danmaku(true)
+                end
                 return
             end
         end
