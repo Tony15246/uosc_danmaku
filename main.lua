@@ -567,14 +567,6 @@ mp.register_script_message("set", function(prop, value)
     if value == "on" then
         if comments == nil then
             local path = mp.get_property("path")
-            if is_protocol(path) and (path:find('bilibili.com') or path:find('bilivideo.c[nom]+')) then
-                load_danmaku_for_bilibili(path)
-                return
-            end
-            if is_protocol(path) and (path:find('bahamut.akamaized.net')) then
-                load_danmaku_for_bahamut(path)
-                return
-            end
             init(path)
         else
             if danmaku.anime and danmaku.episode then
@@ -596,14 +588,6 @@ mp.register_script_message("show_danmaku_keyboard", function()
     if not enabled then
         if comments == nil then
             local path = mp.get_property("path")
-            if is_protocol(path) and (path:find('bilibili.com') or path:find('bilivideo.c[nom]+')) then
-                load_danmaku_for_bilibili(path)
-                return
-            end
-            if is_protocol(path) and (path:find('bahamut.akamaized.net')) then
-                load_danmaku_for_bahamut(path)
-                return
-            end
             init(path)
         else
             if danmaku.anime and danmaku.episode then
