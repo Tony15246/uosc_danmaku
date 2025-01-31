@@ -1192,6 +1192,34 @@ function load_danmaku_for_bahamut(path)
 
 end
 
+function load_danmaku_for_url(path)
+    if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
+        load_danmaku_for_bilibili(path)
+        return
+    end
+
+    if path:find('bahamut.akamaized.net') then
+        load_danmaku_for_bahamut(path)
+        return
+    end
+
+    local title, season_num, episod_num = parse_title()
+    local episod_number = nil
+    if title and episod_num then
+        if season_num then
+            dir = title .." Season".. season_num
+            episod_number = episod_num
+        else
+            dir = title
+        end
+        filename = url_decode(mp.get_property("media-title"))
+        auto_load_danmaku(path, dir, filename, episod_number)
+        return
+    else
+        get_danmaku_with_hash(filename, path)
+    end
+end
+
 -- 自动加载上次匹配的弹幕
 function auto_load_danmaku(path, dir, filename, number)
     if dir ~= nil then
@@ -1251,16 +1279,17 @@ function init(path)
     if not path then return end
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
-    if filename then
-        if dir then
-            local danmaku_xml = utils.join_path(dir, filename .. ".xml")
-            if file_exists(danmaku_xml) then
-                add_danmaku_source_local(danmaku_xml, true)
-                return
-            end
+    if is_protocol(path) then
+        load_danmaku_for_url(path)
+    end
+    if dir and filename then
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if file_exists(danmaku_xml) then
+            add_danmaku_source_local(danmaku_xml, true)
+        else
+            auto_load_danmaku(path, dir, filename)
+            addon_danmaku(path, true)
         end
-        get_danmaku_with_hash(filename, path)
-        addon_danmaku(path, true)
     end
 end
 
@@ -1302,31 +1331,7 @@ mp.register_event("file-loaded", function()
     read_danmaku_source_record(path)
 
     if options.autoload_for_url and is_protocol(path) then
-        if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
-            load_danmaku_for_bilibili(path)
-            return
-        end
-
-        if path:find('bahamut.akamaized.net') then
-            load_danmaku_for_bahamut(path)
-            return
-        end
-
-        local title, season_num, episod_num = parse_title()
-        local episod_number = nil
-        if title and episod_num then
-            if season_num then
-                dir = title .." Season".. season_num
-                episod_number = episod_num
-            else
-                dir = title
-            end
-            filename = url_decode(mp.get_property("media-title"))
-            auto_load_danmaku(path, dir, filename, episod_number)
-            return
-        else
-            get_danmaku_with_hash(filename, path)
-        end
+        load_danmaku_for_url(path)
     end
 
     if filename == nil or dir == nil then
