@@ -462,7 +462,7 @@ local function match_file(file_name, file_hash)
 end
 
 -- 加载弹幕
-function load_danmaku(from_menu)
+function load_danmaku(from_menu, no_osd)
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     local danmaku_input = {}
     local delays = {}
@@ -489,7 +489,7 @@ function load_danmaku(from_menu)
     end
     convert_with_danmaku_factory(danmaku_input, nil, delays)
     enabled = true
-    parse_danmaku(danmaku_file, from_menu)
+    parse_danmaku(danmaku_file, from_menu, no_osd)
 end
 
 function get_video_data(url)

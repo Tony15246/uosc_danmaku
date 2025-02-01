@@ -349,7 +349,7 @@ function danmaku_delay_setup(source_url)
     for url, source in pairs(danmaku.sources) do
         if source.fname then
             local item = {title = url, value = url, keep_open = true,}
-            item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0")
+            item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0") .. "秒"
             item.active = url == source_url
             table.insert(sources, item)
         end
@@ -363,7 +363,7 @@ function danmaku_delay_setup(source_url)
         callback = {mp.get_script_name(), 'setup-source-delay'},
     }
     if source_url ~= nil then
-        menu_props.title = "请输入一位小数"
+        menu_props.title = "请输入一位小数，单位（秒）"
         menu_props.search_style = "palette"
         menu_props.search_debounce = "submit"
         menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-source-delay", source_url }
@@ -698,7 +698,7 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 -- "refresh" 模式会清除输入框文字
                 add_danmaku_setup(query, "refresh")
                 if query == "density" or query == "scrolltime" then
-                    load_danmaku(true)
+                    load_danmaku(true, true)
                 end
                 return
             end
@@ -764,7 +764,7 @@ mp.register_script_message("setup-source-delay", function(query, text)
             add_source_to_history(query, danmaku.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
-            load_danmaku(true)
+            load_danmaku(true, true)
         end
     end
 end)

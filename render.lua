@@ -218,7 +218,7 @@ local function show_loaded()
     end
 end
 
-function parse_danmaku(ass_file_path, from_menu)
+function parse_danmaku(ass_file_path, from_menu, no_osd)
     comments, err = parse_ass(ass_file_path)
     if not comments then
         msg.error("ASS 解析错误:", err)
@@ -226,7 +226,9 @@ function parse_danmaku(ass_file_path, from_menu)
     end
 
     if enabled and (from_menu or get_danmaku_visibility()) then
-        show_loaded()
+        if not no_osd then
+            show_loaded()
+        end
         show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     else
