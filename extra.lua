@@ -46,6 +46,11 @@ local function query_tmdb_movies(title, menu)
         url
     }
 
+    if options.proxy ~= "" then
+        table.insert(cmd, '-x')
+        table.insert(cmd, options.proxy)
+    end
+
     local res = mp.command_native({
         name = "subprocess",
         args = cmd,
@@ -80,6 +85,11 @@ local function query_tmdb_tv(title, menu)
         "-H", "accept: application/json",
         url
     }
+
+    if options.proxy ~= "" then
+        table.insert(cmd, '-x')
+        table.insert(cmd, options.proxy)
+    end
 
     local res = mp.command_native({
         name = "subprocess",
