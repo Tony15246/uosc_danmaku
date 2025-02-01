@@ -462,17 +462,24 @@ local function match_file(file_name, file_hash)
 end
 
 -- 加载弹幕
-function load_danmaku(from_menu)
+function load_danmaku(from_menu, no_osd)
     local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
     local danmaku_input = {}
-    for url, source in pairs(danmaku.sources) do
-        if not url:match("^-") and source.fname then
+    local delays = {}
+    for _, source in pairs(danmaku.sources) do
+        if not source.blocked and source.fname then
             if not file_exists(source.fname) then
                 show_message("未找到弹幕文件", 3)
                 msg.verbose("未找到弹幕文件")
                 return
             end
             table.insert(danmaku_input, source.fname)
+
+            if source.delay then
+                table.insert(delays, source.delay)
+            else
+                table.insert(delays, "0.0")
+            end
         end
     end
     if #danmaku_input == 0 then
@@ -480,9 +487,9 @@ function load_danmaku(from_menu)
         comments = {}
         return
     end
-    convert_with_danmaku_factory(danmaku_input)
+    convert_with_danmaku_factory(danmaku_input, nil, delays)
     enabled = true
-    parse_danmaku(danmaku_file, from_menu)
+    parse_danmaku(danmaku_file, from_menu, no_osd)
 end
 
 function get_video_data(url)
@@ -565,8 +572,8 @@ function fetch_danmaku(episodeId, from_menu)
             danmaku.count = danmaku.count + 1
             local success = save_json_for_factory(response["comments"], danmaku_file)
             if success then
-                if danmaku.sources["-" .. url] ~= nil then
-                    danmaku.sources["-" .. url]["fname"] = danmaku_file
+                if danmaku.sources[url] ~= nil then
+                    danmaku.sources[url]["fname"] = danmaku_file
                 else
                     danmaku.sources[url] = {from = "api_server", fname = danmaku_file}
                 end
@@ -644,8 +651,8 @@ function fetch_danmaku_all(episodeId, from_menu)
                 danmaku.count = danmaku.count + 1
                 local success = save_json_for_factory(comments, danmaku_file)
                 if success then
-                    if danmaku.sources["-" .. related["url"]] ~= nil then
-                        danmaku.sources["-" .. related["url"]]["fname"] = danmaku_file
+                    if danmaku.sources[related["url"]] ~= nil then
+                        danmaku.sources[related["url"]]["fname"] = danmaku_file
                     else
                         danmaku.sources[related["url"]] = {from = "api_server", fname = danmaku_file}
                     end
@@ -690,8 +697,8 @@ function fetch_danmaku_all(episodeId, from_menu)
     danmaku.count = danmaku.count + 1
     local success = save_json_for_factory(comments, danmaku_file)
     if success then
-        if danmaku.sources["-" .. url] ~= nil then
-            danmaku.sources["-" .. url]["fname"] = danmaku_file
+        if danmaku.sources[url] ~= nil then
+            danmaku.sources[url]["fname"] = danmaku_file
         else
             danmaku.sources[url] = {from = "api_server", fname = danmaku_file}
         end
@@ -702,11 +709,13 @@ end
 
 --通过输入源url获取弹幕库
 function add_danmaku_source(query, from_menu)
-    danmaku.sources[query] = {from = "user_custom"}
+    if danmaku.sources[query] == nil then
+        danmaku.sources[query] = {from = "user_custom"}
+    end
 
     from_menu = from_menu or false
     if from_menu then
-        add_source_to_history(query)
+        add_source_to_history(query, danmaku.sources[query])
     end
 
     if is_protocol(query) then
@@ -830,7 +839,7 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory(danmaku_input, danmaku_out)
+function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays)
     if exec_path == "" then
         exec_path = utils.join_path(mp.get_script_directory(), "bin/DanmakuFactory")
         if platform == "windows" then
@@ -846,6 +855,7 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out)
         "-o",
         danmaku_out and danmaku_out or utils.join_path(danmaku_path, "danmaku.ass"),
         "-i",
+        "-t",
         "--ignore-warnings",
         "--scrolltime", options.scrolltime,
         "--fontname", "sans-serif",
@@ -857,6 +867,8 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out)
         "--outline", options.outline,
     }
 
+    local shift = 1
+
     -- 检查 danmaku_input 是字符串还是数组，并插入到正确的位置
     if type(danmaku_input) == "string" then
         -- 如果是单个字符串，直接插入
@@ -866,6 +878,15 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out)
         for i, input in ipairs(danmaku_input) do
             table.insert(arg, 4 + i, input)
         end
+        shift = #danmaku_input
+    end
+
+    if delays then
+        for i, delay in ipairs(delays) do
+            table.insert(arg, 5 + shift + i, delay)
+        end
+    else
+        table.insert(arg, 6 + shift, "0.0")
     end
 
     if blacklist_file ~= "" and file_exists(blacklist_file) then
@@ -960,18 +981,10 @@ function get_danmaku_with_hash(file_name, file_path)
 end
 
 -- 从用户添加过的弹幕源添加弹幕
-function addon_danmaku(path, from_menu)
-    local history_json = read_file(history_path)
-
-    if history_json ~= nil then
-        local history = utils.parse_json(history_json) or {}
-        local history_record = history[path]
-        if history_record ~= nil then
-            for _, source in ipairs(history_record) do
-                if not source:match("^-") then
-                    add_danmaku_source(source, from_menu)
-                end
-            end
+function addon_danmaku(from_menu)
+    for url, source in pairs(danmaku.sources) do
+        if source.from ~= "api_server" then
+            add_danmaku_source(url, from_menu)
         end
     end
 end
@@ -985,6 +998,7 @@ function remove_source_from_history(rm_source)
 
         if history[path] ~= nil then
             for i, source in ipairs(history[path]) do
+                source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
                 if source == rm_source then
                     table.remove(history[path], i)
                     break
@@ -996,7 +1010,7 @@ function remove_source_from_history(rm_source)
     end
 end
 
-function add_source_to_history(add_source)
+function add_source_to_history(add_url, add_source)
     local history_json = read_file(history_path)
     local path = mp.get_property("path")
 
@@ -1004,22 +1018,34 @@ function add_source_to_history(add_source)
         local history = utils.parse_json(history_json) or {}
         history[path] = history[path] or {}
 
-        local flag = false
-        for _, source in ipairs(history[path]) do
-            if source == add_source then
-                flag = true
+        for i, source in ipairs(history[path]) do
+            source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
+            if source == add_url then
+                table.remove(history[path], i)
                 break
             end
         end
 
-        if not flag then
-            table.insert(history[path], add_source)
-            write_json_file(history_path, history)
+        if add_source.delay then
+            add_url = "{{" .. add_source.delay .. "}}" .. add_url
         end
+
+        if add_source.from then
+            add_url = "<" .. add_source.from .. ">" .. add_url
+        end
+
+        if add_source.blocked then
+            add_url = "-" .. add_url
+        end
+
+        table.insert(history[path], add_url)
+
+        write_json_file(history_path, history)
     end
 end
 
 function read_danmaku_source_record(path)
+
     local history_json = read_file(history_path)
 
     if history_json ~= nil then
@@ -1027,10 +1053,30 @@ function read_danmaku_source_record(path)
         local history_record = history[path]
         if history_record ~= nil then
             for _, source in ipairs(history_record) do
+                local blocked = false
+                local from = string.match(source,"<(.-)>")
+                local delay = string.match(source,"{{(.-)}}")
                 if source:match("^-") then
-                    danmaku.sources[source] = {from = "api_server"}
-                else
-                    danmaku.sources[source] = {from = "user_custom"}
+                    source = source:sub(2)
+                    blocked = true
+                end
+                if from then
+                    source = source:gsub("<" .. from .. ">", "")
+                end
+                if delay then
+                    source = source:gsub("{{" .. delay .. "}}", "")
+                end
+
+                danmaku.sources[source] = {}
+
+                if blocked then
+                    danmaku.sources[source]["blocked"] = true
+                end
+                if from then
+                    danmaku.sources[source]["from"] = from
+                end
+                if delay then
+                    danmaku.sources[source]["delay"] = delay
                 end
             end
         end
@@ -1288,7 +1334,7 @@ function init(path)
             add_danmaku_source_local(danmaku_xml, true)
         else
             auto_load_danmaku(path, dir, filename)
-            addon_danmaku(path, true)
+            addon_danmaku(true)
         end
     end
 end
@@ -1347,7 +1393,7 @@ mp.register_event("file-loaded", function()
 
     if options.auto_load then
         auto_load_danmaku(path, dir, filename)
-        addon_danmaku(path)
+        addon_danmaku()
         return
     end
 

@@ -211,20 +211,22 @@ end
 function open_add_menu_uosc()
     local sources = {}
     for url, source in pairs(danmaku.sources) do
-        local item = {title = url, value = url, keep_open = true,}
-        if source.from == "api_server" then
-            if url:match("^-") then
-                item.hint = "来源：弹幕服务器（已屏蔽）"
-                item.actions = {{icon = "check", name = "unblock"},}
+        if source.fname then
+            local item = {title = url, value = url, keep_open = true,}
+            if source.from == "api_server" then
+                if source.blocked then
+                    item.hint = "来源：弹幕服务器（已屏蔽）"
+                    item.actions = {{icon = "check", name = "unblock"},}
+                else
+                    item.hint = "来源：弹幕服务器（未屏蔽）"
+                    item.actions = {{icon = "not_interested", name = "block"},}
+                end
             else
-                item.hint = "来源：弹幕服务器（未屏蔽）"
-                item.actions = {{icon = "not_interested", name = "block"},}
+                item.hint = "来源：用户添加"
+                item.actions = {{icon = "delete", name = "delete"},}
             end
-        else
-            item.hint = "来源：用户添加"
-            item.actions = {{icon = "delete", name = "delete"},}
+            table.insert(sources, item)
         end
-        table.insert(sources, item)
     end
     local menu_props = {
         type = "menu_source",
@@ -235,7 +237,7 @@ function open_add_menu_uosc()
         footnote = "使用enter或ctrl+enter进行添加",
         items = sources,
         item_actions_place = "outside",
-        callback = {mp.get_script_name(), 'menu-event'},
+        callback = {mp.get_script_name(), 'setup-danmaku-source'},
     }
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
@@ -337,6 +339,40 @@ function add_danmaku_setup(actived, status)
     mp.commandv("script-message-to", "uosc", actions, json_props)
 end
 
+function danmaku_delay_setup(source_url)
+    if not uosc_available then
+        show_message("无uosc UI框架，不支持使用该功能", 2)
+        return
+    end
+
+    local sources = {}
+    for url, source in pairs(danmaku.sources) do
+        if source.fname then
+            local item = {title = url, value = url, keep_open = true,}
+            item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0") .. "秒"
+            item.active = url == source_url
+            table.insert(sources, item)
+        end
+    end
+
+    local menu_props = {
+        type = "menu_delay",
+        title = "弹幕源延迟设置",
+        search_style = "disabled",
+        items = sources,
+        callback = {mp.get_script_name(), 'setup-source-delay'},
+    }
+    if source_url ~= nil then
+        menu_props.title = "请输入一位小数，单位（秒）"
+        menu_props.search_style = "palette"
+        menu_props.search_debounce = "submit"
+        menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-source-delay", source_url }
+    end
+
+    local json_props = utils.format_json(menu_props)
+    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+end
+
 
 -- 总集合弹幕菜单
 function open_add_total_menu_uosc()
@@ -344,6 +380,7 @@ function open_add_total_menu_uosc()
     local total_menu_items_config = {
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
+        { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
         { title = "弹幕样式", action = "open_setup_danmaku_menu" },
     }
 
@@ -497,6 +534,18 @@ mp.commandv(
     "script-message-to",
     "uosc",
     "set-button",
+    "danmaku_delay",
+    utils.format_json({
+        icon = "more_time",
+        tooltip = "弹幕源延迟设置",
+        command = "script-message open_source_delay_menu",
+    })
+)
+
+mp.commandv(
+    "script-message-to",
+    "uosc",
+    "set-button",
     "danmaku_menu",
     utils.format_json({
         icon = "grid_view",
@@ -551,6 +600,7 @@ mp.register_script_message("add-source-event", function(query)
 end)
 
 mp.register_script_message("open_add_total_menu", open_add_total_menu)
+mp.register_script_message("open_source_delay_menu", danmaku_delay_setup)
 mp.register_script_message("open_setup_danmaku_menu", function()
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
@@ -648,7 +698,7 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 -- "refresh" 模式会清除输入框文字
                 add_danmaku_setup(query, "refresh")
                 if query == "density" or query == "scrolltime" then
-                    load_danmaku(true)
+                    load_danmaku(true, true)
                 end
                 return
             end
@@ -657,7 +707,7 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
     end
 end)
 
-mp.register_script_message('menu-event', function(json)
+mp.register_script_message('setup-danmaku-source', function(json)
     local event = utils.parse_json(json)
     if event.type == 'activate' then
 
@@ -674,22 +724,47 @@ mp.register_script_message('menu-event', function(json)
         end
 
         if event.action == "block" then
-            danmaku.sources["-" .. event.value] = danmaku.sources[event.value]
-            danmaku.sources[event.value] = nil
-            remove_source_from_history(event.value)
-            add_source_to_history("-" .. event.value)
+            danmaku.sources[event.value]["blocked"] = true
+            add_source_to_history(event.value, danmaku.sources[event.value])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
             load_danmaku(true)
         end
 
         if event.action == "unblock" then
-            danmaku.sources[event.value:sub(2)] = danmaku.sources[event.value]
-            danmaku.sources[event.value] = nil
-            remove_source_from_history(event.value)
+            danmaku.sources[event.value]["blocked"] = false
+            if danmaku.sources[event.value]["delay"] then
+                add_source_to_history(event.value, danmaku.sources[event.value])
+            else
+                remove_source_from_history(event.value)
+            end
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
             load_danmaku(true)
+        end
+    end
+end)
+
+mp.register_script_message("setup-source-delay", function(query, text)
+    local event = utils.parse_json(query)
+    if event ~= nil then
+        -- item点击
+        if event.type == "activate" then
+            danmaku_delay_setup(event.value)
+        end
+    else
+        -- 数值输入
+        if text == nil or text == "" then
+            return
+        end
+        local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
+        if tonumber(newText) ~= nil then
+            local num = tonumber(newText)
+            danmaku.sources[query]["delay"] = tostring(num)
+            add_source_to_history(query, danmaku.sources[query])
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
+            danmaku_delay_setup(query)
+            load_danmaku(true, true)
         end
     end
 end)
