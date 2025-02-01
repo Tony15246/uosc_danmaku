@@ -10,6 +10,38 @@ require('render')
 input_loaded, input = pcall(require, "mp.input")
 uosc_available = false
 
+-- from http://lua-users.org/wiki/LuaUnicode
+local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
+
+-- return a substring based on utf8 characters
+-- like string.sub, but negative index is not supported
+function utf8_sub(s, i, j)
+    if i > j then
+        return s
+    end
+
+    local t = {}
+    local idx = 1
+    for char in s:gmatch(UTF8_PATTERN) do
+        if i <= idx and idx <= j then
+            local width = #char > 2 and 2 or 1
+            idx = idx + width
+            t[#t + 1] = char
+        end
+    end
+    return table.concat(t)
+end
+
+-- abbreviate string if it's too long
+function abbr_str(str, length)
+    if not str or str == '' then return '' end
+    local str_clip = utf8_sub(str, 1, length)
+    if str ~= str_clip then
+        return str_clip .. '...'
+    end
+    return str
+end
+
 function get_animes(query)
     local encoded_query = url_encode(query)
     local url = options.api_server .. "/api/v2/search/episodes"
@@ -121,7 +153,7 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
         type = menu_type,
         title = menu_title,
         search_style = menu_cmd and "palette" or "on_demand",
-        search_debounce = "submit",
+        search_debounce = menu_cmd and "submit" or 0,
         on_search = menu_cmd,
         footnote = menu_footnote,
         search_suggestion = query,
@@ -131,10 +163,11 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
-function open_menu_select(menu_items)
+function open_menu_select(menu_items, is_time)
     local item_titles, item_values = {}, {}
     for i, v in ipairs(menu_items) do
-        item_titles[i] = v.hint and v.title .. " (" .. v.hint .. ")" or v.title
+        item_titles[i] = is_time and "[" .. v.hint .. "] " .. v.title or
+            (v.hint and v.title .. " (" .. v.hint .. ")" or v.title)
         item_values[i] = v.value
     end
     mp.commandv('script-message-to', 'console', 'disable')
@@ -259,6 +292,35 @@ function open_add_menu()
     end
 end
 
+function open_content_menu(pos)
+    local items = {}
+    local time_pos = pos or mp.get_property_native("time-pos")
+
+    if comments ~= nil then
+        for _, event in ipairs(comments) do
+            table.insert(items, {
+                title = abbr_str(event.clean_text, 60),
+                hint = seconds_to_time(event.start_time + delay),
+                value = { "seek", event.start_time + delay, "absolute" },
+                active = event.start_time + delay <= time_pos and time_pos <= event.end_time + delay,
+            })
+        end
+    end
+
+    local menu_props = {
+        type = "menu_content",
+        title = "弹幕内容",
+        footnote = "使用 / 打开搜索",
+        items = items
+    }
+    local json_props = utils.format_json(menu_props)
+
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+    elseif input_loaded then
+        open_menu_select(items, true)
+    end
+end
 
 local menu_items_config = {
     bold = { title = "粗体", hint = options.bold, original = options.bold,
@@ -382,6 +444,7 @@ function open_add_total_menu_uosc()
         { title = "从源添加弹幕", action = "open_add_source_menu" },
         { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
         { title = "弹幕样式", action = "open_setup_danmaku_menu" },
+        { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
 
 
@@ -421,6 +484,7 @@ function open_add_total_menu_select()
     local total_menu_items_config = {
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
+        { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
     for i, config in ipairs(total_menu_items_config) do
         item_titles[i] = config.title
@@ -606,6 +670,12 @@ mp.register_script_message("open_setup_danmaku_menu", function()
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
     end
     add_danmaku_setup()
+end)
+mp.register_script_message("open_content_danmaku_menu", function()
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
+    end
+    open_content_menu()
 end)
 
 mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")

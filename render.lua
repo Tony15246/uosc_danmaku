@@ -3,16 +3,25 @@ local msg = require('mp.msg')
 local utils = require("mp.utils")
 
 local INTERVAL = options.vf_fps and 0.01 or 0.001
-local osd_width, osd_height, delay, pause = 0, 0, 0, true
-enabled, comments = false, nil
+local osd_width, osd_height, pause = 0, 0, true
+enabled, comments, delay = false, nil, 0
+
 local delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
 local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
 mp.set_property_native(delay_property, 0)
 
 -- 从时间字符串转换为秒数
-local function time_to_seconds(time_str)
+function time_to_seconds(time_str)
     local h, m, s = time_str:match("(%d+):(%d+):([%d%.]+)")
     return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
+end
+
+-- 从秒数转换为时间字符串
+function seconds_to_time(seconds)
+    local h = math.floor(seconds / 3600)
+    local m = math.floor(seconds / 60) % 60
+    local s = math.floor(seconds % 60)
+    return string.format("%02d:%02d:%02d", h, m, s)
 end
 
 -- 提取 \move 参数 (x1, y1, x2, y2) 并返回
@@ -121,7 +130,7 @@ local function parse_ass(ass_path)
                     end_time = time_to_seconds(end_time),
                     style = style,
                     text = text:gsub("%s+$", ""),
-                    clean_text = text:gsub("\\pos%(.-%)", ""):gsub("\\move%(.-%)", ""),
+                    clean_text = text:gsub("\\h", " "):gsub("%{.-%}", ""):gsub("^%s*(.-)%s*$", "%1"),
                     pos = text:match("\\pos"),
                     move = text:match("\\move"),
                 }
