@@ -246,10 +246,11 @@ function parse_danmaku(ass_file_path, from_menu, no_osd)
     end
 end
 
-local function filter_state(label, key, value)
+local function filter_state(label, name)
     local filters = mp.get_property_native("vf")
     for _, filter in pairs(filters) do
-        if filter["label"] == label and (not key or key and filter[key] == value) then
+        if filter.label == label or filter.name == name
+        or filter.params[name] ~= nil then
             return true
         end
     end
@@ -269,7 +270,9 @@ function show_danmaku_func()
         if (display_fps and display_fps < 58) or (video_fps and video_fps > 58) then
             return
         end
-        mp.commandv("vf", "append", "@danmaku:fps=fps=60/1.001")
+        if not filter_state("danmaku", "fps") then
+            mp.commandv("vf", "append", "@danmaku:fps=fps=60/1.001")
+        end
     end
 end
 
