@@ -22,14 +22,15 @@ local function load_extra_danmaku(url, episode, number, class, id, site, title, 
     danmaku.anime = title .. " (" .. year .. ")"
     danmaku.episode = "第" .. episode .. "话"
     danmaku.source = site
-    danmaku.extra = {}
-    danmaku.extra.id = id
-    danmaku.extra.site = site
-    danmaku.extra.year = year
-    danmaku.extra.class = class
-    danmaku.extra.title = title
-    danmaku.extra.number = number
-    danmaku.extra.episodenum = episode
+    danmaku.extra = {
+        id = id,
+        site = site,
+        year = year,
+        class = class,
+        title = title,
+        number = tonumber(number),
+        episodenum = tonumber(episode),
+    }
     write_history()
     add_danmaku_source(play_url, true)
 end
@@ -318,11 +319,12 @@ end
 function query_extra(name, class)
     local title = nil
     local class = class and class:lower()
-    local menu = {}
     local message = "加载数据中..."
-    menu.type = "menu_anime"
-    menu.title = "在此处输入番剧名称"
-    menu.footnote = "使用enter或ctrl+enter进行搜索"
+    local menu = {
+        type = "menu_anime",
+        title = "在此处输入番剧名称",
+        footnote = "使用enter或ctrl+enter进行搜索"
+    }
     menu.cmd = { "script-message-to", mp.get_script_name(), "search-anime-event" }
     if uosc_available then
         update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, name)
