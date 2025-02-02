@@ -783,7 +783,7 @@ mp.register_script_message('setup-danmaku-source', function(json)
 
         if event.action == "delete" then
             local rm = danmaku.sources[event.value]["fname"]
-            if rm and file_exists(rm) then
+            if rm and file_exists(rm) and danmaku.sources[event.value]["from"] ~= "user_local" then
                 os.remove(rm)
             end
             danmaku.sources[event.value] = nil

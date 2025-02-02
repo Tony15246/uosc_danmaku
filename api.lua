@@ -412,6 +412,14 @@ end
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
     danmaku.source = "dandanplay"
+    for url, source in pairs(danmaku.sources) do
+        if source.from == "api_server" then
+            if source.fname and file_exists(source.fname) then
+                os.remove(source.fname)
+            end
+            danmaku.sources[url] = nil
+        end
+    end
     local episodeId = tonumber(input)
     if from_menu and options.auto_load or options.autoload_for_url then
         write_history(episodeId)
