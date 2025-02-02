@@ -116,7 +116,7 @@ function format_filename(title)
     for _, formatter in ipairs(formatters) do
         local matches = {title:match(formatter.regex)}
         if #matches > 0 then
-            title = formatter.format(table.unpack(matches))
+            title = formatter.format(unpack(matches))
             return title
         end
     end
