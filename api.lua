@@ -417,7 +417,12 @@ function set_episode_id(input, from_menu)
             if source.fname and file_exists(source.fname) then
                 os.remove(source.fname)
             end
-            danmaku.sources[url] = nil
+
+            if not source.from_history then
+                danmaku.sources[url] = nil
+            else
+                danmaku.sources[url]["fname"] = nil
+            end
         end
     end
     local episodeId = tonumber(input)
@@ -570,7 +575,7 @@ function fetch_danmaku(episodeId, from_menu)
         local response = utils.parse_json(res.stdout)
         if response and response["comments"] then
             if response["count"] == 0 then
-                if danmaku.sources["-" .. url] == nil then
+                if danmaku.sources[url] == nil then
                     danmaku.sources[url] = {from = "api_server"}
                 end
                 show_message("该集弹幕内容为空，结束加载", 3)
@@ -651,7 +656,7 @@ function fetch_danmaku_all(episodeId, from_menu)
             end
 
             if #comments == 0 then
-                if danmaku.sources["-" .. related["url"]] == nil then
+                if danmaku.sources[related["url"]] == nil then
                     danmaku.sources[related["url"]] = {from = "api_server"}
                 end
             else
@@ -694,7 +699,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     local count = response["count"]
 
     if count == 0 then
-        if danmaku.sources["-" .. url] == nil then
+        if danmaku.sources[url] == nil then
             danmaku.sources[url] = {from = "api_server"}
         end
         load_danmaku(from_menu)
@@ -1067,6 +1072,7 @@ function read_danmaku_source_record(path)
                 if source:match("^-") then
                     source = source:sub(2)
                     blocked = true
+                    from = "api_server"
                 end
                 if from then
                     source = source:gsub("<" .. from .. ">", "")
@@ -1080,15 +1086,18 @@ function read_danmaku_source_record(path)
                 if blocked then
                     danmaku.sources[source]["blocked"] = true
                 end
-                if from then
-                    danmaku.sources[source]["from"] = from
-                end
+
+                danmaku.sources[source]["from"] = from or "user_custom"
+
                 if delay then
                     danmaku.sources[source]["delay"] = delay
                 end
+
+                danmaku.sources[source]["from_history"] = true
             end
         end
     end
+
 end
 
 -- 为 bilibli 网站的视频播放加载弹幕
@@ -1372,7 +1381,7 @@ mp.register_script_message("clear-source", function ()
                 end
             end
             load_danmaku(false)
-            show_message("已清空当前视频所关联的弹幕源", 3)
+            show_message("已重置当前视频所有弹幕源更改", 3)
         end
     end
 end)
