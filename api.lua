@@ -1321,7 +1321,7 @@ function auto_load_danmaku(path, dir, filename, number)
                     if history_id then
                         local tmp_id = tostring(x + history_id)
                         set_episode_id(tmp_id)
-                    elseif history_extra and x ~= 0 then
+                    elseif history_extra then
                         local episodenum = history_extra.episodenum + x
                         get_details(history_extra.class, history_extra.id, history_extra.site,
                             history_extra.title, history_extra.year, history_extra.number, episodenum)
