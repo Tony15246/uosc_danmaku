@@ -9,6 +9,7 @@ require('render')
 
 input_loaded, input = pcall(require, "mp.input")
 uosc_available = false
+pid = utils.getpid()
 
 -- from http://lua-users.org/wiki/LuaUnicode
 local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
