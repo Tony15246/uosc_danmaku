@@ -476,7 +476,8 @@ end
 
 -- 加载弹幕
 function load_danmaku(from_menu, no_osd)
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+    local temp_file = "danmaku-" .. pid .. ".ass"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
     local danmaku_input = {}
     local delays = {}
     for _, source in pairs(danmaku.sources) do
@@ -581,7 +582,8 @@ function fetch_danmaku(episodeId, from_menu)
                 show_message("该集弹幕内容为空，结束加载", 3)
                 return
             end
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+            local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
+            local danmaku_file = utils.join_path(danmaku_path, temp_file)
             danmaku.count = danmaku.count + 1
             local success = save_json_for_factory(response["comments"], danmaku_file)
             if success then
@@ -660,7 +662,8 @@ function fetch_danmaku_all(episodeId, from_menu)
                     danmaku.sources[related["url"]] = {from = "api_server"}
                 end
             else
-                local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+                local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
+                local danmaku_file = utils.join_path(danmaku_path, temp_file)
                 danmaku.count = danmaku.count + 1
                 local success = save_json_for_factory(comments, danmaku_file)
                 if success then
@@ -706,7 +709,8 @@ function fetch_danmaku_all(episodeId, from_menu)
         return
     end
 
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+    local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
     danmaku.count = danmaku.count + 1
     local success = save_json_for_factory(comments, danmaku_file)
     if success then
@@ -800,7 +804,8 @@ function add_danmaku_source_online(query, from_menu)
         return
     end
 
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku" .. danmaku.count .. ".json")
+    local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
     danmaku.count = danmaku.count + 1
     local success = save_json_for_factory(comments, danmaku_file)
     if success then
@@ -816,7 +821,8 @@ end
 
 -- 将弹幕转换为factory可读的json格式
 function save_json_for_factory(comments, json_filename)
-    json_filename = json_filename or utils.join_path(danmaku_path, "danmaku.json")
+    local temp_file = "danmaku-" .. pid .. ".json"
+    json_filename = json_filename or utils.join_path(danmaku_path, temp_file)
     local json_file = io.open(json_filename, "w")
 
     if json_file then
@@ -863,10 +869,13 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays)
     end
     local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
 
+    local temp_file = "danmaku-" .. pid .. ".ass"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
+
     local arg = {
         danmaku_factory_path,
         "-o",
-        danmaku_out and danmaku_out or utils.join_path(danmaku_path, "danmaku.ass"),
+        danmaku_out and danmaku_out or danmaku_file,
         "-i",
         "-t",
         "--ignore-warnings",
@@ -938,7 +947,8 @@ function get_danmaku_with_hash(file_name, file_path)
             msg.error("HTTP 请求失败：" .. res.stderr)
             return
         end
-        file_path = utils.join_path(danmaku_path, "temp.mp4")
+        local temp_file = "temp-" .. pid .. ".mp4"
+        file_path = utils.join_path(danmaku_path, temp_file)
         if not file_exists(file_path) then
             return
         end
@@ -1138,7 +1148,8 @@ function load_danmaku_for_bilibili(path)
     end
     if cid ~= nil then
         local url = "https://comment.bilibili.com/" .. cid .. ".xml"
-        local danmaku_xml = utils.join_path(danmaku_path, "danmaku.xml")
+        local temp_file = "danmaku-" .. pid .. ".xml"
+        local danmaku_xml = utils.join_path(danmaku_path, temp_file)
         local arg = {
             "curl",
             "-L",
@@ -1174,7 +1185,8 @@ function load_danmaku_for_bahamut(path)
         return
     end
     local url = "https://ani.gamer.com.tw/ajax/danmuGet.php"
-    local danmaku_json = utils.join_path(danmaku_path, "bahamut.json")
+    local temp_file = "bahamut-" .. pid .. ".json"
+    local danmaku_json = utils.join_path(danmaku_path, temp_file)
     local arg = {
         "curl",
         "-X",
@@ -1226,7 +1238,8 @@ function load_danmaku_for_bahamut(path)
         return
     end
 
-    local json_filename = utils.join_path(danmaku_path, "danmaku.json")
+    local temp_file = "danmaku-" .. pid .. ".json"
+    local json_filename = utils.join_path(danmaku_path, temp_file)
     local json_file = io.open(json_filename, "w")
 
     if json_file then

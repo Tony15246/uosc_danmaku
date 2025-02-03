@@ -353,11 +353,11 @@ mp.add_hook("on_unload", 50, function()
     end
 
     local danmaku_path = os.getenv("TEMP") or "/tmp/"
-    local rm1 = utils.join_path(danmaku_path, "danmaku.json")
-    local rm2 = utils.join_path(danmaku_path, "danmaku.ass")
-    local rm3 = utils.join_path(danmaku_path, "danmaku.xml")
-    local rm4 = utils.join_path(danmaku_path, "temp.mp4")
-    local rm5 = utils.join_path(danmaku_path, "bahamut.json")
+    local rm1 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".json")
+    local rm2 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
+    local rm3 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".xml")
+    local rm4 = utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4")
+    local rm5 = utils.join_path(danmaku_path, "bahamut-" .. pid .. ".json")
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then
         if options.save_danmaku then
