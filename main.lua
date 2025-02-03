@@ -409,7 +409,7 @@ function danmaku_delay_setup(source_url)
 
     local sources = {}
     for url, source in pairs(danmaku.sources) do
-        if source.fname then
+        if source.fname and not source.blocked then
             local item = {title = url, value = url, keep_open = true,}
             item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0") .. "秒"
             item.active = url == source_url
@@ -425,7 +425,7 @@ function danmaku_delay_setup(source_url)
         callback = {mp.get_script_name(), 'setup-source-delay'},
     }
     if source_url ~= nil then
-        menu_props.title = "请输入一位小数，单位（秒）"
+        menu_props.title = "请输入数字，单位（秒）/ 或者按照形如\"14m15s\"的格式输入分钟数加秒数"
         menu_props.search_style = "palette"
         menu_props.search_debounce = "submit"
         menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-source-delay", source_url }
@@ -831,6 +831,15 @@ mp.register_script_message("setup-source-delay", function(query, text)
         if tonumber(newText) ~= nil then
             local num = tonumber(newText)
             danmaku.sources[query]["delay"] = tostring(num)
+            add_source_to_history(query, danmaku.sources[query])
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
+            danmaku_delay_setup(query)
+            load_danmaku(true, true)
+        elseif newText:match("^%d+m%d+s$") then
+            local minutes, seconds = string.match(newText, "^(%d+)m(%d+)s$")
+            minutes = tonumber(minutes)
+            seconds = tonumber(seconds)
+            danmaku.sources[query]["delay"] = tostring(60 * minutes + seconds)
             add_source_to_history(query, danmaku.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
