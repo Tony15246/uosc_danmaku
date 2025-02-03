@@ -622,11 +622,11 @@ function fetch_danmaku_all(episodeId, from_menu)
         return
     end
 
-    for _, related in ipairs(response["relateds"]) do
+    for num, related in ipairs(response["relateds"]) do
         url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
         local shift = related["shift"]
         --show_message("正在从此地址加载弹幕：" .. related["url"], 30)
-        show_message("正在从第三方库装填弹幕", 30)
+        show_message(string.format("正在从第三方库装填弹幕 [%d/%d]", num, #response["relateds"]), 30)
         msg.verbose("正在从第三方库装填弹幕：" .. url)
         res = get_danmaku_contents(url)
         if res.status ~= 0 then
