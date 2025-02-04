@@ -43,6 +43,7 @@ function abbr_str(str, length)
     return str
 end
 
+-- 打开番剧数据匹配菜单
 function get_animes(query)
     local encoded_query = url_encode(query)
     local url = options.api_server .. "/api/v2/search/episodes"
@@ -181,7 +182,7 @@ function open_menu_select(menu_items, is_time)
     })
 end
 
--- 打开输入菜单
+-- 打开弹幕输入搜索菜单
 function open_input_menu_get()
     mp.commandv('script-message-to', 'console', 'disable')
     local title = parse_title(true)
@@ -231,6 +232,15 @@ function open_input_menu_uosc()
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
+function open_input_menu()
+    if uosc_available then
+        open_input_menu_uosc()
+    elseif input_loaded then
+        open_input_menu_get()
+    end
+end
+
+-- 打开弹幕源添加管理菜单
 function open_add_menu_get()
     mp.commandv('script-message-to', 'console', 'disable')
     input.get({
@@ -277,14 +287,6 @@ function open_add_menu_uosc()
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
-function open_input_menu()
-    if uosc_available then
-        open_input_menu_uosc()
-    elseif input_loaded then
-        open_input_menu_get()
-    end
-end
-
 function open_add_menu()
     if uosc_available then
         open_add_menu_uosc()
@@ -293,6 +295,7 @@ function open_add_menu()
     end
 end
 
+-- 打开弹幕内容菜单
 function open_content_menu(pos)
     local items = {}
     local time_pos = pos or mp.get_property_native("time-pos")
@@ -402,6 +405,7 @@ function add_danmaku_setup(actived, status)
     mp.commandv("script-message-to", "uosc", actions, json_props)
 end
 
+-- 设置弹幕源延迟菜单
 function danmaku_delay_setup(source_url)
     if not uosc_available then
         show_message("无uosc UI框架，不支持使用该功能", 2)
@@ -519,7 +523,7 @@ function save_danmaku_func(suffix)
         suffix = string.lower(suffix)
         if suffix == "xml" or suffix == "ass" then
             local danmaku_path = os.getenv("TEMP") or "/tmp/"
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku.ass")
+            local danmaku_file = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
             if file_exists(danmaku_file) then
                 local path = mp.get_property("path")
                 -- 排除网络播放场景
@@ -836,8 +840,8 @@ mp.register_script_message("setup-source-delay", function(query, text)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
             load_danmaku(true, true)
-        elseif newText:match("^%d+m%d+s$") then
-            local minutes, seconds = string.match(newText, "^(%d+)m(%d+)s$")
+        elseif newText:match("^-?%d+m%d+s$") then
+            local minutes, seconds = string.match(newText, "^(-?%d+)m(%d+)s$")
             minutes = tonumber(minutes)
             seconds = tonumber(seconds)
             danmaku.sources[query]["delay"] = tostring(60 * minutes + seconds)
