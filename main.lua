@@ -840,10 +840,11 @@ mp.register_script_message("setup-source-delay", function(query, text)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
             load_danmaku(true, true)
-        elseif newText:match("^-?%d+m%d+s$") then
-            local minutes, seconds = string.match(newText, "^(-?%d+)m(%d+)s$")
+        elseif newText:match("^%-?%d+m%d+s$") then
+            local minutes, seconds = string.match(newText, "^(%-?%d+)m(%d+)s$")
             minutes = tonumber(minutes)
             seconds = tonumber(seconds)
+            if minutes < 0 then seconds = -seconds end
             danmaku.sources[query]["delay"] = tostring(60 * minutes + seconds)
             add_source_to_history(query, danmaku.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
