@@ -39,6 +39,15 @@ function url_decode(str)
     end
 end
 
+function remove_query(url)
+    local qpos = string.find(url, "?", 1, true)
+    if qpos then
+        return string.sub(url, 1, qpos - 1)
+    else
+        return url
+    end
+end
+
 function is_protocol(path)
     return type(path) == 'string' and (path:find('^%a[%w.+-]-://') ~= nil or path:find('^%a[%w.+-]-:%?') ~= nil)
 end
@@ -514,7 +523,7 @@ function get_video_data(url)
         "--user-agent",
         options.user_agent,
         "--output",
-        utils.join_path(danmaku_path, "temp.mp4"),
+        utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4"),
         "-L",
         url,
     }
@@ -1037,6 +1046,10 @@ function add_source_to_history(add_url, add_source)
     local history_json = read_file(history_path)
     local path = mp.get_property("path")
 
+    if is_protocol(path) then
+        path = remove_query(path)
+    end
+
     if history_json then
         local history = utils.parse_json(history_json) or {}
         history[path] = history[path] or {}
@@ -1068,6 +1081,9 @@ function add_source_to_history(add_url, add_source)
 end
 
 function read_danmaku_source_record(path)
+    if is_protocol(path) then
+        path = remove_query(path)
+    end
 
     local history_json = read_file(history_path)
 
@@ -1280,6 +1296,7 @@ function load_danmaku_for_url(path)
     end
 
     local title, season_num, episod_num = parse_title()
+    local filename = url_decode(mp.get_property("media-title"))
     local episod_number = nil
     if title and episod_num then
         if season_num then
@@ -1288,12 +1305,12 @@ function load_danmaku_for_url(path)
         else
             dir = title
         end
-        filename = url_decode(mp.get_property("media-title"))
         auto_load_danmaku(path, dir, filename, episod_number)
+        addon_danmaku()
         return
-    else
-        get_danmaku_with_hash(filename, path)
     end
+    get_danmaku_with_hash(filename, path)
+    addon_danmaku()
 end
 
 -- 自动加载上次匹配的弹幕
