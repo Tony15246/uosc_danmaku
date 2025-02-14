@@ -997,7 +997,7 @@ function get_danmaku_with_hash(file_name, file_path)
 
     -- 解析匹配结果
     local match_data = utils.parse_json(match_data_raw)
-    if not match_data.isMatched then
+    if not match_data or not match_data.isMatched then
         msg.verbose("没有匹配的剧集")
         return
     elseif #match_data.matches > 1 then
