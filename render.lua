@@ -202,7 +202,7 @@ local function render()
             end
 
             -- 构建 ASS 字符串
-            local ass_text = text and string.format("{\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
+            local ass_text = text and string.format("{\\fn%s\\fs%d\\c&HFFFFFF&\\3c&H000000&\\4c&H000000&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
                 fontname, text:match("{\\b1\\i1}x%d+$") and fontsize + text:match("x(%d+)$") or fontsize,
                 options.transparency, options.outline, options.shadow, options.bold == "true" and "1" or "0", text)
 
