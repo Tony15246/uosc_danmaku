@@ -1430,11 +1430,33 @@ mp.register_event("file-loaded", function()
     if filename == nil or dir == nil then
         return
     end
+    local function escape_pattern(str)
+        return str:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%1")
+    end
+
     local danmaku_xml = utils.join_path(dir, filename .. ".xml")
     if options.autoload_local_danmaku then
+        -- 优先尝试精确匹配
         if file_exists(danmaku_xml) then
             add_danmaku_source_local(danmaku_xml)
             return
+        end
+        
+        -- 模糊匹配逻辑
+        local escaped_name = escape_pattern(filename)
+        local pattern = "^" .. escaped_name .. ".*%.xml$"  -- 匹配以filename开头、.xml结尾的文件
+        
+        local files = utils.readdir(dir, "files")  -- 获取目录文件列表
+        if files then
+            for _, v in ipairs(files) do
+                if v:match(pattern) then
+                    local candidate = utils.join_path(dir, v)
+                    if file_exists(candidate) then
+                        add_danmaku_source_local(candidate)
+                        return  -- 找到第一个匹配项即返回
+                    end
+                end
+            end
         end
     end
 
