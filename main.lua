@@ -715,13 +715,14 @@ mp.register_script_message("show_danmaku_keyboard", function()
             local path = mp.get_property("path")
             init(path)
         else
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+            show_message("加载弹幕初始化...", 3)
             if danmaku.anime and danmaku.episode then
                 show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
             else
                 show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
             end
             show_danmaku_func()
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
         end
     else
         show_message("关闭弹幕", 2)
