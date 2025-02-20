@@ -59,18 +59,16 @@ local function query_tmdb(title, class, menu)
         capture_stderr = true,
     })
 
-    if res.status ~= 0 or res.stdout == 0 then
+    local data = utils.parse_json(res.stdout)
+    if res.status ~= 0 or not data.results or #data.results == 0 then
         local message = "获取 tmdb 中文数据失败"
         if uosc_available then
             update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, title)
         else
             show_message(message, 3)
         end
-        msg.error("获取 tmdb 中文数据失败：" .. res.stderr)
-    end
-
-    local data = utils.parse_json(res.stdout)
-    if data and data.results and #data.results > 0 then
+        msg.error("获取 tmdb 中文数据失败：" .. res.stdout)
+    else
         if class == "tv" then
             return data.results[1].name
         else
@@ -281,6 +279,7 @@ local function search_query(query, class, menu)
 end
 
 function query_extra(name, class)
+    local name = name:gsub("%s*%(%d-%)%s*$", "")
     local title = nil
     local class = class and class:lower()
     local message = "加载数据中..."
