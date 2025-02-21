@@ -1372,6 +1372,13 @@ function init(path)
     if not path then return end
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
+    local video = mp.get_property_native("current-tracks/video")
+    local fps = mp.get_property_number("container-fps", 0)
+    local duration = mp.get_property_number("duration", 0)
+    if not video or video["image"] or video["albumart"] or fps < 23 or duration < 60 then
+        msg.info("不支持的播放内容（非视频）")
+        return
+    end
     if is_protocol(path) then
         load_danmaku_for_url(path)
     end
@@ -1420,6 +1427,12 @@ mp.register_event("file-loaded", function()
     local path = mp.get_property("path")
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
+    local video = mp.get_property_native("current-tracks/video")
+    local fps = mp.get_property_number("container-fps", 0)
+    local duration = mp.get_property_number("duration", 0)
+    if not video or video["image"] or video["albumart"] or fps < 23 or duration < 60 then
+        return
+    end
 
     read_danmaku_source_record(path)
 
