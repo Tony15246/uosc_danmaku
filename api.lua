@@ -1217,7 +1217,7 @@ function load_danmaku_for_bilibili(path)
             url,
         }
 
-        call_cmd_async(args, function(error, _)
+        call_cmd_async(arg, function(error, _)
             async_running = false
             if error then
                 show_message("HTTP 请求失败，打开控制台查看详情", 5)
@@ -1269,7 +1269,7 @@ function load_danmaku_for_bahamut(path)
         table.insert(arg, options.proxy)
     end
 
-    call_cmd_async(args, function(error, _)
+    call_cmd_async(arg, function(error, _)
         async_running = false
         if error then
             show_message("HTTP 请求失败，打开控制台查看详情", 5)
