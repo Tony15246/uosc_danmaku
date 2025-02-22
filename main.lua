@@ -63,7 +63,8 @@ function get_animes(query)
     end
     msg.verbose("尝试获取番剧数据：" .. full_url)
 
-    local res = get_danmaku_contents(full_url)
+    local args = get_danmaku_args(full_url)
+    local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
     if res.status ~= 0 then
         local message = "获取数据失败"
@@ -84,7 +85,7 @@ function get_animes(query)
         else
             show_message(message, 3)
         end
-        msg.verbose("无结果")
+        msg.info("无结果")
         return
     end
 
@@ -529,7 +530,7 @@ function save_danmaku_func(suffix)
                 -- 排除网络播放场景
                 if not path or is_protocol(path) then
                     show_message("此弹幕文件不支持保存至本地")
-                    msg.verbose("This danmaku file does not support saving.")
+                    msg.warn("此弹幕文件不支持保存至本地")
                 else
                     local dir = get_parent_directory(path)
                     local filename = mp.get_property('filename/no-ext') 
@@ -537,7 +538,7 @@ function save_danmaku_func(suffix)
                     -- show_message(danmaku_out)
                     if file_exists(danmaku_out) then
                         show_message("已存在同名弹幕文件：" .. danmaku_out)
-                        msg.verbose("Danmaku file with the same name already exists: " .. danmaku_out)
+                        msg.info("已存在同名弹幕文件：" .. danmaku_out)
                         return
                     else
                         convert_with_danmaku_factory(danmaku_file, danmaku_out)
@@ -545,19 +546,19 @@ function save_danmaku_func(suffix)
                             if not options.save_danmaku then
                                 show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
                             end
-                            msg.verbose("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
+                            msg.info("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
                         end
                     end
                 end
             else
                 show_message("找不到弹幕文件：" .. danmaku_file)
-                msg.verbose("Can't find danmaku file：" .. danmaku_file)
+                msg.warn("找不到弹幕文件：" .. danmaku_file)
             end
         else
-            msg.verbose("不支持的文件后缀: " .. (suffix or "未知"))
+            msg.warn("不支持的文件后缀: " .. (suffix or "未知"))
         end
     else
-        msg.verbose("Function value undefined" .. suffix)
+        msg.warn("Function value undefined" .. suffix)
     end
 end
 
@@ -655,6 +656,7 @@ end)
 
 -- Register script message to show the input menu
 mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
+    enabled = true
     danmaku.anime = animeTitle
     danmaku.episode = episodeTitle
     set_episode_id(episodeId, true)
@@ -665,6 +667,7 @@ mp.register_script_message("add-source-event", function(query)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
     end
+    enabled = true
     add_danmaku_source(query, true)
 end)
 
@@ -690,6 +693,8 @@ mp.register_script_message("set", function(prop, value)
     end
 
     if value == "on" then
+        enabled = true
+        set_danmaku_visibility(true)
         if comments == nil then
             local path = mp.get_property("path")
             init(path)
@@ -703,6 +708,8 @@ mp.register_script_message("set", function(prop, value)
         end
     else
         show_message("关闭弹幕", 2)
+        enabled = false
+        set_danmaku_visibility(false)
         hide_danmaku_func()
     end
 
@@ -710,13 +717,15 @@ mp.register_script_message("set", function(prop, value)
 end)
 
 mp.register_script_message("show_danmaku_keyboard", function()
-    if not enabled then
+    enabled = not enabled
+    if enabled then
+        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        set_danmaku_visibility(true)
         if comments == nil then
+            show_message("加载弹幕初始化...", 3)
             local path = mp.get_property("path")
             init(path)
         else
-            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-            show_message("加载弹幕初始化...", 3)
             if danmaku.anime and danmaku.episode then
                 show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
             else
@@ -726,8 +735,9 @@ mp.register_script_message("show_danmaku_keyboard", function()
         end
     else
         show_message("关闭弹幕", 2)
-        hide_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
+        set_danmaku_visibility(false)
+        hide_danmaku_func()
     end
 end)
 

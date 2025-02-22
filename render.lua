@@ -238,8 +238,8 @@ function parse_danmaku(ass_file_path, from_menu, no_osd)
         if not no_osd then
             show_loaded()
         end
-        show_danmaku_func()
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+        show_danmaku_func()
     else
         show_message("")
         hide_danmaku_func()
@@ -262,8 +262,6 @@ function show_danmaku_func()
     if not pause then
         timer:resume()
     end
-    enabled = true
-    set_danmaku_visibility(true)
     if options.vf_fps then
         local display_fps = mp.get_property_number('display-fps')
         local video_fps = mp.get_property_number('estimated-vf-fps')
@@ -279,8 +277,6 @@ end
 function hide_danmaku_func()
     timer:kill()
     overlay:remove()
-    enabled = false
-    set_danmaku_visibility(false)
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")
     end
