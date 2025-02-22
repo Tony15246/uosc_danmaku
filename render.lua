@@ -285,7 +285,7 @@ function show_danmaku_func()
             return
         end
         if not filter_state("danmaku", "fps") then
-            mp.commandv("vf", "append", "@danmaku:fps=fps=60/1.001")
+            mp.commandv("vf", "append", string.format("@danmaku:fps=fps=%s", options.fps))
         end
     end
 end
