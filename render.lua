@@ -65,8 +65,9 @@ local function parse_comment(event, pos, height)
     end
 end
 
-local function ch_convert(ass_path, case)
+local function ch_convert(ass_path, case, callback)
     if case == 0 then
+        callback(nil)
         return
     end
 
@@ -86,6 +87,7 @@ local function ch_convert(ass_path, case)
     elseif case == 2 then
         config = "s2t.json"
     else
+        callback("无效的转换配置")
         return
     end
 
@@ -99,24 +101,18 @@ local function ch_convert(ass_path, case)
         config,
     }
 
-    mp.command_native({
-        name = 'subprocess',
-        playback_only = false,
-        capture_stdout = true,
-        args = arg,
-    })
-
+    call_cmd_async(arg, function(error, _)
+        async_running = false
+        if error then
+            callback("OpenCC 转换失败：" .. error)
+        else
+            callback(nil)
+        end
+    end)
 end
 
 -- 从 ASS 文件中解析样式和事件
-local function parse_ass(ass_path)
-    ch_convert(ass_path, options.chConvert)
-
-    local ass_file = io.open(ass_path, "r")
-    if not ass_file then
-        return nil
-    end
-
+local function parse_ass_events(ass_file)
     local events = {}
     local time_tolerance = options.merge_tolerance
 
@@ -170,6 +166,24 @@ local function parse_ass(ass_path)
     return events
 end
 
+local function parse_ass(ass_path, callback)
+    ch_convert(ass_path, options.chConvert, function(error)
+        if error then
+            callback(error)
+            return
+        end
+
+        -- 解析 ASS 文件
+        local ass_file = io.open(ass_path, "r")
+        if not ass_file then
+            callback("无法打开 ASS 文件")
+            return
+        end
+        local events = parse_ass_events(ass_file)
+        callback(nil, events)
+    end)
+end
+
 local overlay = mp.create_osd_overlay('ass-events')
 
 local function render()
@@ -202,7 +216,7 @@ local function render()
             end
 
             -- 构建 ASS 字符串
-            local ass_text = text and string.format("{\\fn%s\\fs%d\\c&HFFFFFF&\\3c&H000000&\\4c&H000000&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
+            local ass_text = text and string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
                 fontname, text:match("{\\b1\\i1}x%d+$") and fontsize + text:match("x(%d+)$") or fontsize,
                 options.transparency, options.outline, options.shadow, options.bold == "true" and "1" or "0", text)
 
@@ -228,22 +242,24 @@ local function show_loaded()
 end
 
 function parse_danmaku(ass_file_path, from_menu, no_osd)
-    comments, err = parse_ass(ass_file_path)
-    if not comments then
-        msg.error("ASS 解析错误:", err)
-        return
-    end
-
-    if enabled and (from_menu or get_danmaku_visibility()) then
-        if not no_osd then
-            show_loaded()
+    parse_ass(ass_file_path, function(err, events)
+        comments = events
+        if err then
+            msg.error("ASS 解析错误: " .. err)
+            return
         end
-        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
-        show_danmaku_func()
-    else
-        show_message("")
-        hide_danmaku_func()
-    end
+
+        if enabled and (from_menu or get_danmaku_visibility()) then
+            if not no_osd then
+                show_loaded()
+            end
+            mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+            show_danmaku_func()
+        else
+            show_message("")
+            hide_danmaku_func()
+        end
+    end)
 end
 
 local function filter_state(label, name)

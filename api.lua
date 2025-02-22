@@ -590,6 +590,8 @@ function load_danmaku(from_menu, no_osd)
     local danmaku_file = utils.join_path(danmaku_path, temp_file)
     local danmaku_input = {}
     local delays = {}
+
+    -- 收集需要加载的弹幕文件
     for _, source in pairs(danmaku.sources) do
         if not source.blocked and source.fname then
             if not file_exists(source.fname) then
@@ -606,13 +608,25 @@ function load_danmaku(from_menu, no_osd)
             end
         end
     end
+
+    -- 如果没有弹幕文件，退出加载
     if #danmaku_input == 0 then
         show_message("该集弹幕内容为空，结束加载", 3)
         comments = {}
         return
     end
-    convert_with_danmaku_factory(danmaku_input, nil, delays)
-    parse_danmaku(danmaku_file, from_menu, no_osd)
+
+    -- 异步执行弹幕转换
+    convert_with_danmaku_factory(danmaku_input, nil, delays, function(error)
+        if error then
+            show_message("弹幕转换失败", 3)
+            msg.error("弹幕转换失败：" .. error)
+            return
+        end
+
+        -- 转换完成后加载弹幕
+        parse_danmaku(danmaku_file, from_menu, no_osd)
+    end)
 end
 
 -- 异步获取弹幕数据
@@ -915,7 +929,7 @@ end
 
 --将json文件又转换为ass文件。
 -- Function to convert JSON file using DanmakuFactory
-function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays)
+function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callback)
     if exec_path == "" then
         exec_path = utils.join_path(mp.get_script_directory(), "bin/DanmakuFactory")
         if platform == "windows" then
@@ -978,12 +992,13 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays)
         table.insert(arg, options.blockmode)
     end
 
-    mp.command_native({
-        name = 'subprocess',
-        playback_only = false,
-        capture_stdout = true,
-        args = arg,
-    })
+    -- 异步执行命令
+    call_cmd_async(arg, function(error, _)
+        async_running = false
+        if callback then
+            callback(error)
+        end
+    end)
 end
 
 -- Utility function to split a string by a delimiter
