@@ -97,7 +97,7 @@ function get_animes(query)
                 "script-message-to",
                 mp.get_script_name(),
                 "search-episodes-event",
-                anime.animeTitle, anime.animeId,
+                anime.animeTitle, anime.bangumiId,
             },
         })
     end
@@ -112,11 +112,8 @@ function get_animes(query)
     end
 end
 
-function get_episodes(animeTitle, animeId)
-    local encoded_query = url_encode(animeTitle)
-    local url = options.api_server .. "/api/v2/search/episodes"
-    local params = "anime=" .. encoded_query
-    local full_url = url .. "?" .. params
+function get_episodes(animeTitle, bangumiId)
+    local url = options.api_server .. "/api/v2/bangumi/" .. bangumiId
     local items = {}
 
     local message = "加载数据中..."
@@ -130,7 +127,7 @@ function get_episodes(animeTitle, animeId)
         show_message(message, 30)
     end
 
-    local args = get_danmaku_args(full_url)
+    local args = get_danmaku_args(url)
     local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
     if res.status ~= 0 then
@@ -145,7 +142,7 @@ function get_episodes(animeTitle, animeId)
 
     local response = utils.parse_json(res.stdout)
 
-    if not response or not response.animes then
+    if not response or not response.bangumi or not response.bangumi.episodes then
         local message = "无结果"
         if uosc_available then
             update_menu_uosc(menu_type, menu_title, message, footnote)
@@ -156,27 +153,7 @@ function get_episodes(animeTitle, animeId)
         return
     end
 
-    local episodes = nil
-
-    for _, anime in ipairs(response.animes) do
-        if animeTitle == anime.animeTitle and tonumber(animeId) == anime.animeId then
-            episodes = anime.episodes
-            break
-        end
-    end
-
-    if not episodes then
-        local message = "无结果"
-        if uosc_available then
-            update_menu_uosc(menu_type, menu_title, message, footnote)
-        else
-            show_message(message, 3)
-        end
-        msg.info("无结果")
-        return
-    end
-
-    for _, episode in ipairs(episodes) do
+    for _, episode in ipairs(response.bangumi.episodes) do
         table.insert(items, {
             title = episode.episodeTitle,
             value = { "script-message-to", mp.get_script_name(), "load-danmaku",
@@ -705,11 +682,11 @@ mp.register_script_message("search-anime-event", function(query)
         get_animes(query)
     end
 end)
-mp.register_script_message("search-episodes-event", function(animeTitle, animeId)
+mp.register_script_message("search-episodes-event", function(animeTitle, bangumiId)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
     end
-    get_episodes(animeTitle, animeId)
+    get_episodes(animeTitle, bangumiId)
 end)
 
 -- Register script message to show the input menu
