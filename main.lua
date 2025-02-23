@@ -46,8 +46,8 @@ end
 -- 打开番剧数据匹配菜单
 function get_animes(query)
     local encoded_query = url_encode(query)
-    local url = options.api_server .. "/api/v2/search/episodes"
-    local params = "anime=" .. encoded_query
+    local url = options.api_server .. "/api/v2/search/anime"
+    local params = "keyword=" .. encoded_query
     local full_url = url .. "?" .. params
     local items = {}
 
@@ -97,7 +97,7 @@ function get_animes(query)
                 "script-message-to",
                 mp.get_script_name(),
                 "search-episodes-event",
-                anime.animeTitle, utils.format_json(anime.episodes),
+                anime.animeTitle, anime.animeId,
             },
         })
     end
@@ -112,8 +112,70 @@ function get_animes(query)
     end
 end
 
-function get_episodes(animeTitle, episodes)
+function get_episodes(animeTitle, animeId)
+    local encoded_query = url_encode(animeTitle)
+    local url = options.api_server .. "/api/v2/search/episodes"
+    local params = "anime=" .. encoded_query
+    local full_url = url .. "?" .. params
     local items = {}
+
+    local message = "加载数据中..."
+    local menu_type = "menu_episodes"
+    local menu_title = "剧集信息"
+    local footnote = "使用 / 打开筛选"
+
+    if uosc_available then
+        update_menu_uosc(menu_type, menu_title, message, footnote)
+    else
+        show_message(message, 30)
+    end
+
+    local args = get_danmaku_args(full_url)
+    local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
+
+    if res.status ~= 0 then
+        local message = "获取数据失败"
+        if uosc_available then
+            update_menu_uosc(menu_type, menu_title, message, footnote)
+        else
+            show_message(message, 3)
+        end
+        msg.error("HTTP 请求失败：" .. res.stderr)
+    end
+
+    local response = utils.parse_json(res.stdout)
+
+    if not response or not response.animes then
+        local message = "无结果"
+        if uosc_available then
+            update_menu_uosc(menu_type, menu_title, message, footnote)
+        else
+            show_message(message, 3)
+        end
+        msg.info("无结果")
+        return
+    end
+
+    local episodes = nil
+
+    for _, anime in ipairs(response.animes) do
+        if animeTitle == anime.animeTitle and tonumber(animeId) == anime.animeId then
+            episodes = anime.episodes
+            break
+        end
+    end
+
+    if not episodes then
+        local message = "无结果"
+        if uosc_available then
+            update_menu_uosc(menu_type, menu_title, message, footnote)
+        else
+            show_message(message, 3)
+        end
+        msg.info("无结果")
+        return
+    end
+
     for _, episode in ipairs(episodes) do
         table.insert(items, {
             title = episode.episodeTitle,
@@ -123,10 +185,6 @@ function get_episodes(animeTitle, episodes)
             selectable = true,
         })
     end
-
-    local menu_type = "menu_episodes"
-    local menu_title = "剧集信息"
-    local footnote = "使用 / 打开筛选"
 
     if uosc_available then
         update_menu_uosc(menu_type, menu_title, items, footnote)
@@ -647,11 +705,11 @@ mp.register_script_message("search-anime-event", function(query)
         get_animes(query)
     end
 end)
-mp.register_script_message("search-episodes-event", function(animeTitle, episodes)
+mp.register_script_message("search-episodes-event", function(animeTitle, animeId)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
     end
-    get_episodes(animeTitle, utils.parse_json(episodes))
+    get_episodes(animeTitle, animeId)
 end)
 
 -- Register script message to show the input menu
