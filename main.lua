@@ -576,13 +576,20 @@ function save_danmaku_func(suffix)
                         msg.info("已存在同名弹幕文件：" .. danmaku_out)
                         return
                     else
-                        convert_with_danmaku_factory(danmaku_file, danmaku_out)
-                        if file_exists(danmaku_out) then
-                            if not options.save_danmaku then
-                                show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
+                        -- 异步执行弹幕转换保存
+                        convert_with_danmaku_factory(danmaku_file, danmaku_out, nil, function(error)
+                            if error then
+                                show_message("弹幕保存失败", 3)
+                                msg.error("弹幕保存失败：" .. error)
+                                return
                             end
-                            msg.info("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
-                        end
+                            if file_exists(danmaku_out) then
+                                if not options.save_danmaku then
+                                    show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
+                                end
+                                msg.warn("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
+                            end
+                        end)
                     end
                 end
             else
