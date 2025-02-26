@@ -551,7 +551,7 @@ function open_add_total_menu()
 end
 
 -- 视频播放时保存弹幕
-function save_danmaku_func(suffix)
+function save_danmaku_func(suffix, custom)
     -- show_message(suffix)
     -- 检查 suffix 是否存在（不是 nil）并且是字符串类型
     if type(suffix) == "string" then
@@ -568,8 +568,14 @@ function save_danmaku_func(suffix)
                     msg.warn("此弹幕文件不支持保存至本地")
                 else
                     local dir = get_parent_directory(path)
-                    local filename = mp.get_property('filename/no-ext') 
-                    local danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
+                    local filename = mp.get_property('filename/no-ext')
+                    local danmaku_out
+                    if custom and type(custom) == "string" then
+                        custom = string.lower(custom)
+                        danmaku_out = utils.join_path(dir, filename ..  "." .. custom .. "." .. suffix)
+                    else
+                        danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
+                    end
                     -- show_message(danmaku_out)
                     if file_exists(danmaku_out) then
                         show_message("已存在同名弹幕文件：" .. danmaku_out)
@@ -665,8 +671,8 @@ mp.register_script_message('uosc-version', function()
 end)
 
 -- 视频播放时保存弹幕
-mp.register_script_message("immediately_save_danmaku", function(event)
-    save_danmaku_func(event)
+mp.register_script_message("immediately_save_danmaku", function(event, custom)
+    save_danmaku_func(event, custom)
 end)
 
 -- 注册函数给 uosc 按钮使用

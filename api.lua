@@ -1418,9 +1418,16 @@ function init(path)
         load_danmaku_for_url(path)
     end
     if dir and filename then
-        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
-        if file_exists(danmaku_xml) then
-            add_danmaku_source_local(danmaku_xml, true)
+        local formats = {"xml", "ass"}
+        local danmaku_file = nil
+        for _, format in ipairs(formats) do
+            danmaku_file = utils.join_path(dir, filename .. format)
+            if file_exists(danmaku_file) then
+                break
+            end
+        end
+        if danmaku_file then
+            add_danmaku_source_local(danmaku_file, true)
         else
             auto_load_danmaku(path, dir, filename)
             addon_danmaku(true)
@@ -1483,11 +1490,18 @@ mp.register_event("file-loaded", function()
     if filename == nil or dir == nil then
         return
     end
-    local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+    local formats = {"xml", "ass"}
+    local danmaku_file = nil
+    for _, format in ipairs(formats) do
+        danmaku_file = utils.join_path(dir, filename .. format)
+        if file_exists(danmaku_file) then
+            break
+        end
+    end
     if options.autoload_local_danmaku then
-        if file_exists(danmaku_xml) then
+        if danmaku_file then
             enabled = true
-            add_danmaku_source_local(danmaku_xml)
+            add_danmaku_source_local(danmaku_file)
             return
         end
     end
