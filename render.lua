@@ -373,7 +373,7 @@ mp.add_hook("on_unload", 50, function()
     if file_exists(rm1) then os.remove(rm1) end
     if file_exists(rm2) then
         if options.save_danmaku then
-            save_danmaku_func("xml")
+            save_danmaku_func()
         end
         os.remove(rm2)
     end

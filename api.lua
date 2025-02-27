@@ -992,13 +992,22 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callba
         table.insert(arg, options.blockmode)
     end
 
-    -- 异步执行命令
-    call_cmd_async(arg, function(error, _)
-        async_running = false
-        if callback then
-            callback(error)
-        end
-    end)
+    if not callback then
+        mp.command_native({
+            name = 'subprocess',
+            playback_only = false,
+            capture_stdout = true,
+            args = arg,
+        })
+    else
+        -- 异步执行命令
+        call_cmd_async(arg, function(error, _)
+            async_running = false
+            if callback then
+                callback(error)
+            end
+        end)
+    end
 end
 
 -- Utility function to split a string by a delimiter

@@ -551,56 +551,42 @@ function open_add_total_menu()
 end
 
 -- 视频播放时保存弹幕
-function save_danmaku_func(suffix)
-    -- show_message(suffix)
-    -- 检查 suffix 是否存在（不是 nil）并且是字符串类型
-    if type(suffix) == "string" then
-        -- 将字符串转换为小写以确保比较时不区分大小写
-        suffix = string.lower(suffix)
-        if suffix == "xml" or suffix == "ass" then
-            local danmaku_path = os.getenv("TEMP") or "/tmp/"
-            local danmaku_file = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
-            if file_exists(danmaku_file) then
-                local path = mp.get_property("path")
-                -- 排除网络播放场景
-                if not path or is_protocol(path) then
-                    show_message("此弹幕文件不支持保存至本地")
-                    msg.warn("此弹幕文件不支持保存至本地")
-                else
-                    local dir = get_parent_directory(path)
-                    local filename = mp.get_property('filename/no-ext') 
-                    local danmaku_out = utils.join_path(dir, filename .. "." .. suffix)
-                    -- show_message(danmaku_out)
-                    if file_exists(danmaku_out) then
-                        show_message("已存在同名弹幕文件：" .. danmaku_out)
-                        msg.info("已存在同名弹幕文件：" .. danmaku_out)
-                        return
-                    else
-                        -- 异步执行弹幕转换保存
-                        convert_with_danmaku_factory(danmaku_file, danmaku_out, nil, function(error)
-                            if error then
-                                show_message("弹幕保存失败", 3)
-                                msg.error("弹幕保存失败：" .. error)
-                                return
-                            end
-                            if file_exists(danmaku_out) then
-                                if not options.save_danmaku then
-                                    show_message("成功保存 " .. suffix .. " 弹幕文件到视频文件目录")
-                                end
-                                msg.warn("成功保存 " .. suffix .. " 弹幕文件到: " .. danmaku_out)
-                            end
-                        end)
-                    end
-                end
-            else
-                show_message("找不到弹幕文件：" .. danmaku_file)
-                msg.warn("找不到弹幕文件：" .. danmaku_file)
-            end
+function save_danmaku_func()
+    local danmaku_path = os.getenv("TEMP") or "/tmp/"
+    local danmaku_file = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
+    if file_exists(danmaku_file) then
+        local path = mp.get_property("path")
+        -- 排除网络播放场景
+        if not path or is_protocol(path) then
+            show_message("此弹幕文件不支持保存至本地")
+            msg.warn("此弹幕文件不支持保存至本地")
         else
-            msg.warn("不支持的文件后缀: " .. (suffix or "未知"))
+            local dir = get_parent_directory(path)
+            local filename = mp.get_property('filename/no-ext')
+            local danmaku_out = utils.join_path(dir, filename .. ".xml")
+            -- show_message(danmaku_out)
+            if file_exists(danmaku_out) then
+                show_message("已存在同名弹幕文件：" .. danmaku_out)
+                msg.info("已存在同名弹幕文件：" .. danmaku_out)
+                return
+            else
+                convert_with_danmaku_factory(danmaku_file, danmaku_out)
+                if file_exists(danmaku_out) then
+                    if not options.save_danmaku then
+                        show_message("成功保存 xml 弹幕文件到视频文件目录")
+                    end
+                    msg.warn("成功保存 xml 弹幕文件到: " .. danmaku_out)
+                else
+                    if not options.save_danmaku then
+                        show_message("弹幕保存失败", 3)
+                    end
+                    msg.error("弹幕保存失败：" .. error)
+                end
+            end
         end
     else
-        msg.warn("Function value undefined" .. suffix)
+        show_message("找不到弹幕文件：" .. danmaku_file)
+        msg.warn("找不到弹幕文件：" .. danmaku_file)
     end
 end
 
@@ -672,8 +658,8 @@ mp.register_script_message('uosc-version', function()
 end)
 
 -- 视频播放时保存弹幕
-mp.register_script_message("immediately_save_danmaku", function(event)
-    save_danmaku_func(event)
+mp.register_script_message("immediately_save_danmaku", function()
+    save_danmaku_func()
 end)
 
 -- 注册函数给 uosc 按钮使用
