@@ -1,8 +1,8 @@
 # uosc_danmaku
 在MPV播放器中加载弹弹play弹幕，基于 uosc UI框架和弹弹play API的mpv弹幕扩展插件
 
-> [!IMPORTANT]
-> Release1.2.0及Release1.2.0之前的发行版，都由于弹弹play接口使用政策改版，部分功能无法使用。如果发现插件功能异常，比如搜索弹幕总是显示无结果，请拉取或下载主分支最新源代码；或下载预发行版v1.3.0-alpha
+> [!WARNING]
+> Release1.2.0及Release1.2.0之前的发行版，都由于弹弹play接口使用政策改版，部分功能无法使用。如果发现插件功能异常，比如搜索弹幕总是显示无结果，请拉取或下载主分支最新源代码；或下载[最新发行版](https://github.com/Tony15246/uosc_danmaku/releases/latest)
 
 > [!IMPORTANT]
 > mpv 需基于 LuaJIT 或 Lua 5.2 构建，脚本不支持 Lua 5.1
