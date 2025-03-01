@@ -251,13 +251,12 @@ key script-message clear-source
 
 #### 保存当前视频弹幕（可选）
 
-在视频播放时手动保存弹幕至视频所在文件夹，保存格式支持`xml`与`ass`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
+在视频播放时手动保存弹幕至视频所在文件夹，保存格式为`xml`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
 
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`immediately_save_danmaku "xml"`与`immediately_save_danmaku "ass"`。
+想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`immediately_save_danmaku`。
 
 ```
-key script-message immediately_save_danmaku "xml"
-key script-message immediately_save_danmaku "ass"
+key script-message immediately_save_danmaku
 ```
 
 
@@ -395,7 +394,7 @@ add_from_source=yes
 
 #### 功能说明
 
-当文件关闭时自动保存弹幕文件（xml）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
+当文件关闭时自动保存弹幕文件（xml格式）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
 
 > [!NOTE]
 >
@@ -465,6 +464,22 @@ proxy=127.0.0.1:7890
 
 ```
 vf_fps=yes
+```
+
+### fps
+
+#### 功能说明
+
+指定要使用的 fps 滤镜参数，例如如果设置fps为`60/1.001`，则实际生效的视频滤镜参数为`@danmaku:fps=fps=60/1.001`
+
+使用这个选项，可以根据自己显示器的刷新率调整要使用的视频滤镜参数
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并指定如下内容：
+
+```
+fps=60/1.001
 ```
 
 ### transparency
