@@ -580,7 +580,7 @@ function save_danmaku_func()
                     if not options.save_danmaku then
                         show_message("弹幕保存失败", 3)
                     end
-                    msg.error("弹幕保存失败：" .. error)
+                    msg.error("弹幕保存失败")
                 end
             end
         end
