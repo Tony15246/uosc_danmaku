@@ -355,7 +355,6 @@ mp.observe_property('pause', 'bool', function(_, value)
 end)
 
 mp.add_hook("on_unload", 50, function()
-    mp.unobserve_property('pause')
     comments, delay = nil, 0
     timer:kill()
     overlay:remove()
