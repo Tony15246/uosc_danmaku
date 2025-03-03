@@ -717,7 +717,7 @@ function handle_danmaku_data(query, data, from_menu)
         local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
         local args = get_danmaku_args(url)
         fetch_danmaku_data(args, function(retry_data)
-            if not retry_data or not retry_data["comments"] then
+            if not retry_data or not retry_data["comments"] or retry_data["count"] == 0 then
                 get_danmaku_fallback(query)
                 return
             end
