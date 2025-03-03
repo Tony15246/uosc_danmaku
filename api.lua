@@ -513,7 +513,8 @@ function get_danmaku_fallback(query)
             return
         end
         if file_exists(danmaku_xml) then
-            add_danmaku_source_local(danmaku_xml, true)
+            save_danmaku_downloaded(query, danmaku_xml)
+            load_danmaku(true)
         end
     end)
 end
@@ -692,10 +693,24 @@ function save_danmaku_data(comments, query, danmaku_source)
 
     if success then
         if danmaku.sources[query] ~= nil then
+            if danmaku.sources[query].fname and file_exists(danmaku.sources[query].fname) then
+                os.remove(danmaku.sources[query].fname)
+            end
             danmaku.sources[query]["fname"] = danmaku_file
         else
             danmaku.sources[query] = {from = danmaku_source, fname = danmaku_file}
         end
+    end
+end
+
+function save_danmaku_downloaded(url, downloaded_file)
+    if danmaku.sources[url] ~= nil then
+        if danmaku.sources[url].fname and file_exists(danmaku.sources[url].fname) then
+            os.remove(danmaku.sources[url].fname)
+        end
+        danmaku.sources[url]["fname"] = downloaded_file
+    else
+        danmaku.sources[url] = {from = "user_custom", fname = downloaded_file}
     end
 end
 
@@ -905,6 +920,9 @@ function add_danmaku_source_local(query, from_menu)
     end
 
     if danmaku.sources[query] ~= nil then
+        if danmaku.sources[query].fname and file_exists(danmaku.sources[query].fname) then
+            os.remove(danmaku.sources[query].fname)
+        end
         danmaku.sources[query]["from"] = "user_local"
         danmaku.sources[query]["fname"] = path
     else
@@ -1284,7 +1302,8 @@ function load_danmaku_for_bilibili(path)
                 return
             end
             if file_exists(danmaku_xml) then
-                add_danmaku_source_local(danmaku_xml, true)
+                save_danmaku_downloaded(path, danmaku_xml)
+                load_danmaku(true)
             end
         end)
     end
@@ -1369,12 +1388,12 @@ function load_danmaku_for_bahamut(path)
             json_file:close()
         end
 
-        if danmaku.sources[url] ~= nil then
-            danmaku.sources[url]["fname"] = json_filename
-        else
-            danmaku.sources[url] = {from = "user_custom", fname = json_filename}
+        if file_exists(json_filename) then
+            save_danmaku_downloaded(
+                "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn,
+                json_filename)
+            load_danmaku(true)
         end
-        load_danmaku(true)
     end)
 end
 
