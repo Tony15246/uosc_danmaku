@@ -479,6 +479,45 @@ function call_cmd_async(args, callback)
     end
 end
 
+-- 回退使用额外的弹幕获取方式
+function get_danmaku_fallback(query)
+    -- 如果是爱奇艺的链接，直接结束加载
+    -- 弹幕转换程序无法正确处理爱奇艺的 xml 弹幕
+    if query:find("iqiyi%.com") ~= nil then
+        show_message("此源弹幕为空，结束加载", 3)
+        msg.verbose("此源弹幕为空，结束加载")
+        return
+    end
+
+    local url = options.fallback_server .. "/?url=" .. query
+    msg.verbose("尝试获取弹幕：" .. url)
+    local temp_file = "danmaku-" .. pid .. ".xml"
+    local danmaku_xml = utils.join_path(danmaku_path, temp_file)
+    local arg = {
+        "curl",
+        "-L",
+        "-s",
+        "--compressed",
+        "--user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+        "--output",
+        danmaku_xml,
+        url,
+    }
+
+    call_cmd_async(arg, function(error, _)
+        async_running = false
+        if error then
+            show_message("HTTP 请求失败，打开控制台查看详情", 5)
+            msg.error(error)
+            return
+        end
+        if file_exists(danmaku_xml) then
+            add_danmaku_source_local(danmaku_xml, true)
+        end
+    end)
+end
+
 -- 返回弹幕请求参数
 function get_danmaku_args(url)
     local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
@@ -612,6 +651,7 @@ function load_danmaku(from_menu, no_osd)
     -- 如果没有弹幕文件，退出加载
     if #danmaku_input == 0 then
         show_message("该集弹幕内容为空，结束加载", 3)
+        msg.verbose("该集弹幕内容为空，结束加载")
         comments = {}
         return
     end
@@ -667,6 +707,7 @@ function handle_danmaku_data(query, data, from_menu)
     -- 如果没有数据，进行重试
     if count == 0 then
         show_message("服务器无缓存数据，再次尝试请求", 30)
+        msg.verbose("服务器无缓存数据，再次尝试请求")
         -- 等待 2 秒后重试
         local start = os.time()
         while os.time() - start < 2 do
@@ -677,7 +718,7 @@ function handle_danmaku_data(query, data, from_menu)
         local args = get_danmaku_args(url)
         fetch_danmaku_data(args, function(retry_data)
             if not retry_data or not retry_data["comments"] then
-                show_message("此源弹幕为空，结束加载", 3)
+                get_danmaku_fallback(query)
                 return
             end
             save_danmaku_data(retry_data["comments"], query, "user_custom")
@@ -763,6 +804,7 @@ function handle_fetched_danmaku(data, url, from_menu)
                 danmaku.sources[url] = {from = "api_server"}
             end
             show_message("该集弹幕内容为空，结束加载", 3)
+            msg.verbose("该集弹幕内容为空，结束加载")
             return
         end
         save_danmaku_data(data["comments"], url, "api_server")
@@ -884,6 +926,7 @@ function add_danmaku_source_online(query, from_menu)
     fetch_danmaku_data(args, function(data)
         if not data or not data["comments"] then
             show_message("此源弹幕无法加载", 3)
+            msg.verbose("此源弹幕无法加载")
             return
         end
         handle_danmaku_data(query, data, from_menu)
@@ -1392,6 +1435,7 @@ function auto_load_danmaku(path, dir, filename, number)
                     local x = playing_number - history_number --获取集数差值
                     danmaku.episode = episode_number and string.format("第%s话", episode_number + x) or history_dir.episodeTitle
                     show_message("自动加载上次匹配的弹幕", 3)
+                    msg.verbose("自动加载上次匹配的弹幕")
                     if history_id then
                         local tmp_id = tostring(x + history_id)
                         set_episode_id(tmp_id)
@@ -1463,6 +1507,7 @@ mp.register_script_message("clear-source", function ()
             end
             load_danmaku(false)
             show_message("已重置当前视频所有弹幕源更改", 3)
+            msg.verbose("已重置当前视频所有弹幕源更改")
         end
     end
 end)

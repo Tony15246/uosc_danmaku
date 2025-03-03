@@ -2,7 +2,11 @@ local opt = require("mp.options")
 
 -- 选项
 options = {
+    -- 指定弹幕服务器地址，自定义服务需兼容 dandanplay 的 api
     api_server = "https://api.dandanplay.net",
+    -- 指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕
+    -- 服务器可以自托管：https://github.com/lyz05/danmaku
+    fallback_server = "https://fc.lyz05.cn",
     -- 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)
     -- 请在 https://www.themoviedb.org 注册后去个人账号设置界面获取
     tmdb_api_key= "",
