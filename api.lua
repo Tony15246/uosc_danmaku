@@ -1104,7 +1104,14 @@ function get_danmaku_with_hash(file_name, file_path)
 end
 
 -- 从用户添加过的弹幕源添加弹幕
-function addon_danmaku(from_menu)
+function addon_danmaku(dir, from_menu)
+    if dir then
+        local history_json = read_file(history_path)
+        local history = utils.parse_json(history_json) or {}
+        if history[dir] and history[dir].extra ~= nil then
+            return
+        end
+    end
     for url, source in pairs(danmaku.sources) do
         if source.from ~= "api_server" then
             add_danmaku_source(url, from_menu)
@@ -1393,7 +1400,7 @@ function load_danmaku_for_url(path)
             dir = title
         end
         auto_load_danmaku(path, dir, filename, episod_number)
-        addon_danmaku()
+        addon_danmaku(dir, false)
         return
     end
     get_danmaku_with_hash(filename, path)
@@ -1476,7 +1483,7 @@ function init(path)
             add_danmaku_source_local(danmaku_xml, true)
         else
             auto_load_danmaku(path, dir, filename)
-            addon_danmaku(true)
+            addon_danmaku(dir, true)
         end
     end
 end
@@ -1549,7 +1556,7 @@ mp.register_event("file-loaded", function()
     if options.auto_load then
         enabled = true
         auto_load_danmaku(path, dir, filename)
-        addon_danmaku()
+        addon_danmaku(dir, false)
         return
     end
 
