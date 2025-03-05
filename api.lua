@@ -491,8 +491,9 @@ function get_danmaku_fallback(query)
 
     local url = options.fallback_server .. "/?url=" .. query
     msg.verbose("尝试获取弹幕：" .. url)
-    local temp_file = "danmaku-" .. pid .. ".xml"
+    local temp_file = "danmaku-" .. pid .. danmaku.count .. ".xml"
     local danmaku_xml = utils.join_path(danmaku_path, temp_file)
+    danmaku.count = danmaku.count + 1
     local arg = {
         "curl",
         "-L",
@@ -1280,8 +1281,9 @@ function load_danmaku_for_bilibili(path)
     end
     if cid ~= nil then
         local url = "https://comment.bilibili.com/" .. cid .. ".xml"
-        local temp_file = "danmaku-" .. pid .. ".xml"
+        local temp_file = "danmaku-" .. pid .. danmaku.count .. ".xml"
         local danmaku_xml = utils.join_path(danmaku_path, temp_file)
+        danmaku.count = danmaku.count + 1
         local arg = {
             "curl",
             "-L",
@@ -1367,8 +1369,9 @@ function load_danmaku_for_bahamut(path)
             return
         end
 
-        local temp_file = "danmaku-" .. pid .. ".json"
+        temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
         local json_filename = utils.join_path(danmaku_path, temp_file)
+        danmaku.count = danmaku.count + 1
         local json_file = io.open(json_filename, "w")
 
         if json_file then
