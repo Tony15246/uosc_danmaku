@@ -364,19 +364,23 @@ mp.add_hook("on_unload", 50, function()
     end
 
     local danmaku_path = os.getenv("TEMP") or "/tmp/"
-    local rm1 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".json")
-    local rm2 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
-    local rm3 = utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4")
-    local rm4 = utils.join_path(danmaku_path, "bahamut-" .. pid .. ".json")
-    if file_exists(rm1) then os.remove(rm1) end
-    if file_exists(rm2) then
-        if options.save_danmaku then
-            save_danmaku_func()
-        end
-        os.remove(rm2)
+    local files_to_remove = {
+        file1 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".json"),
+        file2 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass"),
+        file3 = utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4"),
+        file4 = utils.join_path(danmaku_path, "bahamut-" .. pid .. ".json")
+    }
+
+    if options.save_danmaku and file_exists(files_to_remove.file2) then
+        save_danmaku_func()
     end
-    if file_exists(rm3) then os.remove(rm3) end
-    if file_exists(rm4) then os.remove(rm4) end
+
+    for _, file in ipairs(files_to_remove) do
+        if file_exists(file) then
+            os.remove(file)
+        end
+    end
+
     for _, source in pairs(danmaku.sources) do
         if source.fname and source.from and source.from ~= "user_local" and file_exists(source.fname) then
             os.remove(source.fname)
