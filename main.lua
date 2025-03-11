@@ -1,15 +1,14 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
+input_loaded, input = pcall(require, "mp.input")
+uosc_available = false
+pid = utils.getpid()
 
 require("options")
 require("guess")
 require("api")
 require('extra')
 require('render')
-
-input_loaded, input = pcall(require, "mp.input")
-uosc_available = false
-pid = utils.getpid()
 
 -- from http://lua-users.org/wiki/LuaUnicode
 local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
@@ -365,6 +364,8 @@ end
 local menu_items_config = {
     bold = { title = "粗体", hint = options.bold, original = options.bold,
         footnote = "true / false", },
+    font_size_strict = { title = "统一大小", hint = options.font_size_strict, original = options.font_size_strict,
+        footnote = "true / false", },
     fontsize = { title = "大小", hint = options.fontsize, original = options.fontsize,
         scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
     outline = { title = "描边", hint = options.outline, original = options.outline,
@@ -381,7 +382,7 @@ local menu_items_config = {
         scope = { min = 0.0, max = 1.0 }, footnote = "显示范围(0.0-1.0)", },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "fontsize", "outline", "shadow", "density", "scrolltime", "transparency", "displayarea"}
+local ordered_keys = {"bold", "font_size_strict", "fontsize", "outline", "shadow", "density", "scrolltime", "transparency", "displayarea"}
 
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived, status)
@@ -778,9 +779,15 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 if ordered_keys[event.index] == "bold" then
                     options.bold = options.bold == "true" and "false" or "true"
                     menu_items_config.bold.hint = options.bold
+                elseif ordered_keys[event.index] == "font_size_strict" then
+                    options.font_size_strict = options.font_size_strict == "true" and "false" or "true"
+                    menu_items_config.font_size_strict.hint = options.font_size_strict
                 end
                 -- "updata" 模式会保留输入框文字
                 add_danmaku_setup(ordered_keys[event.index], "updata")
+                if ordered_keys[event.index] == "font_size_strict" then
+                    load_danmaku(true, true)
+                end
                 return
             else
                 -- msg.info("event.action：" .. event.action)

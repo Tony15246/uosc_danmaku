@@ -627,9 +627,12 @@ scrolltime=15
 fontname=sans-serif
 #大小 
 fontsize=50
+#是否严格保持指定的字号大小，（true false）
+#这会破坏特效弹幕的显示，建议仅当弹幕显示重叠时启用
+font_size_strict=false
 #阴影
 shadow=0
-#粗体 true false
+#粗体（true false）
 bold=true
 #弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
 density=0.0
