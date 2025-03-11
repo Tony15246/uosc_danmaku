@@ -481,14 +481,6 @@ end
 
 -- 回退使用额外的弹幕获取方式
 function get_danmaku_fallback(query)
-    -- 如果是爱奇艺的链接，直接结束加载
-    -- 弹幕转换程序无法正确处理爱奇艺的 xml 弹幕
-    if query:find("iqiyi%.com") ~= nil then
-        show_message("此源弹幕为空，结束加载", 3)
-        msg.verbose("此源弹幕为空，结束加载")
-        return
-    end
-
     local url = options.fallback_server .. "/?url=" .. query
     msg.verbose("尝试获取弹幕：" .. url)
     local temp_file = "danmaku-" .. pid .. danmaku.count .. ".xml"
@@ -1023,6 +1015,10 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callba
     }
 
     local shift = 1
+
+    if options.font_size_strict == "true" then
+        table.insert(arg, 13, "--font-size-strict")
+    end
 
     -- 检查 danmaku_input 是字符串还是数组，并插入到正确的位置
     if type(danmaku_input) == "string" then

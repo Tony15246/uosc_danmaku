@@ -209,6 +209,9 @@ local function render()
     for _, event in ipairs(comments) do
         if pos >= event.start_time + delay and pos <= event.end_time + delay then
             local text = parse_comment(event, pos, height)
+            if text then
+                text = text:gsub("&#%d+;","")
+            end
 
             if text and text:match("\\fs%d+") then
                 local font_size = text:match("\\fs(%d+)") * 1.5
@@ -375,7 +378,7 @@ mp.add_hook("on_unload", 50, function()
         save_danmaku_func()
     end
 
-    for _, file in ipairs(files_to_remove) do
+    for _, file in pairs(files_to_remove) do
         if file_exists(file) then
             os.remove(file)
         end

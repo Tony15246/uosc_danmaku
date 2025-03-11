@@ -45,6 +45,9 @@ options = {
     fontname = "sans-serif",
     --大小 
     fontsize = "50",
+    --是否严格保持指定的字号大小
+    --这会破坏特效弹幕的显示，建议仅当弹幕显示重叠时启用
+    font_size_strict = "false",
     --阴影
     shadow = "0",
     --粗体 true false
