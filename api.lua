@@ -4,6 +4,7 @@ local md5 = require("md5")
 
 local danmaku_path = os.getenv("TEMP") or "/tmp/"
 local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
+local dandanplay_path = mp.command_native({ "expand-path", options.dandanplay_Path })
 local history_path = mp.command_native({"expand-path", options.history_path})
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
@@ -514,12 +515,15 @@ end
 
 -- 返回弹幕请求参数
 function get_danmaku_args(url)
-    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-    if platform == "windows" then
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-    else
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
+    if dandanplay_path == "" then
+        dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
+        if platform == "windows" then
+            dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
+        else
+            dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
+        end
     end
+    dandanplay_path = os.getenv("DANDANPLAY") or dandanplay_path
     local args = {
         dandanplay_path,
         "-X",

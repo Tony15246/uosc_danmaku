@@ -527,6 +527,26 @@ merge_tolerance=1
 chConvert=0
 ```
 
+### dandanplay_Path
+
+#### 功能说明
+
+指定 dandanplay 程序的路径，支持绝对路径和相对路径
+不特殊指定或者留空（默认值）会在脚本同目录的 bin 中查找，调用本人构建好的 dandanplay 可执行文件
+示例：`dandanplay_Path=dandanplay` 会在环境变量 PATH 中或 mpv 程序旁查找该程序
+
+#### 使用示例
+
+想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+
+
+> [!IMPORTANT]
+> 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
+
+```
+dandanplay_Path=/path/to/your/dandanplay
+```
+
 ### DanmakuFactory_Path
 
 #### 功能说明
