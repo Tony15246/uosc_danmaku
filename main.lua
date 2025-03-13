@@ -840,7 +840,11 @@ mp.register_script_message("danmaku-delay", function(number)
     if value == nil then
         return msg.error('command danmaku-delay: invalid time')
     end
-    delay = delay + value
+    if value == 0 then
+        delay = 0
+    else
+        delay = delay + value
+    end
     if enabled and comments ~= nil then
         render()
     end
