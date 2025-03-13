@@ -1,559 +1,302 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
-input_loaded, input = pcall(require, "mp.input")
-uosc_available = false
+
 pid = utils.getpid()
+danmaku = {sources = {}, count = 1}
+delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
 
-require("options")
-require("guess")
-require("api")
-require('extra')
-require('render')
+require("modules/options")
+require("modules/utils")
+require("modules/guess")
+require('modules/render')
+require('modules/menu')
 
--- from http://lua-users.org/wiki/LuaUnicode
-local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
+require("apis/dandanplay")
+require('apis/extra')
 
--- return a substring based on utf8 characters
--- like string.sub, but negative index is not supported
-function utf8_sub(s, i, j)
-    if i > j then
-        return s
-    end
+danmaku_path = os.getenv("TEMP") or "/tmp/"
+history_path = mp.command_native({"expand-path", options.history_path})
 
-    local t = {}
-    local idx = 1
-    for char in s:gmatch(UTF8_PATTERN) do
-        if i <= idx and idx <= j then
-            local width = #char > 2 and 2 or 1
-            idx = idx + width
-            t[#t + 1] = char
+local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
+local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
+local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
+
+platform = (function()
+    local platform = mp.get_property_native("platform")
+    if platform then
+        if itable_index_of({ "windows", "darwin" }, platform) then
+            return platform
         end
-    end
-    return table.concat(t)
-end
-
--- abbreviate string if it's too long
-function abbr_str(str, length)
-    if not str or str == '' then return '' end
-    local str_clip = utf8_sub(str, 1, length)
-    if str ~= str_clip then
-        return str_clip .. '...'
-    end
-    return str
-end
-
--- 打开番剧数据匹配菜单
-function get_animes(query)
-    local encoded_query = url_encode(query)
-    local url = options.api_server .. "/api/v2/search/anime"
-    local params = "keyword=" .. encoded_query
-    local full_url = url .. "?" .. params
-    local items = {}
-
-    local message = "加载数据中..."
-    local menu_type = "menu_anime"
-    local menu_title = "在此处输入番剧名称"
-    local footnote = "使用enter或ctrl+enter进行搜索"
-    local menu_cmd = { "script-message-to", mp.get_script_name(), "search-anime-event" }
-    if uosc_available then
-        update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
     else
-        show_message(message, 30)
-    end
-    msg.verbose("尝试获取番剧数据：" .. full_url)
-
-    local args = get_danmaku_args(full_url)
-    local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
-
-    if res.status ~= 0 then
-        local message = "获取数据失败"
-        if uosc_available then
-            update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
-        else
-            show_message(message, 3)
+        if os.getenv("windir") ~= nil then
+            return "windows"
         end
-        msg.error("HTTP 请求失败：" .. res.stderr)
-    end
-
-    local response = utils.parse_json(res.stdout)
-
-    if not response or not response.animes then
-        local message = "无结果"
-        if uosc_available then
-            update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
-        else
-            show_message(message, 3)
+        local homedir = os.getenv("HOME")
+        if homedir ~= nil and string.sub(homedir, 1, 6) == "/Users" then
+            return "darwin"
         end
-        msg.info("无结果")
-        return
     end
+    return "linux"
+end)()
 
-    for _, anime in ipairs(response.animes) do
-        table.insert(items, {
-            title = anime.animeTitle,
-            hint = anime.typeDescription,
-            value = {
-                "script-message-to",
-                mp.get_script_name(),
-                "search-episodes-event",
-                anime.animeTitle, anime.bangumiId,
-            },
-        })
-    end
-
-    if uosc_available then
-        update_menu_uosc(menu_type, menu_title, items, footnote, menu_cmd, query)
-    elseif input_loaded then
-        show_message("", 0)
-        mp.add_timeout(0.1, function()
-            open_menu_select(items)
-        end)
-    end
-end
-
-function get_episodes(animeTitle, bangumiId)
-    local url = options.api_server .. "/api/v2/bangumi/" .. bangumiId
-    local items = {}
-
-    local message = "加载数据中..."
-    local menu_type = "menu_episodes"
-    local menu_title = "剧集信息"
-    local footnote = "使用 / 打开筛选"
-
-    if uosc_available then
-        update_menu_uosc(menu_type, menu_title, message, footnote)
+function get_danmaku_visibility()
+    local history_json = read_file(history_path)
+    local history
+    if history_json ~= nil then
+        history = utils.parse_json(history_json)
+        local flag = history["show_danmaku"]
+        if flag == nil then
+            history["show_danmaku"] = false
+            write_json_file(history_path, history)
+        else
+            return flag
+        end
     else
-        show_message(message, 30)
+        history = {}
+        history["show_danmaku"] = false
+        write_json_file(history_path, history)
     end
+    return false
+end
 
-    local args = get_danmaku_args(url)
-    local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
-
-    if res.status ~= 0 then
-        local message = "获取数据失败"
-        if uosc_available then
-            update_menu_uosc(menu_type, menu_title, message, footnote)
-        else
-            show_message(message, 3)
-        end
-        msg.error("HTTP 请求失败：" .. res.stderr)
+function set_danmaku_visibility(flag)
+    local history = {}
+    local history_json = read_file(history_path)
+    if history_json ~= nil then
+        history = utils.parse_json(history_json)
     end
+    history["show_danmaku"] = flag
+    write_json_file(history_path, history)
+end
 
-    local response = utils.parse_json(res.stdout)
-
-    if not response or not response.bangumi or not response.bangumi.episodes then
-        local message = "无结果"
-        if uosc_available then
-            update_menu_uosc(menu_type, menu_title, message, footnote)
-        else
-            show_message(message, 3)
-        end
-        msg.info("无结果")
-        return
-    end
-
-    for _, episode in ipairs(response.bangumi.episodes) do
-        table.insert(items, {
-            title = episode.episodeTitle,
-            value = { "script-message-to", mp.get_script_name(), "load-danmaku",
-            animeTitle, episode.episodeTitle, episode.episodeId },
-            keep_open = false,
-            selectable = true,
-        })
-    end
-
-    if uosc_available then
-        update_menu_uosc(menu_type, menu_title, items, footnote)
-    elseif input_loaded then
-        mp.add_timeout(0.1, function()
-            open_menu_select(items)
-        end)
+function set_danmaku_button()
+    if get_danmaku_visibility() then
+        mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
     end
 end
 
-function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd, query)
-    local items = {}
-    if type(menu_item) == "string" then
-        table.insert(items, {
-            title = menu_item,
-            value = "",
-            italic = true,
-            keep_open = true,
-            selectable = false,
-            align = "center",
-        })
-    else
-        items = menu_item
-    end
-
-    local menu_props = {
-        type = menu_type,
-        title = menu_title,
-        search_style = menu_cmd and "palette" or "on_demand",
-        search_debounce = menu_cmd and "submit" or 0,
-        on_search = menu_cmd,
-        footnote = menu_footnote,
-        search_suggestion = query,
-        items = items,
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
-end
-
-function open_menu_select(menu_items, is_time)
-    local item_titles, item_values = {}, {}
-    for i, v in ipairs(menu_items) do
-        item_titles[i] = is_time and "[" .. v.hint .. "] " .. v.title or
-            (v.hint and v.title .. " (" .. v.hint .. ")" or v.title)
-        item_values[i] = v.value
-    end
-    mp.commandv('script-message-to', 'console', 'disable')
-    input.select({
-        prompt = '筛选:',
-        items = item_titles,
-        submit = function(id)
-            mp.commandv(unpack(item_values[id]))
-        end,
-    })
-end
-
--- 打开弹幕输入搜索菜单
-function open_input_menu_get()
-    mp.commandv('script-message-to', 'console', 'disable')
-    local title = parse_title(true)
-    input.get({
-        prompt = '番剧名称:',
-        default_text = title,
-        cursor_position = title and #title + 1,
-        submit = function(text)
-            input.terminate()
-            mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", text)
-        end
-    })
-end
-
-function open_input_menu_uosc()
-    local items = {}
-
+function show_loaded(init)
     if danmaku.anime and danmaku.episode then
-        local episode = danmaku.episode:gsub("%s.-$","")
-        episode = episode:match("^(第.*[话回集]+)%s*") or episode
-        items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
-            bold = true,
-            italic = true,
-            keep_open = true,
-            selectable = false,
-        }
-    end
-
-    items[#items + 1] = {
-        hint = "  追加|ds或|dy或|dm可搜索电视剧|电影|国漫",
-        keep_open = true,
-        selectable = false,
-    }
-
-    local menu_props = {
-        type = "menu_danmaku",
-        title = "在此处输入番剧名称",
-        search_style = "palette",
-        search_debounce = "submit",
-        search_suggestion = parse_title(true),
-        on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
-        footnote = "使用enter或ctrl+enter进行搜索",
-        items = items
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
-end
-
-function open_input_menu()
-    if uosc_available then
-        open_input_menu_uosc()
-    elseif input_loaded then
-        open_input_menu_get()
-    end
-end
-
--- 打开弹幕源添加管理菜单
-function open_add_menu_get()
-    mp.commandv('script-message-to', 'console', 'disable')
-    input.get({
-        prompt = 'Input url:',
-        submit = function(text)
-            input.terminate()
-            mp.commandv("script-message-to", mp.get_script_name(), "add-source-event", text)
+        show_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\\N弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+        if init then
+            msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
         end
-    })
+    else
+        show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
+    end
 end
 
-function open_add_menu_uosc()
-    local sources = {}
-    for url, source in pairs(danmaku.sources) do
-        if source.fname then
-            local item = {title = url, value = url, keep_open = true,}
-            if source.from == "api_server" then
-                if source.blocked then
-                    item.hint = "来源：弹幕服务器（已屏蔽）"
-                    item.actions = {{icon = "check", name = "unblock"},}
-                else
-                    item.hint = "来源：弹幕服务器（未屏蔽）"
-                    item.actions = {{icon = "not_interested", name = "block"},}
-                end
-            else
-                item.hint = "来源：用户添加"
-                item.actions = {{icon = "delete", name = "delete"},}
+local function get_cid()
+    local cid, danmaku_id = nil, nil
+    local tracks = mp.get_property_native("track-list")
+    for _, track in ipairs(tracks) do
+        if track["lang"] == "danmaku" then
+            cid = track["external-filename"]:match("/(%d-)%.xml$")
+            danmaku_id = track["id"]
+            break
+        end
+    end
+    return cid, danmaku_id
+end
+
+local function extract_between_colons(input_string)
+    local start_index = 0
+    local end_index = 0
+    local count = 0
+    for i = 1, #input_string do
+        if input_string:sub(i, i) == ":" then
+            count = count + 1
+            if count == 2 then
+                start_index = i
+            elseif count == 3 then
+                end_index = i
+                break
             end
-            table.insert(sources, item)
         end
     end
-    local menu_props = {
-        type = "menu_source",
-        title = "在此输入源地址url",
-        search_style = "palette",
-        search_debounce = "submit",
-        on_search = { "script-message-to", mp.get_script_name(), "add-source-event" },
-        footnote = "使用enter或ctrl+enter进行添加",
-        items = sources,
-        item_actions_place = "outside",
-        callback = {mp.get_script_name(), 'setup-danmaku-source'},
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
-end
-
-function open_add_menu()
-    if uosc_available then
-        open_add_menu_uosc()
-    elseif input_loaded then
-        open_add_menu_get()
+    if start_index > 0 and end_index > 0 then
+        return input_string:sub(start_index + 1, end_index - 1)
+    else
+        return nil
     end
 end
 
--- 打开弹幕内容菜单
-function open_content_menu(pos)
-    local items = {}
-    local time_pos = pos or mp.get_property_native("time-pos")
+local function hex_to_int_color(hex_color)
+    -- 移除颜色代码中的'#'字符
+    hex_color = hex_color:sub(2)  -- 只保留颜色代码部分
 
-    if comments ~= nil then
-        for _, event in ipairs(comments) do
-            table.insert(items, {
-                title = abbr_str(event.clean_text, 60),
-                hint = seconds_to_time(event.start_time + delay),
-                value = { "seek", event.start_time + delay, "absolute" },
-                active = event.start_time + delay <= time_pos and time_pos <= event.end_time + delay,
-            })
-        end
-    end
+    -- 提取R, G, B的十六进制值并转为整数
+    local r = tonumber(hex_color:sub(1, 2), 16)
+    local g = tonumber(hex_color:sub(3, 4), 16)
+    local b = tonumber(hex_color:sub(5, 6), 16)
 
-    local menu_props = {
-        type = "menu_content",
-        title = "弹幕内容",
-        footnote = "使用 / 打开搜索",
-        items = items
-    }
-    local json_props = utils.format_json(menu_props)
+    -- 计算32位整数值
+    local color_int = (r * 256 * 256) + (g * 256) + b
 
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "open-menu", json_props)
-    elseif input_loaded then
-        open_menu_select(items, true)
-    end
+    return color_int
 end
 
-local menu_items_config = {
-    bold = { title = "粗体", hint = options.bold, original = options.bold,
-        footnote = "true / false", },
-    font_size_strict = { title = "统一大小", hint = options.font_size_strict, original = options.font_size_strict,
-        footnote = "true / false", },
-    fontsize = { title = "大小", hint = options.fontsize, original = options.fontsize,
-        scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
-    outline = { title = "描边", hint = options.outline, original = options.outline,
-        scope = { min = 0.0, max = 4.0 }, footnote = "输入范围：(0.0-4.0)" },
-    shadow = { title = "阴影", hint = options.shadow, original = options.shadow,
-        scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
-    density = { title = "密度", hint = options.density, original = options.density,
-        scope = { min = -1, max = math.huge }, footnote = "整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数", },
-    scrolltime = { title = "速度", hint = options.scrolltime, original = options.scrolltime,
-        scope = { min = 1, max = math.huge }, footnote = "请输入整数(>=1)", },
-    transparency = { title = "透明度", hint = options.transparency, original = options.transparency,
-        scope = { min = 0, max = 255 }, footnote = "输入整数：0(不透明)到255(完全透明)", },
-    displayarea = { title = "弹幕显示范围", hint = options.displayarea, original = options.displayarea,
-        scope = { min = 0.0, max = 1.0 }, footnote = "显示范围(0.0-1.0)", },
-}
--- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "font_size_strict", "fontsize", "outline", "shadow", "density", "scrolltime", "transparency", "displayarea"}
-
--- 设置弹幕样式菜单
-function add_danmaku_setup(actived, status)
-    if not uosc_available then
-        show_message("无uosc UI框架，不支持使用该功能", 2)
-        return
+local function get_type_from_position(position)
+    if position == 0 then
+        return 1
     end
-
-    local items = {}
-    for _, key in ipairs(ordered_keys) do
-        local config = menu_items_config[key]
-        local item_config = {
-            title = config.title,
-            hint = "目前：" .. tostring(config.hint),
-            active = key == actived,
-            keep_open = true,
-            selectable = true,
-        }
-        if config.hint ~= config.original then
-            item_config.actions = {{icon = "refresh", name = key, label = "恢复默认配置 < " .. config.original .. " >"}}
-        end
-        table.insert(items, item_config)
+    if position == 1 then
+        return 4
     end
-
-    local menu_props = {
-        type = "menu_style",
-        title = "弹幕样式",
-        search_style = "disabled",
-        footnote = "样式更改仅在本次播放生效",
-        item_actions_place = "outside",
-        items = items,
-        callback = { mp.get_script_name(), 'setup-danmaku-style'},
-    }
-
-    local actions = "open-menu"
-    if status ~= nil then
-        -- msg.info(status)
-        if status == "updata" then
-            -- "updata" 模式会保留输入框文字
-            menu_props.title = "  " .. menu_items_config[actived]["footnote"]
-            actions = "update-menu"
-        elseif status == "refresh" then
-            -- "refresh" 模式会清除输入框文字
-            menu_props.title = "  " .. menu_items_config[actived]["footnote"]
-        elseif status == "error" then
-            menu_props.title = "输入非数字字符或范围出错"
-            -- 创建一个定时器，在1秒后触发回调函数，删除搜索栏错误信息
-            mp.add_timeout(1.0, function() add_danmaku_setup(actived, "updata") end)
-        end
-        menu_props.search_style = "palette"
-        menu_props.search_debounce = "submit"
-        menu_props.footnote = menu_items_config[actived]["footnote"] or ""
-        menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-danmaku-style", actived }
-    end
-
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", actions, json_props)
+    return 5
 end
 
--- 设置弹幕源延迟菜单
-function danmaku_delay_setup(source_url)
-    if not uosc_available then
-        show_message("无uosc UI框架，不支持使用该功能", 2)
-        return
+function write_history(episodeid)
+    local history = {}
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path)
+    local fname = mp.get_property('filename/no-ext')
+    local episodeNumber = 0
+    if episodeid then
+        episodeNumber = tonumber(episodeid) % 1000
+    elseif danmaku.extra then
+        episodeNumber = danmaku.extra.episodenum
     end
 
-    local sources = {}
-    for url, source in pairs(danmaku.sources) do
-        if source.fname and not source.blocked then
-            local item = {title = url, value = url, keep_open = true,}
-            item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0") .. "秒"
-            item.active = url == source_url
-            table.insert(sources, item)
+    if is_protocol(path) then
+        local title, season_num, episod_num = parse_title()
+        if title and episod_num then
+            if season_num then
+                dir = title .." Season".. season_num
+            else
+                dir = title
+            end
+            fname = url_decode(mp.get_property("media-title"))
+            episodeNumber = episod_num
         end
     end
 
-    local menu_props = {
-        type = "menu_delay",
-        title = "弹幕源延迟设置",
-        search_style = "disabled",
-        items = sources,
-        callback = {mp.get_script_name(), 'setup-source-delay'},
-    }
-    if source_url ~= nil then
-        menu_props.title = "请输入数字，单位（秒）/ 或者按照形如\"14m15s\"的格式输入分钟数加秒数"
-        menu_props.search_style = "palette"
-        menu_props.search_debounce = "submit"
-        menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-source-delay", source_url }
+    if dir ~= nil then
+        local history_json = read_file(history_path)
+        if history_json ~= nil then
+            history = utils.parse_json(history_json) or {}
+        end
+        history[dir] = {}
+        history[dir].fname = fname
+        history[dir].source = danmaku.source
+        history[dir].animeTitle = danmaku.anime
+        history[dir].episodeTitle = danmaku.episode
+        history[dir].episodeNumber = episodeNumber
+        if episodeid then
+            history[dir].episodeId = episodeid
+        elseif danmaku.extra then
+            history[dir].extra = danmaku.extra
+        end
+        write_json_file(history_path, history)
     end
-
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
+function remove_source_from_history(rm_source)
+    local history_json = read_file(history_path)
+    local path = mp.get_property("path")
 
--- 总集合弹幕菜单
-function open_add_total_menu_uosc()
-    local items = {}
-    local total_menu_items_config = {
-        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
-        { title = "从源添加弹幕", action = "open_add_source_menu" },
-        { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
-        { title = "弹幕样式", action = "open_setup_danmaku_menu" },
-        { title = "弹幕内容", action = "open_content_danmaku_menu" },
-    }
+    if history_json then
+        local history = utils.parse_json(history_json) or {}
 
+        if history[path] ~= nil then
+            for i, source in ipairs(history[path]) do
+                source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
+                if source == rm_source then
+                    table.remove(history[path], i)
+                    break
+                end
+            end
+        end
 
-    if danmaku.anime and danmaku.episode then
-        local episode = danmaku.episode:gsub("%s.-$","")
-        episode = episode:match("^(第.*[话回集]+)%s*") or episode
-        items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
-            bold = true,
-            italic = true,
-            keep_open = true,
-            selectable = false,
-        }
+        write_json_file(history_path, history)
     end
-
-    for _, config in ipairs(total_menu_items_config) do
-        table.insert(items, {
-            title = config.title,
-            value = { "script-message-to", mp.get_script_name(), config.action },
-            keep_open = false,
-            selectable = true,
-        })
-    end
-
-    local menu_props = {
-        type = "menu_total",
-        title = "弹幕设置",
-        search_style = "disabled",
-        items = items,
-    }
-    local json_props = utils.format_json(menu_props)
-    mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
-function open_add_total_menu_select()
-    local item_titles, item_values = {}, {}
-    local total_menu_items_config = {
-        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
-        { title = "从源添加弹幕", action = "open_add_source_menu" },
-        { title = "弹幕内容", action = "open_content_danmaku_menu" },
-    }
-    for i, config in ipairs(total_menu_items_config) do
-        item_titles[i] = config.title
-        item_values[i] = { "script-message-to", mp.get_script_name(), config.action }
+function add_source_to_history(add_url, add_source)
+    local history_json = read_file(history_path)
+    local path = mp.get_property("path")
+
+    if is_protocol(path) then
+        path = remove_query(path)
     end
 
-    mp.commandv('script-message-to', 'console', 'disable')
-    input.select({
-        prompt = '选择:',
-        items = item_titles,
-        submit = function(id)
-            mp.commandv(unpack(item_values[id]))
-        end,
-    })
+    if history_json then
+        local history = utils.parse_json(history_json) or {}
+        history[path] = history[path] or {}
+
+        for i, source in ipairs(history[path]) do
+            source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
+            if source == add_url then
+                table.remove(history[path], i)
+                break
+            end
+        end
+
+        if add_source.delay then
+            add_url = "{{" .. add_source.delay .. "}}" .. add_url
+        end
+
+        if add_source.from then
+            add_url = "<" .. add_source.from .. ">" .. add_url
+        end
+
+        if add_source.blocked then
+            add_url = "-" .. add_url
+        end
+
+        table.insert(history[path], add_url)
+
+        write_json_file(history_path, history)
+    end
 end
 
-function open_add_total_menu()
-    if uosc_available then
-        open_add_total_menu_uosc()
-    elseif input_loaded then
-        open_add_total_menu_select()
+function read_danmaku_source_record(path)
+    if is_protocol(path) then
+        path = remove_query(path)
+    end
+
+    local history_json = read_file(history_path)
+
+    if history_json ~= nil then
+        local history = utils.parse_json(history_json) or {}
+        local history_record = history[path]
+        if history_record ~= nil then
+            for _, source in ipairs(history_record) do
+                local blocked = false
+                local from = string.match(source,"<(.-)>")
+                local delay = string.match(source,"{{(.-)}}")
+                if source:match("^-") then
+                    source = source:sub(2)
+                    blocked = true
+                    from = "api_server"
+                end
+                if from then
+                    source = source:gsub("<" .. from .. ">", "")
+                end
+                if delay then
+                    source = source:gsub("{{" .. delay .. "}}", "")
+                end
+
+                danmaku.sources[source] = {}
+
+                if blocked then
+                    danmaku.sources[source]["blocked"] = true
+                end
+
+                danmaku.sources[source]["from"] = from or "user_custom"
+
+                if delay then
+                    danmaku.sources[source]["delay"] = delay
+                end
+
+                danmaku.sources[source]["from_history"] = true
+            end
+        end
     end
 end
 
 -- 视频播放时保存弹幕
-function save_danmaku_func()
-    local danmaku_path = os.getenv("TEMP") or "/tmp/"
+function save_danmaku()
     local danmaku_file = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
     if file_exists(danmaku_file) then
         local path = mp.get_property("path")
@@ -591,158 +334,542 @@ function save_danmaku_func()
     end
 end
 
+-- 加载弹幕
+function load_danmaku(from_menu, no_osd)
+    if not enabled then return end
+    local temp_file = "danmaku-" .. pid .. ".ass"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
+    local danmaku_input = {}
+    local delays = {}
 
--- 添加 uosc 菜单栏按钮
-mp.commandv(
-    "script-message-to",
-    "uosc",
-    "set-button",
-    "danmaku",
-    utils.format_json({
-        icon = "search",
-        tooltip = "弹幕搜索",
-        command = "script-message open_search_danmaku_menu",
-    })
-)
+    -- 收集需要加载的弹幕文件
+    for _, source in pairs(danmaku.sources) do
+        if not source.blocked and source.fname then
+            if not file_exists(source.fname) then
+                show_message("未找到弹幕文件", 3)
+                msg.info("未找到弹幕文件")
+                return
+            end
+            table.insert(danmaku_input, source.fname)
 
-mp.commandv(
-    "script-message-to",
-    "uosc",
-    "set-button",
-    "danmaku_source",
-    utils.format_json({
-        icon = "add_box",
-        tooltip = "从源添加弹幕",
-        command = "script-message open_add_source_menu",
-    })
-)
-
-mp.commandv(
-    "script-message-to",
-    "uosc",
-    "set-button",
-    "danmaku_styles",
-    utils.format_json({
-        icon = "palette",
-        tooltip = "弹幕样式",
-        command = "script-message open_setup_danmaku_menu",
-    })
-)
-
-mp.commandv(
-    "script-message-to",
-    "uosc",
-    "set-button",
-    "danmaku_delay",
-    utils.format_json({
-        icon = "more_time",
-        tooltip = "弹幕源延迟设置",
-        command = "script-message open_source_delay_menu",
-    })
-)
-
-mp.commandv(
-    "script-message-to",
-    "uosc",
-    "set-button",
-    "danmaku_menu",
-    utils.format_json({
-        icon = "grid_view",
-        tooltip = "弹幕设置",
-        command = "script-message open_add_total_menu",
-    })
-)
-
-
-mp.register_script_message('uosc-version', function()
-    uosc_available = true
-end)
-
--- 视频播放时保存弹幕
-mp.register_script_message("immediately_save_danmaku", function()
-    save_danmaku_func()
-end)
-
--- 注册函数给 uosc 按钮使用
-mp.register_script_message("open_search_danmaku_menu", open_input_menu)
-mp.register_script_message("search-anime-event", function(query)
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_danmaku")
+            if source.delay then
+                table.insert(delays, source.delay)
+            else
+                table.insert(delays, "0.0")
+            end
+        end
     end
-    local name, class = query:match("^(.-)%s*|%s*(.-)%s*$")
-    if name and class then
-        query_extra(name, class)
-    else
-        get_animes(query)
-    end
-end)
-mp.register_script_message("search-episodes-event", function(animeTitle, bangumiId)
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_anime")
-    end
-    get_episodes(animeTitle, bangumiId)
-end)
 
--- Register script message to show the input menu
-mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
-    enabled = true
-    danmaku.anime = animeTitle
-    danmaku.episode = episodeTitle
-    set_episode_id(episodeId, true)
-end)
-
-mp.register_script_message("open_add_source_menu", open_add_menu)
-mp.register_script_message("add-source-event", function(query)
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
-    end
-    enabled = true
-    add_danmaku_source(query, true)
-end)
-
-mp.register_script_message("open_add_total_menu", open_add_total_menu)
-mp.register_script_message("open_source_delay_menu", danmaku_delay_setup)
-mp.register_script_message("open_setup_danmaku_menu", function()
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
-    end
-    add_danmaku_setup()
-end)
-mp.register_script_message("open_content_danmaku_menu", function()
-    if uosc_available then
-        mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
-    end
-    open_content_menu()
-end)
-
-mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
-mp.register_script_message("set", function(prop, value)
-    if prop ~= "show_danmaku" then
+    -- 如果没有弹幕文件，退出加载
+    if #danmaku_input == 0 then
+        show_message("该集弹幕内容为空，结束加载", 3)
+        msg.verbose("该集弹幕内容为空，结束加载")
+        comments = {}
         return
     end
 
-    if value == "on" then
-        enabled = true
-        set_danmaku_visibility(true)
-        if comments == nil then
-            local path = mp.get_property("path")
-            init(path)
-        else
-            if danmaku.anime and danmaku.episode then
-                show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
-            else
-                show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-            end
-            show_danmaku_func()
+    -- 异步执行弹幕转换
+    convert_with_danmaku_factory(danmaku_input, nil, delays, function(error)
+        if error then
+            show_message("弹幕转换失败", 3)
+            msg.error("弹幕转换失败：" .. error)
+            return
         end
-    else
-        show_message("关闭弹幕", 2)
-        enabled = false
-        set_danmaku_visibility(false)
-        hide_danmaku_func()
+
+        -- 转换完成后加载弹幕
+        parse_danmaku(danmaku_file, from_menu, no_osd)
+    end)
+end
+
+-- 使用 DanmakuFactory 转换弹幕文件
+function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callback)
+    if exec_path == "" then
+        exec_path = utils.join_path(mp.get_script_directory(), "bin/DanmakuFactory")
+        if platform == "windows" then
+            exec_path = utils.join_path(exec_path, "DanmakuFactory.exe")
+        else
+            exec_path = utils.join_path(exec_path, "DanmakuFactory")
+        end
+    end
+    local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
+
+    local temp_file = "danmaku-" .. pid .. ".ass"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
+
+    local arg = {
+        danmaku_factory_path,
+        "-o",
+        danmaku_out and danmaku_out or danmaku_file,
+        "-i",
+        "-t",
+        "--ignore-warnings",
+        "--scrolltime", options.scrolltime,
+        "--fontname", "sans-serif",
+        "--fontsize", options.fontsize,
+        "--shadow", options.shadow,
+        "--bold", options.bold,
+        "--density", options.density,
+    --  "--displayarea", options.displayarea,
+        "--outline", options.outline,
+    }
+
+    local shift = 1
+
+    if options.font_size_strict == "true" then
+        table.insert(arg, 13, "--font-size-strict")
     end
 
-    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", value)
+    -- 检查 danmaku_input 是字符串还是数组，并插入到正确的位置
+    if type(danmaku_input) == "string" then
+        -- 如果是单个字符串，直接插入
+        table.insert(arg, 5, danmaku_input)
+    else
+        -- 如果是字符串数组，逐个插入
+        for i, input in ipairs(danmaku_input) do
+            table.insert(arg, 4 + i, input)
+        end
+        shift = #danmaku_input
+    end
+
+    if delays then
+        for i, delay in ipairs(delays) do
+            table.insert(arg, 5 + shift + i, delay)
+        end
+    else
+        table.insert(arg, 6 + shift, "0.0")
+    end
+
+    if blacklist_file ~= "" and file_exists(blacklist_file) then
+        table.insert(arg, "--blacklist")
+        table.insert(arg, blacklist_file)
+    end
+
+    if options.blockmode ~= "" then
+        table.insert(arg, "--blockmode")
+        table.insert(arg, options.blockmode)
+    end
+
+    if not callback then
+        mp.command_native({
+            name = 'subprocess',
+            playback_only = false,
+            capture_stdout = true,
+            args = arg,
+        })
+    else
+        -- 异步执行命令
+        call_cmd_async(arg, function(error, _)
+            async_running = false
+            if callback then
+                callback(error)
+            end
+        end)
+    end
+end
+
+-- 简繁转换
+function ch_convert(ass_path, case, callback)
+    if case == 0 then
+        callback(nil)
+        return
+    end
+
+    if opencc_path == "" then
+        opencc_path = utils.join_path(mp.get_script_directory(), "bin")
+        if platform == "windows" then
+            opencc_path = utils.join_path(opencc_path, "OpenCC_Windows/opencc.exe")
+        else
+            opencc_path = utils.join_path(opencc_path, "OpenCC_Linux/opencc")
+        end
+    end
+    opencc_path = os.getenv("OPENCC") or opencc_path
+
+    local config
+    if case == 1 then
+        config = "t2s.json"
+    elseif case == 2 then
+        config = "s2t.json"
+    else
+        callback("无效的转换配置")
+        return
+    end
+
+    local arg = {
+        opencc_path,
+        "-i",
+        ass_path,
+        "-o",
+        ass_path,
+        "-c",
+        config,
+    }
+
+    call_cmd_async(arg, function(error, _)
+        async_running = false
+        if error then
+            callback("OpenCC 转换失败：" .. error)
+        else
+            callback(nil)
+        end
+    end)
+end
+
+-- 为 bilibli 网站的视频播放加载弹幕
+function load_danmaku_for_bilibili(path)
+    local cid, danmaku_id = get_cid()
+    if danmaku_id ~= nil then
+        mp.commandv('sub-remove', danmaku_id)
+    end
+
+    if cid == nil then
+        cid = mp.get_opt('cid')
+        if not cid then
+            local patterns = {
+                "bilivideo%.c[nom]+.*/resource/(%d+)%D+.*",
+                "bilivideo%.c[nom]+.*/(%d+)-%d+-%d+%..*%?",
+            }
+            local urls = {
+                path,
+                mp.get_property("stream-open-filename", ''),
+            }
+
+            for _, pattern in ipairs(patterns) do
+                for _, url in ipairs(urls) do
+                    if url:find(pattern) then
+                        cid = url:match(pattern)
+                        break
+                    end
+                end
+            end
+        end
+    end
+    if cid == nil and path:match("/video/BV.-") then
+        if path:match("video/BV.-/.*") then
+            path = path:gsub("/[^/]+$", "")
+        end
+        add_danmaku_source_online(path, true)
+        return
+    end
+    if cid ~= nil then
+        local url = "https://comment.bilibili.com/" .. cid .. ".xml"
+        local temp_file = "danmaku-" .. pid .. danmaku.count .. ".xml"
+        local danmaku_xml = utils.join_path(danmaku_path, temp_file)
+        danmaku.count = danmaku.count + 1
+        local arg = {
+            "curl",
+            "-L",
+            "-s",
+            "--compressed",
+            "--user-agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+            "--output",
+            danmaku_xml,
+            url,
+        }
+
+        call_cmd_async(arg, function(error)
+            async_running = false
+            if error then
+                show_message("HTTP 请求失败，打开控制台查看详情", 5)
+                msg.error(error)
+                return
+            end
+            if file_exists(danmaku_xml) then
+                save_danmaku_downloaded(path, danmaku_xml)
+                load_danmaku(true)
+            end
+        end)
+    end
+end
+
+-- 为 bahamut 网站的视频播放加载弹幕
+function load_danmaku_for_bahamut(path)
+    local path = path:gsub('%%(%x%x)', hex_to_char)
+    local sn = extract_between_colons(path)
+    if sn == nil then
+        return
+    end
+    local url = "https://ani.gamer.com.tw/ajax/danmuGet.php"
+    local temp_file = "bahamut-" .. pid .. ".json"
+    local danmaku_json = utils.join_path(danmaku_path, temp_file)
+    local arg = {
+        "curl",
+        "-X",
+        "POST",
+        "-d",
+        "sn=" .. sn,
+        "-L",
+        "-s",
+        "--user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36",
+        "--header",
+        "Origin: https://ani.gamer.com.tw",
+        "--header",
+        "Content-Type: application/x-www-form-urlencoded;charset=utf-8",
+        "--header",
+        "Accept: application/json",
+        "--header",
+        "Authority: ani.gamer.com.tw",
+        "--output",
+        danmaku_json,
+        url,
+    }
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
+    call_cmd_async(arg, function(error)
+        async_running = false
+        if error then
+            show_message("HTTP 请求失败，打开控制台查看详情", 5)
+            msg.error(error)
+            return
+        end
+        if not file_exists(danmaku_json) then
+            url = "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn
+            enabled = true
+            add_danmaku_source_online(url, true)
+            return
+        end
+
+        local comments_json = read_file(danmaku_json)
+        local comments = utils.parse_json(comments_json)
+        if not comments then
+            return
+        end
+
+        temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
+        local json_filename = utils.join_path(danmaku_path, temp_file)
+        danmaku.count = danmaku.count + 1
+        local json_file = io.open(json_filename, "w")
+
+        if json_file then
+            json_file:write("[\n")
+            for _, comment in ipairs(comments) do
+                local m = comment["text"]
+                local color = hex_to_int_color(comment["color"])
+                local mode = get_type_from_position(comment["position"])
+                local time = tonumber(comment["time"]) / 10
+                local c = time .. "," .. color .. "," .. mode .. ",25,,,"
+
+                -- Write the JSON object as a single line, no spaces or extra formatting
+                local json_entry = string.format('{"c":"%s","m":"%s"},\n', c, m)
+                json_file:write(json_entry)
+            end
+            json_file:write("]")
+            json_file:close()
+        end
+
+        if file_exists(json_filename) then
+            save_danmaku_downloaded(
+                "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn,
+                json_filename)
+            load_danmaku(true)
+        end
+    end)
+end
+
+function load_danmaku_for_url(path)
+    if path:find('bilibili.com') or path:find('bilivideo.c[nom]+') then
+        load_danmaku_for_bilibili(path)
+        return
+    end
+
+    if path:find('bahamut.akamaized.net') then
+        load_danmaku_for_bahamut(path)
+        return
+    end
+
+    local title, season_num, episod_num = parse_title()
+    local filename = url_decode(mp.get_property("media-title"))
+    local episod_number = nil
+    if title and episod_num then
+        if season_num then
+            dir = title .." Season".. season_num
+            episod_number = episod_num
+        else
+            dir = title
+        end
+        auto_load_danmaku(path, dir, filename, episod_number)
+        addon_danmaku(dir, false)
+        return
+    end
+    get_danmaku_with_hash(filename, path)
+    addon_danmaku()
+end
+
+-- 自动加载上次匹配的弹幕
+function auto_load_danmaku(path, dir, filename, number)
+    if dir ~= nil then
+        local history_json = read_file(history_path)
+        if history_json ~= nil then
+            local history = utils.parse_json(history_json) or {}
+            -- 1.判断父文件名是否存在
+            local history_dir = history[dir]
+            if history_dir ~= nil then
+                --2.如果存在，则获取number和id
+                danmaku.anime = history_dir.animeTitle
+                local episode_number = history_dir.episodeTitle and history_dir.episodeTitle:match("%d+")
+                local history_number = history_dir.episodeNumber
+                local history_id = history_dir.episodeId
+                local history_fname = history_dir.fname
+                local history_extra = history_dir.extra
+                local playing_number = nil
+
+                if history_fname then
+                    if filename ~= history_fname then
+                        if number then
+                            playing_number = number
+                        else
+                            history_number, playing_number = get_episode_number(filename, history_fname)
+                        end
+                    else
+                        playing_number = history_number
+                    end
+                else
+                    playing_number = get_episode_number(filename)
+                end
+                if playing_number ~= nil then
+                    local x = playing_number - history_number --获取集数差值
+                    danmaku.episode = episode_number and string.format("第%s话", episode_number + x) or history_dir.episodeTitle
+                    show_message("自动加载上次匹配的弹幕", 3)
+                    msg.verbose("自动加载上次匹配的弹幕")
+                    if history_id then
+                        local tmp_id = tostring(x + history_id)
+                        set_episode_id(tmp_id)
+                    elseif history_extra then
+                        local episodenum = history_extra.episodenum + x
+                        get_details(history_extra.class, history_extra.id, history_extra.site,
+                            history_extra.title, history_extra.year, history_extra.number, episodenum)
+                    end
+                else
+                    get_danmaku_with_hash(filename, path)
+                end
+            else
+                get_danmaku_with_hash(filename, path)
+            end
+        else
+            get_danmaku_with_hash(filename, path)
+        end
+    end
+end
+
+function init(path)
+    if not path then return end
+    local dir = get_parent_directory(path)
+    local filename = mp.get_property('filename/no-ext')
+    local video = mp.get_property_native("current-tracks/video")
+    local fps = mp.get_property_number("container-fps", 0)
+    local duration = mp.get_property_number("duration", 0)
+    if not video or video["image"] or video["albumart"] or fps < 23 or duration < 60 then
+        msg.info("不支持的播放内容（非视频）")
+        return
+    end
+    if is_protocol(path) then
+        load_danmaku_for_url(path)
+    end
+    if dir and filename then
+        local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+        if file_exists(danmaku_xml) then
+            add_danmaku_source_local(danmaku_xml, true)
+        else
+            auto_load_danmaku(path, dir, filename)
+            addon_danmaku(dir, true)
+        end
+    end
+end
+
+mp.register_event("file-loaded", function()
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path)
+    local filename = mp.get_property('filename/no-ext')
+    local video = mp.get_property_native("current-tracks/video")
+    local fps = mp.get_property_number("container-fps", 0)
+    local duration = mp.get_property_number("duration", 0)
+    if not video or video["image"] or video["albumart"] or fps < 23 or duration < 60 then
+        return
+    end
+
+    read_danmaku_source_record(path)
+
+    if not get_danmaku_visibility() then
+        return
+    end
+
+    if options.autoload_for_url and is_protocol(path) then
+        enabled = true
+        load_danmaku_for_url(path)
+    end
+
+    if filename == nil or dir == nil then
+        return
+    end
+    local danmaku_xml = utils.join_path(dir, filename .. ".xml")
+    if options.autoload_local_danmaku then
+        if file_exists(danmaku_xml) then
+            enabled = true
+            add_danmaku_source_local(danmaku_xml)
+            return
+        end
+    end
+
+    if options.auto_load then
+        enabled = true
+        auto_load_danmaku(path, dir, filename)
+        addon_danmaku(dir, false)
+        return
+    end
+
+    if enabled and comments == nil and not async_running then
+        init(path)
+    end
+end)
+
+-------------- 键位绑定 --------------
+mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function()
+    mp.commandv("script-message", "open_search_danmaku_menu")
+end)
+mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", function()
+    mp.commandv("script-message", "show_danmaku_keyboard")
+end)
+
+mp.register_script_message("danmaku-delay", function(number)
+    local value = tonumber(number)
+    if value == nil then
+        return msg.error('command danmaku-delay: invalid time')
+    end
+    delay = delay + value
+    if enabled and comments ~= nil then
+        render()
+    end
+    show_message('设置弹幕延迟: ' .. delay .. ' s')
+    mp.set_property_native(delay_property, delay)
+end)
+
+mp.register_script_message("clear-source", function()
+    local path = mp.get_property("path")
+    local history_json = read_file(history_path)
+
+    if history_json ~= nil then
+        local history = utils.parse_json(history_json) or {}
+        if path and history[path] ~= nil then
+            history[path] = nil
+            write_json_file(history_path, history)
+            for url, source in pairs(danmaku.sources) do
+                if source.from == "user_custom" then
+                    if source.fname and file_exists(source.fname) then
+                        os.remove(source.fname)
+                    end
+                    danmaku.sources[url] = nil
+                end
+            end
+            load_danmaku(false)
+            show_message("已重置当前视频所有弹幕源更改", 3)
+            msg.verbose("已重置当前视频所有弹幕源更改")
+        end
+    end
 end)
 
 mp.register_script_message("show_danmaku_keyboard", function()
@@ -755,11 +882,7 @@ mp.register_script_message("show_danmaku_keyboard", function()
             local path = mp.get_property("path")
             init(path)
         else
-            if danmaku.anime and danmaku.episode then
-                show_message("加载弹幕：" .. danmaku.anime .. "-" .. danmaku.episode.. "\\N共计" .. #comments .. "条弹幕", 3)
-            else
-                show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-            end
+            show_loaded()
             show_danmaku_func()
         end
     else
@@ -770,132 +893,8 @@ mp.register_script_message("show_danmaku_keyboard", function()
     end
 end)
 
-mp.register_script_message("setup-danmaku-style", function(query, text)
-    local event = utils.parse_json(query)
-    if event ~= nil then
-        -- item点击 或 图标点击
-        if event.type == "activate" then
-            if not event.action then
-                if ordered_keys[event.index] == "bold" then
-                    options.bold = options.bold == "true" and "false" or "true"
-                    menu_items_config.bold.hint = options.bold
-                elseif ordered_keys[event.index] == "font_size_strict" then
-                    options.font_size_strict = options.font_size_strict == "true" and "false" or "true"
-                    menu_items_config.font_size_strict.hint = options.font_size_strict
-                end
-                -- "updata" 模式会保留输入框文字
-                add_danmaku_setup(ordered_keys[event.index], "updata")
-                if ordered_keys[event.index] == "font_size_strict" then
-                    load_danmaku(true, true)
-                end
-                return
-            else
-                -- msg.info("event.action：" .. event.action)
-                options[event.action] = menu_items_config[event.action]["original"]
-                menu_items_config[event.action]["hint"] = options[event.action]
-                add_danmaku_setup(event.action, "updata")
-                if event.action == "density" or event.action == "scrolltime" then
-                    load_danmaku(true)
-                end
-            end
-        end
-    else
-        -- 数值输入
-        if text == nil or text == "" then
-            return
-        end
-        local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
-        if tonumber(newText) ~= nil and menu_items_config[query]["scope"] ~= nil then
-            local num = tonumber(newText)
-            local min_num = menu_items_config[query]["scope"]["min"]
-            local max_num = menu_items_config[query]["scope"]["max"]
-            if num and min_num <= num and num <= max_num then
-                if string.match(menu_items_config[query]["footnote"], "整数") then
-                    -- 输入范围为整数时向下取整
-                    num = tostring(math.floor(num))
-                end
-                options[query] = tostring(num)
-                menu_items_config[query]["hint"] = options[query]
-                -- "refresh" 模式会清除输入框文字
-                add_danmaku_setup(query, "refresh")
-                if query == "density" or query == "scrolltime" then
-                    load_danmaku(true, true)
-                end
-                return
-            end
-        end
-        add_danmaku_setup(query, "error")
-    end
-end)
-
-mp.register_script_message('setup-danmaku-source', function(json)
-    local event = utils.parse_json(json)
-    if event.type == 'activate' then
-
-        if event.action == "delete" then
-            local rm = danmaku.sources[event.value]["fname"]
-            if rm and file_exists(rm) and danmaku.sources[event.value]["from"] ~= "user_local" then
-                os.remove(rm)
-            end
-            danmaku.sources[event.value] = nil
-            remove_source_from_history(event.value)
-            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
-            open_add_menu_uosc()
-            load_danmaku(true)
-        end
-
-        if event.action == "block" then
-            danmaku.sources[event.value]["blocked"] = true
-            add_source_to_history(event.value, danmaku.sources[event.value])
-            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
-            open_add_menu_uosc()
-            load_danmaku(true)
-        end
-
-        if event.action == "unblock" then
-            danmaku.sources[event.value]["blocked"] = false
-            if danmaku.sources[event.value]["delay"] then
-                add_source_to_history(event.value, danmaku.sources[event.value])
-            else
-                remove_source_from_history(event.value)
-            end
-            mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
-            open_add_menu_uosc()
-            load_danmaku(true)
-        end
-    end
-end)
-
-mp.register_script_message("setup-source-delay", function(query, text)
-    local event = utils.parse_json(query)
-    if event ~= nil then
-        -- item点击
-        if event.type == "activate" then
-            danmaku_delay_setup(event.value)
-        end
-    else
-        -- 数值输入
-        if text == nil or text == "" then
-            return
-        end
-        local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
-        if tonumber(newText) ~= nil then
-            local num = tonumber(newText)
-            danmaku.sources[query]["delay"] = tostring(num)
-            add_source_to_history(query, danmaku.sources[query])
-            mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
-            danmaku_delay_setup(query)
-            load_danmaku(true, true)
-        elseif newText:match("^%-?%d+m%d+s$") then
-            local minutes, seconds = string.match(newText, "^(%-?%d+)m(%d+)s$")
-            minutes = tonumber(minutes)
-            seconds = tonumber(seconds)
-            if minutes < 0 then seconds = -seconds end
-            danmaku.sources[query]["delay"] = tostring(60 * minutes + seconds)
-            add_source_to_history(query, danmaku.sources[query])
-            mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
-            danmaku_delay_setup(query)
-            load_danmaku(true, true)
-        end
-    end
-end)
+mp.register_script_message("immediately_save_danmaku", save_danmaku)
+mp.register_script_message("open_source_delay_menu", danmaku_delay_setup)
+mp.register_script_message("open_search_danmaku_menu", open_input_menu)
+mp.register_script_message("open_add_source_menu", open_add_menu)
+mp.register_script_message("open_add_total_menu", open_add_total_menu)

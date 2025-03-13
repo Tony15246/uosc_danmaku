@@ -8,10 +8,6 @@ local Source = {
     ["优酷"] = "youku",
 }
 
-local function is_chinese(str)
-    return string.match(str, "[\228-\233][\128-\191]") ~= nil
-end
-
 local function load_extra_danmaku(url, episode, number, class, id, site, title, year)
     local play_url = nil
     if url:match("^.-%.html") then
