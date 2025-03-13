@@ -274,7 +274,7 @@ function read_danmaku_source_record(path)
                     source = source:gsub("<" .. from .. ">", "")
                 end
                 if delay then
-                    source = source:gsub("{{" .. delay .. "}}", "")
+                    source = source:gsub("{{%-?" .. delay .. "}}", "")
                 end
 
                 danmaku.sources[source] = {}
