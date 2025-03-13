@@ -5,9 +5,6 @@ local utils = require("mp.utils")
 local INTERVAL = options.vf_fps and 0.01 or 0.001
 local osd_width, osd_height, pause = 0, 0, true
 enabled, comments, delay = false, nil, 0
-
-local delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
-local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
 mp.set_property_native(delay_property, 0)
 
 -- 从时间字符串转换为秒数
@@ -63,52 +60,6 @@ local function parse_comment(event, pos, height)
     else
         return string.format("{\\pos(%.1f,%.1f)\\an7}%s", current_x, current_y, clean_text)
     end
-end
-
-local function ch_convert(ass_path, case, callback)
-    if case == 0 then
-        callback(nil)
-        return
-    end
-
-    if opencc_path == "" then
-        opencc_path = utils.join_path(mp.get_script_directory(), "bin")
-        if platform == "windows" then
-            opencc_path = utils.join_path(opencc_path, "OpenCC_Windows/opencc.exe")
-        else
-            opencc_path = utils.join_path(opencc_path, "OpenCC_Linux/opencc")
-        end
-    end
-    opencc_path = os.getenv("OPENCC") or opencc_path
-
-    local config
-    if case == 1 then
-        config = "t2s.json"
-    elseif case == 2 then
-        config = "s2t.json"
-    else
-        callback("无效的转换配置")
-        return
-    end
-
-    local arg = {
-        opencc_path,
-        "-i",
-        ass_path,
-        "-o",
-        ass_path,
-        "-c",
-        config,
-    }
-
-    call_cmd_async(arg, function(error, _)
-        async_running = false
-        if error then
-            callback("OpenCC 转换失败：" .. error)
-        else
-            callback(nil)
-        end
-    end)
 end
 
 -- 从 ASS 文件中解析样式和事件
@@ -186,7 +137,7 @@ end
 
 local overlay = mp.create_osd_overlay('ass-events')
 
-local function render()
+function render()
     if comments == nil then return end
 
     local pos, err = mp.get_property_number('time-pos')
@@ -235,15 +186,6 @@ end
 
 local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
-local function show_loaded()
-    if danmaku.anime and danmaku.episode then
-        show_message("匹配内容：" .. danmaku.anime .. "-" .. danmaku.episode .. "\\N弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-        msg.info(danmaku.anime .. "-" .. danmaku.episode .. " 弹幕加载成功，共计" .. #comments .. "条弹幕")
-    else
-        show_message("弹幕加载成功，共计" .. #comments .. "条弹幕", 3)
-    end
-end
-
 function parse_danmaku(ass_file_path, from_menu, no_osd)
     parse_ass(ass_file_path, function(err, events)
         comments = events
@@ -254,7 +196,7 @@ function parse_danmaku(ass_file_path, from_menu, no_osd)
 
         if enabled and (from_menu or get_danmaku_visibility()) then
             if not no_osd then
-                show_loaded()
+                show_loaded(true)
             end
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
             show_danmaku_func()
@@ -302,7 +244,7 @@ function hide_danmaku_func()
 end
 
 local message_overlay = mp.create_osd_overlay('ass-events')
-local message_timer = mp.add_timeout(3, function ()
+local message_timer = mp.add_timeout(3, function()
     message_overlay:remove()
 end, true)
 
@@ -357,6 +299,15 @@ mp.observe_property('pause', 'bool', function(_, value)
     end
 end)
 
+mp.register_event('playback-restart', function(event)
+    if event.error then
+        return msg.error(event.error)
+    end
+    if enabled and comments ~= nil then
+        render()
+    end
+end)
+
 mp.add_hook("on_unload", 50, function()
     comments, delay = nil, 0
     timer:kill()
@@ -366,7 +317,6 @@ mp.add_hook("on_unload", 50, function()
         mp.commandv("vf", "remove", "@danmaku")
     end
 
-    local danmaku_path = os.getenv("TEMP") or "/tmp/"
     local files_to_remove = {
         file1 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".json"),
         file2 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass"),
@@ -390,26 +340,4 @@ mp.add_hook("on_unload", 50, function()
         end
     end
     danmaku = {sources = {}, count = 1}
-end)
-
-mp.register_event('playback-restart', function(event)
-    if event.error then
-        return msg.error(event.error)
-    end
-    if enabled and comments ~= nil then
-        render()
-    end
-end)
-
-mp.register_script_message("danmaku-delay", function(number)
-    local value = tonumber(number)
-    if value == nil then
-        return msg.error('command danmaku-delay: invalid time')
-    end
-    delay = delay + value
-    if enabled and comments ~= nil then
-        render()
-    end
-    show_message('设置弹幕延迟: ' .. delay .. ' s')
-    mp.set_property_native(delay_property, delay)
 end)
