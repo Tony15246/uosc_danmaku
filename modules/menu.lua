@@ -182,7 +182,7 @@ end
 -- 打开弹幕输入搜索菜单
 function open_input_menu_get()
     mp.commandv('script-message-to', 'console', 'disable')
-    local title = parse_title(true)
+    local title = parse_title()
     input.get({
         prompt = '番剧名称:',
         default_text = title,
@@ -220,7 +220,7 @@ function open_input_menu_uosc()
         title = "在此处输入番剧名称",
         search_style = "palette",
         search_debounce = "submit",
-        search_suggestion = parse_title(true),
+        search_suggestion = parse_title(),
         on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
         footnote = "使用enter或ctrl+enter进行搜索",
         items = items
