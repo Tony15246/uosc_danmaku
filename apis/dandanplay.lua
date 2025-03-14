@@ -21,9 +21,7 @@ function set_episode_id(input, from_menu)
         end
     end
     local episodeId = tonumber(input)
-    if from_menu and options.auto_load or options.autoload_for_url then
-        write_history(episodeId)
-    end
+    write_history(episodeId)
     set_danmaku_button()
     if options.load_more_danmaku then
         fetch_danmaku_all(episodeId, from_menu)
@@ -165,7 +163,7 @@ local function match_file(file_path, file_name)
         danmaku.episode = data.matches[1].episodeTitle
 
         -- 获取并加载弹幕数据
-        set_episode_id(data.matches[1].episodeId, true)
+        set_episode_id(data.matches[1].episodeId)
     end)
 end
 
