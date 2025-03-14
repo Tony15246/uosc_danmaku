@@ -85,39 +85,122 @@ function get_danmaku_args(url)
     return args
 end
 
--- 执行哈希匹配获取弹幕
-local function match_file(file_path, file_name)
-    -- 计算文件哈希
-    local file_info = utils.file_info(file_path)
-    if file_info and file_info.size < 16 * 1024 * 1024 then
-        msg.info("文件小于 16M，无法计算 hash")
-        return
-    end
-    local file, error = io.open(normalize(file_path), 'rb')
-    if error ~= nil then
-        return msg.error(error)
-    end
-    local m = md5.new()
-    for _ = 1, 16 * 1024 do
-        local content = file:read(1024)
-        if content == nil then
-            file:close()
-            return msg.error('无法读取文件内容')
+-- 尝试通过解析文件名匹配剧集
+local function match_episode(animeTitle, bangumiId, episode_num)
+    local url = options.api_server .. "/api/v2/bangumi/" .. bangumiId
+    local args = get_danmaku_args(url)
+
+    call_cmd_async(args, function(error, json)
+        async_running = false
+        if error then
+            show_message("HTTP 请求失败，打开控制台查看详情", 5)
+            msg.error(error)
+            return
         end
-        m:update(content)
-    end
-    file:close()
-    local hash = m:finish()
-    if not hash then
+
+        local data = utils.parse_json(json)
+        if not data or not data.bangumi or not data.bangumi.episodes then
+            msg.info("无结果")
+            return
+        end
+
+        for _, episode in ipairs(data.bangumi.episodes) do
+            if tonumber(episode.episodeNumber) == tonumber(episode_num) then
+                danmaku.anime = animeTitle
+                danmaku.episode = episode.episodeTitle
+                set_episode_id(episode.episodeId)
+                break
+            end
+        end
+    end)
+end
+
+local function match_anime()
+    local animes = {}
+    local anime_type = "tvseries"
+    local type_count = 0
+    local title, season_num, episode_num = parse_title()
+    if not episode_num then
+        msg.info("无法解析剧集信息")
         return
+    end
+
+    if title:match("OVA") or title:match("OAD") then
+        anime_type = "ova"
+    end
+
+    local encoded_query = url_encode(title)
+    local url = options.api_server .. "/api/v2/search/anime"
+    local params = "keyword=" .. encoded_query
+    local full_url = url .. "?" .. params
+    local args = get_danmaku_args(full_url)
+
+    call_cmd_async(args, function(error, json)
+        async_running = false
+        if error then
+            show_message("HTTP 请求失败，打开控制台查看详情", 5)
+            msg.error(error)
+            return
+        end
+
+        local data = utils.parse_json(json)
+        if not data or not data.animes then
+            msg.info("无结果")
+            return
+        end
+
+        for _, anime in ipairs(data.animes) do
+            if anime.type == anime_type then
+                type_count = type_count + 1
+                table.insert(animes, anime)
+            end
+        end
+        if type_count == 1 then
+            match_episode(animes[1].animeTitle, animes[1].bangumiId, episode_num)
+        else
+            msg.info("匹配到多个结果，请尝试手动搜索")
+        end
+    end)
+end
+
+-- 执行哈希匹配获取弹幕
+local function match_file(file_path, file_name, callback)
+    -- 计算文件哈希
+    local hash = nil
+    local file_info = utils.file_info(file_path)
+    if file_info and file_info.size > 16 * 1024 * 1024 then
+        local file, error = io.open(normalize(file_path), 'rb')
+        if file and not error then
+            local m = md5.new()
+            for _ = 1, 16 * 1024 do
+                local content = file:read(1024)
+                if not content then
+                    break
+                end
+                m:update(content)
+            end
+            file:close()
+            hash = m:finish()
+        end
+    end
+
+    if hash then msg.info('hash:', hash) end
+
+    local title, season_num, episode_num = parse_title()
+    if title and episode_num then
+        if season_num then
+            file_name = title .. " S" .. season_num .. "E" .. episode_num
+        else
+            file_name = title .. " E" .. episode_num
+        end
     else
-        msg.info('hash:', hash)
+        file_name = title
     end
 
     local url = options.api_server .. "/api/v2/match"
     local body = utils.format_json({
         fileName = file_name,
-        fileHash = hash,
+        fileHash = hash or "",
         matchMode = "hashAndFileName"
     })
 
@@ -147,15 +230,12 @@ local function match_file(file_path, file_name)
         async_running = false
         if error then
             show_message("HTTP 请求失败，打开控制台查看详情", 5)
-            msg.error(error)
+            callback(error)
             return
         end
         local data = utils.parse_json(json)
-        if not data or not data.isMatched then
-            msg.info("没有匹配的剧集")
-            return
-        elseif #data.matches > 1 then
-            msg.info("找到多个匹配的剧集")
+        if not data or not data.matches or #data.matches > 1 then
+            callback("没有匹配的剧集")
             return
         end
 
@@ -514,9 +594,13 @@ function get_danmaku_with_hash(file_name, file_path)
         if cache_start and tonumber(cache_start) == 0 and tonumber(cache_bytes) >= 16 * 1024 * 1024 then
             local file_path = utils.join_path(danmaku_path, temp_file)
             mp.commandv("dump-cache", cache_start, cache_end, file_path)
-            if file_exists(file_path) then
-                match_file(file_path, file_name)
-            end
+            match_file(file_path, file_name, function(error)
+                if error then
+                    msg.error(error)
+                    msg.info("尝试通过解析文件名获取弹幕")
+                    match_anime()
+                end
+            end)
             return
         end
 
@@ -539,19 +623,24 @@ function get_danmaku_with_hash(file_name, file_path)
 
         call_cmd_async(arg, function(error)
             async_running = false
-            if error then
-                show_message("HTTP 请求失败，打开控制台查看详情", 5)
-                msg.error(error)
-                return
-            end
-            file_path = utils.join_path(danmaku_path, temp_file)
-            if not file_exists(file_path) then
-                return
-            end
 
-            match_file(file_path, file_name)
+            file_path = utils.join_path(danmaku_path, temp_file)
+
+            match_file(file_path, file_name, function(error)
+                if error then
+                    msg.error(error)
+                    msg.info("尝试通过解析文件名获取弹幕")
+                    match_anime()
+                end
+            end)
         end)
     else
-        match_file(file_path, file_name)
+        match_file(file_path, file_name, function(error)
+            if error then
+                msg.error(error)
+                msg.info("尝试通过解析文件名获取弹幕")
+                match_anime()
+            end
+        end)
     end
 end

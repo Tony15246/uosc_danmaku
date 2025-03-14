@@ -201,7 +201,7 @@ function get_parent_directory(path)
 end
 
 -- 获取播放文件标题信息
-function parse_title(from_menu)
+function parse_title()
     local path = mp.get_property("path")
     local filename = mp.get_property("filename/no-ext")
 
@@ -215,11 +215,11 @@ function parse_title(from_menu)
         if title then
             local media_title, season, episode = title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
             if season then
-                return media_title
+                return media_title, season, episode
             else
                 local media_title, episode = title:match("^(.-)%s*[eE](%d+)")
                 if episode then
-                    return media_title
+                    return media_title, season, episode
                 end
             end
             return title
@@ -261,9 +261,7 @@ function parse_title(from_menu)
             end
         end
     end
-    if from_menu then
-        return title
-    end
+
     return title, season, episode
 end
 

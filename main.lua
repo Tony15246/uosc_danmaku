@@ -458,7 +458,7 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callba
         })
     else
         -- 异步执行命令
-        call_cmd_async(arg, function(error, _)
+        call_cmd_async(arg, function(error)
             async_running = false
             if callback then
                 callback(error)
@@ -504,7 +504,7 @@ function ch_convert(ass_path, case, callback)
         config,
     }
 
-    call_cmd_async(arg, function(error, _)
+    call_cmd_async(arg, function(error)
         async_running = false
         if error then
             callback("OpenCC 转换失败：" .. error)
