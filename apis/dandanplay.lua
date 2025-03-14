@@ -505,6 +505,21 @@ end
 function get_danmaku_with_hash(file_name, file_path)
     if is_protocol(file_path) then
         set_danmaku_button()
+        local temp_file = "temp-" .. pid .. ".mp4"
+        local cache_state = mp.get_property_native("demuxer-cache-state")
+        local cache_bytes = cache_state and cache_state["fw-bytes"] or 0
+        local cache_ranges = cache_state and cache_state["seekable-ranges"] or {}
+        local cache_start = cache_ranges[1] and cache_ranges[1]["start"] or nil
+        local cache_end = cache_ranges[1] and cache_ranges[1]["end"] or nil
+        if cache_start and tonumber(cache_start) == 0 and tonumber(cache_bytes) >= 16 * 1024 * 1024 then
+            local file_path = utils.join_path(danmaku_path, temp_file)
+            mp.commandv("dump-cache", cache_start, cache_end, file_path)
+            if file_exists(file_path) then
+                match_file(file_path, file_name)
+            end
+            return
+        end
+
         local arg = {
             "curl",
             "--range",
@@ -512,7 +527,7 @@ function get_danmaku_with_hash(file_name, file_path)
             "--user-agent",
             options.user_agent,
             "--output",
-            utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4"),
+            utils.join_path(danmaku_path, temp_file),
             "-L",
             file_path,
         }
@@ -529,7 +544,6 @@ function get_danmaku_with_hash(file_name, file_path)
                 msg.error(error)
                 return
             end
-            local temp_file = "temp-" .. pid .. ".mp4"
             file_path = utils.join_path(danmaku_path, temp_file)
             if not file_exists(file_path) then
                 return
