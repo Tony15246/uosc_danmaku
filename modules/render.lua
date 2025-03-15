@@ -77,7 +77,7 @@ local function parse_ass_events(ass_file)
                     end_time = time_to_seconds(end_time),
                     style = style,
                     text = text:gsub("%s+$", ""),
-                    clean_text = text:gsub("\\h", " "):gsub("%{.-%}", ""):gsub("^%s*(.-)%s*$", "%1"),
+                    clean_text = text:gsub("\\h+", " "):gsub("{[\\=].-}", ""):gsub("^%s*(.-)%s*$", "%1"),
                     pos = text:match("\\pos"),
                     move = text:match("\\move"),
                 }
