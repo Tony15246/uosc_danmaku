@@ -415,7 +415,7 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callba
 
     local shift = 1
 
-    if options.font_size_strict == "true" then
+    if options.font_size_strict == "true" or danmaku.strict then
         table.insert(arg, 13, "--font-size-strict")
     end
 
