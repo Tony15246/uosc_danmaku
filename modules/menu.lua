@@ -299,12 +299,15 @@ function open_content_menu(pos)
 
     if comments ~= nil then
         for _, event in ipairs(comments) do
-            table.insert(items, {
-                title = abbr_str(event.clean_text, 60),
-                hint = seconds_to_time(event.start_time + delay),
-                value = { "seek", event.start_time + delay, "absolute" },
-                active = event.start_time + delay <= time_pos and time_pos <= event.end_time + delay,
-            })
+            local text = event.clean_text:gsub("^m%s[mbl%s%-%d%.]+$", ""):gsub("^%s*(.-)%s*$", "%1")
+            if text and text ~= "" then
+                table.insert(items, {
+                    title = abbr_str(text, 60),
+                    hint = seconds_to_time(event.start_time + delay),
+                    value = { "seek", event.start_time + delay, "absolute" },
+                    active = event.start_time + delay <= time_pos and time_pos <= event.end_time + delay,
+                })
+            end
         end
     end
 
