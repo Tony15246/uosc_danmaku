@@ -115,6 +115,25 @@ function read_file(file_path)
     return content
 end
 
+-- 应用额外的自定义标题替换规则
+function title_replace(title)
+    local title_replace = utils.parse_json(options.title_replace)
+    if not title_replace then
+        return title
+    end
+    for _, v in pairs(title_replace) do
+        for _, indexrules in pairs(v['rules']) do
+            for rule, override in pairs(indexrules) do
+                title = title:gsub(rule, override)
+                        :gsub("[_%.]", " ")
+                        :gsub("^%s*(.-)%s*$", "%1")
+                        :gsub("[@#%.%+%-%%&*_=,/~`]+$", "")
+            end
+        end
+    end
+    return title
+end
+
 function write_json_file(file_path, data)
     local file = io.open(file_path, "w")
     if not file then
@@ -215,14 +234,14 @@ function parse_title()
         if title then
             local media_title, season, episode = title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
             if season then
-                return media_title, season, episode
+                return title_replace(media_title), season, episode
             else
                 local media_title, episode = title:match("^(.-)%s*[eE](%d+)")
                 if episode then
-                    return media_title, season, episode
+                    return title_replace(media_title), season, episode
                 end
             end
-            return title
+            return title_replace(title)
         end
 
         local directory = get_parent_directory(path)
@@ -238,7 +257,7 @@ function parse_title()
                 :gsub("%(%d+.?%d*.?%d*%)%s*$", "")
                 :gsub("[%._]", " ")
                 :gsub("^%s*(.-)%s*$", "%1")
-        return title
+        return title_replace(title)
     end
 
     local title = mp.get_property("media-title")
@@ -262,7 +281,7 @@ function parse_title()
         end
     end
 
-    return title, season, episode
+    return title_replace(title), season, episode
 end
 
 -- 获取当前文件名所包含的集数
