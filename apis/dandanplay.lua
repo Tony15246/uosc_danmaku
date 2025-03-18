@@ -237,7 +237,7 @@ local function match_file(file_path, file_name, callback)
             return
         end
         local data = utils.parse_json(json)
-        if not data or not data.matches or #data.matches > 1 then
+        if not data or not data.isMatched or #data.matches > 1 then
             callback("没有匹配的剧集")
             return
         end
