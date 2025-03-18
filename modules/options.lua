@@ -68,6 +68,13 @@ options = {
     message_x = 30,
     --指定脚本相关消息显示的消息的y轴坐标
     message_y = 30,
+    -- 自定义标题解析中的额外替换规则，内容格式为 JSON 字符串，替换模式为 lua 的 string.gsub 函数
+    --! 注意：由于 mpv 的 lua 版本限制，自定义规则只支持形如 %n 的捕获组写法，即示例用法，不支持直接替换字符的写法
+    title_replace = [[
+       [{ 
+           "rules": [{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }],
+       }]
+    ]],
 }
 
 opt.read_options(options, mp.get_script_name(), function() end)

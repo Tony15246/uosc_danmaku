@@ -1,4 +1,5 @@
 # uosc_danmaku
+
 在MPV播放器中加载弹弹play弹幕，基于 uosc UI框架和弹弹play API的mpv弹幕扩展插件
 
 > [!WARNING]
@@ -8,7 +9,7 @@
 > mpv 需基于 LuaJIT 或 Lua 5.2 构建，脚本不支持 Lua 5.1
 
 > [!NOTE]
-> 已添加对mpv内部`mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
+> 已添加对mpv内部 `mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
 >
 > 欲启用此支持mpv最低版本要求：0.39.0
 
@@ -19,9 +20,10 @@
 <video width="902" src="https://github.com/user-attachments/assets/86717e75-9176-4f1a-88cd-71fa94da0c0e">
 </video>
 
-在未安装uosc框架时，调用mpv内部的`mp.input`进行菜单渲染，具体效果见[此pr](https://github.com/Tony15246/uosc_danmaku/pull/24)
+在未安装uosc框架时，调用mpv内部的 `mp.input`进行菜单渲染，具体效果见[此pr](https://github.com/Tony15246/uosc_danmaku/pull/24)
 
 ### 主要功能
+
 1. 从弹弹play或自定义服务的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
 3. 通过点击加入uosc control bar中的弹幕开关控件可以控制弹幕的开关
@@ -48,7 +50,6 @@
 
 字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
 
-
 ## 安装
 
 ### 下载
@@ -65,9 +66,10 @@
 └── scripts
 ```
 
-想要使用本插件，请将本插件完整地[下载](https://github.com/Tony15246/uosc_danmaku/releases)或者克隆到`scripts`目录下，文件结构如下：
+想要使用本插件，请将本插件完整地[下载](https://github.com/Tony15246/uosc_danmaku/releases)或者克隆到 `scripts`目录下，文件结构如下：
 
 > [!IMPORTANT]
+>
 > 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
 > 2. 记得给bin文件夹下的文件赋予可执行权限
 
@@ -97,25 +99,26 @@
     ├── README.md
     └── render.lua
 ```
+
 ### 基本配置
 
 #### uosc控件配置
 
 这一步非常重要，不添加控件，弹幕搜索按钮和弹幕开关就不会显示在进度条上方的控件条中。若没有控件，则只能通过[绑定快捷键](#绑定快捷键可选)调用弹幕搜索和弹幕开关功能
 
-想要添加uosc控件，需要修改mpv配置文件夹下的`script-opts`中的`uosc.conf`文件。如果已经安装了uosc，但是`script-opts`文件夹下没有`uosc.conf`文件，可以去[uosc项目地址](https://github.com/tomasklaen/uosc)下载官方的`uosc.conf`文件，并按照后面的配置步骤进行配置。
+想要添加uosc控件，需要修改mpv配置文件夹下的 `script-opts`中的 `uosc.conf`文件。如果已经安装了uosc，但是 `script-opts`文件夹下没有 `uosc.conf`文件，可以去[uosc项目地址](https://github.com/tomasklaen/uosc)下载官方的 `uosc.conf`文件，并按照后面的配置步骤进行配置。
 
 由于uosc最近才更新了部分接口和控件代码，导致老旧版本的uosc和新版的uosc配置有所不同。如果是下载的最新git版uosc或者一直保持更新的用户按照[最新版uosc的控件配置步骤](#最新版uosc的控件配置步骤)配置即可。如果不确定自己的uosc版本，或者在使用诸如[MPV_lazy](https://github.com/hooke007/MPV_lazy)等由第三方管理uosc版本的用户，可以使用兼容新版和旧版uosc的[旧版uosc控件配置步骤](#旧版uosc控件配置步骤)
 
 ##### 最新版uosc的控件配置步骤
 
-找到`uosc.conf`文件中的`controls`配置项，uosc官方默认的配置可能如下：
+找到 `uosc.conf`文件中的 `controls`配置项，uosc官方默认的配置可能如下：
 
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
 
-在`controls`控件配置项中添加`button:danmaku`的弹幕搜索按钮和`cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关。放置的位置就是实际会在在进度条上方的控件条中显示的位置，可以放在自己喜欢的位置。我个人把这两个控件放在了`<stream>stream-quality`画质选择控件后边。添加完控件的配置大概如下：
+在 `controls`控件配置项中添加 `button:danmaku`的弹幕搜索按钮和 `cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关。放置的位置就是实际会在在进度条上方的控件条中显示的位置，可以放在自己喜欢的位置。我个人把这两个控件放在了 `<stream>stream-quality`画质选择控件后边。添加完控件的配置大概如下：
 
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,button:danmaku,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
@@ -123,13 +126,13 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 ##### 旧版uosc控件配置步骤
 
-找到`uosc.conf`文件中的`controls`配置项，uosc官方默认的配置可能如下：
+找到 `uosc.conf`文件中的 `controls`配置项，uosc官方默认的配置可能如下：
 
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
 
-在`controls`控件配置项中添加`command:search:script-message open_search_danmaku_menu?搜索弹幕`的弹幕搜索按钮和`cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关。放置的位置就是实际会在在进度条上方的控件条中显示的位置，可以放在自己喜欢的位置。我个人把这两个控件放在了`<stream>stream-quality`画质选择控件后边。添加完控件的配置大概如下：
+在 `controls`控件配置项中添加 `command:search:script-message open_search_danmaku_menu?搜索弹幕`的弹幕搜索按钮和 `cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关。放置的位置就是实际会在在进度条上方的控件条中显示的位置，可以放在自己喜欢的位置。我个人把这两个控件放在了 `<stream>stream-quality`画质选择控件后边。添加完控件的配置大概如下：
 
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,command:search:script-message open_search_danmaku_menu?搜索弹幕,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
@@ -137,7 +140,7 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 ##### 修改uosc控件（可选）
 
-如果出于重名等各种原因，无法将本插件所放置的文件夹命名为`uosc_danmaku`的话，需要修改`cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的`uosc_danmaku`为放置本插件的文件夹的名称。假如将本插件放置在`my_folder`文件夹下，那么弹幕开关配置就要修改为`cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
+如果出于重名等各种原因，无法将本插件所放置的文件夹命名为 `uosc_danmaku`的话，需要修改 `cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的 `uosc_danmaku`为放置本插件的文件夹的名称。假如将本插件放置在 `my_folder`文件夹下，那么弹幕开关配置就要修改为 `cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
 
 #### 绑定快捷键（可选）
 
@@ -145,9 +148,9 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 
 快捷键已经进行了默认绑定。默认情况下弹幕搜索功能绑定“Ctrl+d”；弹幕开关功能绑定“j”
 
-弹幕搜索功能绑定的脚本消息为`open_search_danmaku_menu`，弹幕开关功能绑定的脚本消息为`show_danmaku_keyboard`
+弹幕搜索功能绑定的脚本消息为 `open_search_danmaku_menu`，弹幕开关功能绑定的脚本消息为 `show_danmaku_keyboard`
 
-如需配置快捷键，只需在`input.conf`中添加如下行即可，快捷键可以改为自己喜欢的按键组合。
+如需配置快捷键，只需在 `input.conf`中添加如下行即可，快捷键可以改为自己喜欢的按键组合。
 
 ```
 Ctrl+d script-message open_search_danmaku_menu
@@ -177,9 +180,9 @@ https://www.bilibili.com/video/BV1kx411o7Yo
 https://ani.gamer.com.tw/animeVideo.php?sn=36843
 ```
 
-此功能通过调用弹弹Play的extcomment接口实现获取第三方弹幕站（如A/B/C站）上指定网址对应的弹幕。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_source`或`command:add_box:script-message open_add_source_menu?从源添加弹幕`到`uosc.conf`的controls配置项中。
+此功能通过调用弹弹Play的extcomment接口实现获取第三方弹幕站（如A/B/C站）上指定网址对应的弹幕。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_source`或 `command:add_box:script-message open_add_source_menu?从源添加弹幕`到 `uosc.conf`的controls配置项中。
 
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_source_menu`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `open_add_source_menu`。
 
 ```
 key script-message open_add_source_menu
@@ -198,11 +201,11 @@ C:\Users\Tony\Downloads\example.xml
 
 #### 弹幕源延迟设置
 
-可以独立控制每个弹幕源的延迟，延迟支持两种输入模式。第一种模式为输入数字（最高可精确到小数点后两位），单位为秒；第二种输入模式为输入形如`14m15s`格式的字符串，代表延迟的分钟数和秒数。
+可以独立控制每个弹幕源的延迟，延迟支持两种输入模式。第一种模式为输入数字（最高可精确到小数点后两位），单位为秒；第二种输入模式为输入形如 `14m15s`格式的字符串，代表延迟的分钟数和秒数。
 
-想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_delay`或`command:more_time:script-message open_source_delay_menu?弹幕源延迟设置`到`uosc.conf`的controls配置项中。
+想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_delay`或 `command:more_time:script-message open_source_delay_menu?弹幕源延迟设置`到 `uosc.conf`的controls配置项中。
 
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。弹幕源延迟设置功能对应的脚本消息为`open_source_delay_menu`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。弹幕源延迟设置功能对应的脚本消息为 `open_source_delay_menu`。
 
 ```
 key script-message open_source_delay_menu
@@ -210,10 +213,9 @@ key script-message open_source_delay_menu
 
 #### 实时修改弹幕样式（可选）
 
-依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_styles`或`command:palette:script-message open_setup_danmaku_menu?弹幕样式`到`uosc.conf`的controls配置项中。
+依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_styles`或 `command:palette:script-message open_setup_danmaku_menu?弹幕样式`到 `uosc.conf`的controls配置项中。
 
-
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。实时修改弹幕样式功能对应的脚本消息为`open_setup_danmaku_menu`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。实时修改弹幕样式功能对应的脚本消息为 `open_setup_danmaku_menu`。
 
 ```
 key script-message open_setup_danmaku_menu
@@ -221,10 +223,9 @@ key script-message open_setup_danmaku_menu
 
 #### 弹幕设置（可选）
 
-打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加`button:danmaku_menu`或`command:grid_view:script-message open_add_total_menu?弹幕设置`到`uosc.conf`的controls配置项中。
+打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_menu`或 `command:grid_view:script-message open_add_total_menu?弹幕设置`到 `uosc.conf`的controls配置项中。
 
-
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`open_add_total_menu`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `open_add_total_menu`。
 
 ```
 key script-message open_add_total_menu
@@ -237,13 +238,14 @@ key script-message open_add_total_menu
 ```
 key script-message danmaku-delay <seconds>
 ```
-> 当前弹幕延迟的值可以从`user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
+
+> 当前弹幕延迟的值可以从 `user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
 
 #### 清空当前视频关联的弹幕源（可选）
 
 可以清空当前视频中，用户通过[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单手动添加的所有弹幕源（注意该功能不会删除来源于弹幕服务器的弹幕，此类弹幕只能屏蔽或者手动重新匹配新弹幕库）。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
 
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`clear-source`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `clear-source`。
 
 ```
 key script-message clear-source
@@ -251,14 +253,13 @@ key script-message clear-source
 
 #### 保存当前视频弹幕（可选）
 
-在视频播放时手动保存弹幕至视频所在文件夹，保存格式为`xml`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
+在视频播放时手动保存弹幕至视频所在文件夹，保存格式为 `xml`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
 
-想要通过快捷键使用此功能，请添加类似下面的配置到`input.conf`中。从源添加弹幕功能对应的脚本消息为`immediately_save_danmaku`。
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `immediately_save_danmaku`。
 
 ```
 key script-message immediately_save_danmaku
 ```
-
 
 ## 配置选项（可选）
 
@@ -274,12 +275,11 @@ key script-message immediately_save_danmaku
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 api_server=https://api.dandanplay.net
 ```
-
 
 ### load_more_danmaku
 
@@ -287,15 +287,16 @@ api_server=https://api.dandanplay.net
 
 由于弹弹Play默认对于弹幕较多的番剧加载并且整合弹幕的上限大约每集7000条，而这7000条弹幕也不是均匀分配，例如有时弹幕基本只来自于哔哩哔哩，有时弹幕又只来自于巴哈姆特。这样的话弹幕观看体验就和直接在哔哩哔哩或者巴哈姆特观看没有区别了，失去了弹弹Play整合全平台弹幕的优势。
 
-因此，本人添加了配置选项`load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
+因此，本人添加了配置选项 `load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
 
 #### 使用方法
 
-想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 load_more_danmaku=yes
 ```
+
 ### auto_load
 
 #### 功能说明
@@ -316,17 +317,18 @@ load_more_danmaku=yes
 └── KitaujiSub_Make_Heroine_ga_Oosugiru!_08WebRipHEVC_AACCHS_JP.mp4
 ```
 
-只要在播放第一集`KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4`的时候手动搜索并且加载过一次弹幕，那么打开第二集时就会直接自动加载第二集的弹幕，打开第三集时就会直接加载第三集的弹幕，以此类推，不用再手动搜索
+只要在播放第一集 `KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4`的时候手动搜索并且加载过一次弹幕，那么打开第二集时就会直接自动加载第二集的弹幕，打开第三集时就会直接加载第三集的弹幕，以此类推，不用再手动搜索
 
 #### 使用方法
 
-想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 auto_load=yes
 ```
 
 注意⚠️： 一个文件夹下有且仅有一同部番剧的若干视频文件才会生效。下面这种情况下，如果手动搜索并且加载过一次《少女歌剧》第一集的弹幕，《哭泣少女乐队》第二集必须重新手动识别，但这样会破坏《少女歌剧》的弹幕记录
+
 ```
 少女歌剧
 ├── 少女歌剧1.mp4
@@ -344,7 +346,7 @@ auto_load=yes
 
 #### 使用方法
 
-想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 autoload_local_danmaku=yes
@@ -366,7 +368,7 @@ autoload_local_danmaku=yes
 
 #### 使用方法
 
-想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 autoload_for_url=yes
@@ -376,15 +378,15 @@ autoload_for_url=yes
 
 > [!NOTE]
 >
-> 该可选配置项在Release v1.2.0之后已废除。现在通过`从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过`add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
+> 该可选配置项在Release v1.2.0之后已废除。现在通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过 `add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
 
 #### 功能说明
 
-开启此选项后，通过`从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源会被记录，并且下次播放同一个视频的时候会自动关联并加载添加过的弹幕源。
+开启此选项后，通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源会被记录，并且下次播放同一个视频的时候会自动关联并加载添加过的弹幕源。
 
 #### 使用方法
 
-想要开启此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加如下内容：
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
 
 ```
 add_from_source=yes
@@ -398,9 +400,9 @@ add_from_source=yes
 
 > [!NOTE]
 >
-> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭`save_danmaku`选项。
+> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭 `save_danmaku`选项。
 >
-> `save_danmaku`选项的打开和关闭可以运行时实时更新。在`input.conf`中添加如下内容，可通过快捷键实时控制`save_danmaku`选项的打开和关闭
+> `save_danmaku`选项的打开和关闭可以运行时实时更新。在 `input.conf`中添加如下内容，可通过快捷键实时控制 `save_danmaku`选项的打开和关闭
 >
 > ```
 > key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
@@ -408,28 +410,27 @@ add_from_source=yes
 
 #### 使用方法
 
-想要启用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并指定如下内容：
+想要启用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
 
 ```
 save_danmaku=yes
 ```
 
-
 ### user_agent
 
 #### 功能说明
 
-自定义`curl`发送网络请求时使用的 User Agent，默认值是`mpv_danmaku/1.0`
+自定义 `curl`发送网络请求时使用的 User Agent，默认值是 `mpv_danmaku/1.0`
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
 
 > [!NOTE]
 >
 > User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
 >
-> 若想提高URL播放的哈希匹配成功率，可以将此项设为`mpv`或浏览器的User-Agent
+> 若想提高URL播放的哈希匹配成功率，可以将此项设为 `mpv`或浏览器的User-Agent
 
 ```
 user_agent=mpv_danmaku/1.0
@@ -439,20 +440,21 @@ user_agent=mpv_danmaku/1.0
 
 #### 功能说明
 
-自定义`curl`发送网络请求时使用的代理，默认禁用
+自定义 `curl`发送网络请求时使用的代理，默认禁用
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 proxy=127.0.0.1:7890
 ```
+
 ### vf_fps
 
 #### 功能说明
 
-指定是否使用 fps 视频滤镜`@danmaku:fps=fps=60/1.001`，可大幅提升弹幕平滑度。默认禁用
+指定是否使用 fps 视频滤镜 `@danmaku:fps=fps=60/1.001`，可大幅提升弹幕平滑度。默认禁用
 
 注意该视频滤镜的性能开销较大，需在确保设备性能足够的前提下开启
 
@@ -460,7 +462,7 @@ proxy=127.0.0.1:7890
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并指定如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
 
 ```
 vf_fps=yes
@@ -470,13 +472,13 @@ vf_fps=yes
 
 #### 功能说明
 
-指定要使用的 fps 滤镜参数，例如如果设置fps为`60/1.001`，则实际生效的视频滤镜参数为`@danmaku:fps=fps=60/1.001`
+指定要使用的 fps 滤镜参数，例如如果设置fps为 `60/1.001`，则实际生效的视频滤镜参数为 `@danmaku:fps=fps=60/1.001`
 
 使用这个选项，可以根据自己显示器的刷新率调整要使用的视频滤镜参数
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并指定如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
 
 ```
 fps=60/1.001
@@ -490,7 +492,7 @@ fps=60/1.001
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 transparency=48
@@ -506,7 +508,7 @@ transparency=48
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 merge_tolerance=1
@@ -514,14 +516,13 @@ merge_tolerance=1
 
 ### chConvert
 
-
 #### 功能说明
 
 中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体。默认值: 0，不转换简繁字体，按照弹幕源原本字体显示
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 chConvert=0
@@ -537,8 +538,7 @@ chConvert=0
 
 #### 使用示例
 
-想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
-
+想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
 
 > [!IMPORTANT]
 > 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
@@ -557,8 +557,7 @@ DanmakuFactory_Path=/path/to/your/DanmakuFactory
 
 #### 使用示例
 
-想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
-
+想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
 
 > [!IMPORTANT]
 > 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
@@ -571,11 +570,11 @@ OpenCC_Path=/path/to/your/opencc
 
 #### 功能说明
 
-指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径。默认值是`~~/danmaku-history.json`也就是mpv配置文件夹的根目录下
+指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径。默认值是 `~~/danmaku-history.json`也就是mpv配置文件夹的根目录下
 
 #### 使用示例
 
-想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
 
 > [!IMPORTANT]
 > 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认放在mpv配置文件夹的根目录下。
@@ -586,14 +585,13 @@ history_path=/path/to/your/danmaku-history.json
 
 ### message_x
 
-
 #### 功能说明
 
 自定义插件相关提示的显示位置，距离屏幕左上角的x轴的距离
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 message_x=30
@@ -601,24 +599,35 @@ message_x=30
 
 ### message_y
 
-
 #### 功能说明
 
 自定义插件相关提示的显示位置，距离屏幕左上角的y轴的距离
 
 #### 使用方法
 
-想要使用此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并自定义如下内容：
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
 message_y=30
+```
+
+### title_replace
+
+自定义标题解析中的额外替换规则，内容格式为 JSON 字符串，替换模式为 lua 的 string.gsub 函数
+
+注意⚠️：由于 mpv 的 lua 版本限制，自定义规则只支持形如 %n 的捕获组写法，即示例用法，不支持直接替换字符的写法
+
+用法示例：
+
+```
+title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 ```
 
 ### DanmakuFactory相关配置（自定义弹幕样式相关配置）
 
 默认配置如下，可根据需求更改并自定义弹幕样式
 
-想要配置此选项，请在mpv配置文件夹下的`script-opts`中创建`uosc_danmaku.conf`文件并添加类似如下内容：
+想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
 
 ```
 #速度
@@ -650,7 +659,7 @@ blacklist_path=
 
 ### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”/搜索弹幕总是无结果/弹幕无法加载
 
-可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有`bin\DanmakuFactory`文件夹下的DanmakuFactory.exe，和`bin\dandanplay`文件夹下的`dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
+可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有 `bin\DanmakuFactory`文件夹下的DanmakuFactory.exe，和 `bin\dandanplay`文件夹下的 `dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
 
