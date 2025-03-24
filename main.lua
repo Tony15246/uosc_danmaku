@@ -264,7 +264,7 @@ function read_danmaku_source_record(path)
             for _, source in ipairs(history_record) do
                 local blocked = false
                 local from = string.match(source,"<(.-)>")
-                local delay = string.match(source,"{{(.-)}}")
+                local source_delay = string.match(source,"{{(.-)}}")
                 if source:match("^-") then
                     source = source:sub(2)
                     blocked = true
@@ -273,23 +273,27 @@ function read_danmaku_source_record(path)
                 if from then
                     source = source:gsub("<" .. from .. ">", "")
                 end
-                if delay then
-                    source = source:gsub("{{%-?" .. delay .. "}}", "")
+                if source_delay then
+                    source = source:gsub("{{%-?" .. source_delay .. "}}", "")
                 end
 
-                danmaku.sources[source] = {}
+                if source ~= "overall" then
+                    danmaku.sources[source] = {}
 
-                if blocked then
-                    danmaku.sources[source]["blocked"] = true
+                    if blocked then
+                        danmaku.sources[source]["blocked"] = true
+                    end
+
+                    danmaku.sources[source]["from"] = from or "user_custom"
+
+                    if source_delay then
+                        danmaku.sources[source]["delay"] = source_delay
+                    end
+
+                    danmaku.sources[source]["from_history"] = true
+                else
+                    delay = source_delay
                 end
-
-                danmaku.sources[source]["from"] = from or "user_custom"
-
-                if delay then
-                    danmaku.sources[source]["delay"] = delay
-                end
-
-                danmaku.sources[source]["from_history"] = true
             end
         end
     end
@@ -835,7 +839,12 @@ mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", f
     mp.commandv("script-message", "show_danmaku_keyboard")
 end)
 
+local delay_write_timer = mp.add_timeout(1, function ()
+    add_source_to_history("overall", {delay = delay})
+end, true)
 mp.register_script_message("danmaku-delay", function(number)
+    delay_write_timer:kill()
+
     local value = tonumber(number)
     if value == nil then
         return msg.error('command danmaku-delay: invalid time')
@@ -850,6 +859,8 @@ mp.register_script_message("danmaku-delay", function(number)
     end
     show_message('设置弹幕延迟: ' .. delay .. ' s')
     mp.set_property_native(delay_property, delay)
+
+    delay_write_timer:resume()
 end)
 
 mp.register_script_message("clear-source", function()
