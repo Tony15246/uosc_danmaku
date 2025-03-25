@@ -199,10 +199,9 @@ function remove_source_from_history(rm_source)
         local history = utils.parse_json(history_json) or {}
 
         if history[path] ~= nil then
-            for i, source in ipairs(history[path]) do
-                source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
+            for source in pairs(history[path]) do
                 if source == rm_source then
-                    table.remove(history[path], i)
+                    history[path][source] = nil
                     break
                 end
             end
@@ -224,27 +223,16 @@ function add_source_to_history(add_url, add_source)
         local history = utils.parse_json(history_json) or {}
         history[path] = history[path] or {}
 
-        for i, source in ipairs(history[path]) do
-            source = source:gsub("^-", ""):gsub("^<.->", ""):gsub("^{{.-}}", "")
-            if source == add_url then
-                table.remove(history[path], i)
-                break
-            end
+        if not history[path][add_url] then
+            history[path][add_url] = {}
         end
+
+        history[path][add_url].from = add_source.from or "user_custom"
+        history[path][add_url].blocked = add_source.blocked or false
 
         if add_source.delay then
-            add_url = "{{" .. add_source.delay .. "}}" .. add_url
+            history[path][add_url].delay = add_source.delay
         end
-
-        if add_source.from then
-            add_url = "<" .. add_source.from .. ">" .. add_url
-        end
-
-        if add_source.blocked then
-            add_url = "-" .. add_url
-        end
-
-        table.insert(history[path], add_url)
 
         write_json_file(history_path, history)
     end
@@ -261,35 +249,49 @@ function read_danmaku_source_record(path)
         local history = utils.parse_json(history_json) or {}
         local history_record = history[path]
         if history_record ~= nil then
-            for _, source in ipairs(history_record) do
-                local blocked = false
-                local from = string.match(source,"<(.-)>")
-                local delay = string.match(source,"{{(.-)}}")
-                if source:match("^-") then
-                    source = source:sub(2)
-                    blocked = true
-                    from = "api_server"
-                end
-                if from then
-                    source = source:gsub("<" .. from .. ">", "")
-                end
-                if delay then
-                    source = source:gsub("{{%-?" .. delay .. "}}", "")
-                end
+            local from = nil
+            local delay = nil
+            local blocked = false
+            if is_nested_table(history_record) then
+                for source in pairs(history_record) do
+                    blocked = history_record[source].blocked or false
+                    from = history_record[source].from
+                    delay = history_record[source].delay
 
-                danmaku.sources[source] = {}
-
-                if blocked then
-                    danmaku.sources[source]["blocked"] = true
+                    danmaku.sources[source] = {}
+                    danmaku.sources[source]["from"] = from or "user_custom"
+                    danmaku.sources[source]["blocked"] = blocked
+                    if delay then
+                        danmaku.sources[source]["delay"] = delay
+                    end
+                    danmaku.sources[source]["from_history"] = true
                 end
+            else
+                local danmaku_sources = {}
+                for _, source in ipairs(history_record) do
+                    from = source:match("<(.-)>")
+                    delay = source:match("{{(.-)}}")
+                    source = source:gsub("<.->", ""):gsub("{{.-}}", "")
 
-                danmaku.sources[source]["from"] = from or "user_custom"
+                    if source:match("^%-") then
+                        source = source:sub(2)
+                        blocked = true
+                        from = "api_server"
+                    end
 
-                if delay then
-                    danmaku.sources[source]["delay"] = delay
+                    danmaku.sources[source] = {}
+                    danmaku.sources[source]["from"] = from or "user_custom"
+                    danmaku.sources[source]["blocked"] = blocked
+                    if delay then
+                        danmaku.sources[source]["delay"] = delay
+                    end
+                    danmaku_sources[source] = shallow_copy(danmaku.sources[source])
+                    danmaku.sources[source]["from_history"] = true
                 end
-
-                danmaku.sources[source]["from_history"] = true
+                if next(danmaku_sources) ~= nil then
+                    history[path] = danmaku_sources
+                    write_json_file(history_path, history)
+                end
             end
         end
     end
