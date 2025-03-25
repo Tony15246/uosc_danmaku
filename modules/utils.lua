@@ -87,6 +87,26 @@ function itable_index_of(itable, value)
     end
 end
 
+function is_nested_table(t)
+    if type(t) ~= "table" then
+        return false
+    end
+    for _, v in pairs(t) do
+        if type(v) == "table" then
+            return true
+        end
+    end
+    return false
+end
+
+function shallow_copy(original)
+    local copy = {}
+    for k, v in pairs(original) do
+        copy[k] = v
+    end
+    return copy
+end
+
 function remove_query(url)
     local qpos = string.find(url, "?", 1, true)
     if qpos then

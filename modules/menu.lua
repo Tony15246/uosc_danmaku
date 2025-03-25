@@ -741,11 +741,7 @@ mp.register_script_message('setup-danmaku-source', function(json)
 
         if event.action == "unblock" then
             danmaku.sources[event.value]["blocked"] = false
-            if danmaku.sources[event.value]["delay"] then
-                add_source_to_history(event.value, danmaku.sources[event.value])
-            else
-                remove_source_from_history(event.value)
-            end
+            add_source_to_history(event.value, danmaku.sources[event.value])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
             load_danmaku(true)
