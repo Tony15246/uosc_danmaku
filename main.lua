@@ -198,10 +198,10 @@ function remove_source_from_history(rm_source)
     if history_json then
         local history = utils.parse_json(history_json) or {}
 
-        if history[path] ~= nil then
-            for source in pairs(history[path]) do
+        if history[path] ~= nil and history[path]["sources"] ~= nil then
+            for source in pairs(history[path]["sources"]) do
                 if source == rm_source then
-                    history[path][source] = nil
+                    history[path]["sources"][source] = nil
                     break
                 end
             end
@@ -223,15 +223,19 @@ function add_source_to_history(add_url, add_source)
         local history = utils.parse_json(history_json) or {}
         history[path] = history[path] or {}
 
-        if not history[path][add_url] then
-            history[path][add_url] = {}
+        if not history[path]["sources"] then
+            history[path]["sources"] = {}
         end
 
-        history[path][add_url].from = add_source.from or "user_custom"
-        history[path][add_url].blocked = add_source.blocked or false
+        if not history[path]["sources"][add_url] then
+            history[path]["sources"][add_url] = {}
+        end
+
+        history[path]["sources"][add_url].from = add_source.from or "user_custom"
+        history[path]["sources"][add_url].blocked = add_source.blocked or false
 
         if add_source.delay then
-            history[path][add_url].delay = add_source.delay
+            history[path]["sources"][add_url].delay = add_source.delay
         end
 
         write_json_file(history_path, history)
@@ -247,7 +251,10 @@ function read_danmaku_source_record(path)
 
     if history_json ~= nil then
         local history = utils.parse_json(history_json) or {}
-        local history_record = history[path]
+        if history[path] == nil then
+            return
+        end
+        local history_record = history[path]["sources"]
         if history_record ~= nil then
             local from = nil
             local delay = nil
@@ -289,7 +296,7 @@ function read_danmaku_source_record(path)
                     danmaku.sources[source]["from_history"] = true
                 end
                 if next(danmaku_sources) ~= nil then
-                    history[path] = danmaku_sources
+                    history[path]["sources"] = danmaku_sources
                     write_json_file(history_path, history)
                 end
             end
