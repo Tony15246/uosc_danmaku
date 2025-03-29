@@ -857,7 +857,7 @@ mp.register_script_message("danmaku-delay", function(number)
     if enabled and comments ~= nil then
         render()
     end
-    show_message('设置弹幕延迟: ' .. delay .. ' s')
+    show_message('设置弹幕延迟: ' .. string.format("%.1f", delay + 1e-10) .. ' s')
     mp.set_property_native(delay_property, delay)
 end)
 

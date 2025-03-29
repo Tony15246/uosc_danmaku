@@ -418,7 +418,7 @@ function danmaku_delay_setup(source_url)
     for url, source in pairs(danmaku.sources) do
         if source.fname and not source.blocked then
             local item = {title = url, value = url, keep_open = true,}
-            item.hint = "当前弹幕源延迟:" .. (source.delay and tostring(source.delay) or "0.0") .. "秒"
+            item.hint = "当前弹幕源延迟:" .. (source.delay and string.format("%.1f", source.delay + 1e-10) or "0.0") .. "秒"
             item.active = url == source_url
             table.insert(sources, item)
         end
