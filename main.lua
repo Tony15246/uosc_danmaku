@@ -10,6 +10,7 @@ require("modules/utils")
 require("modules/guess")
 require('modules/render')
 require('modules/menu')
+require("modules/colors")
 
 require("apis/dandanplay")
 require('apis/extra')
@@ -836,12 +837,27 @@ mp.register_event("file-loaded", function()
     end
 end)
 
+mp.register_event("file-loaded", function()
+    login_or_update_token()
+end)
+
 -------------- 键位绑定 --------------
 mp.add_key_binding(options.open_search_danmaku_menu_key, "open_search_danmaku_menu", function()
     mp.commandv("script-message", "open_search_danmaku_menu")
 end)
 mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", function()
     mp.commandv("script-message", "show_danmaku_keyboard")
+end)
+mp.add_key_binding("C", "send_danmaku_interactively", function()
+    mp.set_property("pause", "yes")
+    input.get({
+        prompt = "请输入弹幕内容：",
+        submit = function (text)
+            input.terminate()
+            mp.set_property("pause", "no")
+            mp.commandv("script-message", "send_danmaku", text)
+        end
+    })
 end)
 
 mp.register_script_message("danmaku-delay", function(number)
@@ -904,6 +920,11 @@ mp.register_script_message("show_danmaku_keyboard", function()
         set_danmaku_visibility(false)
         hide_danmaku_func()
     end
+end)
+
+mp.register_script_message("send_danmaku", function (comment)
+    -- pause video first
+    send_danmaku(danmaku.episodeId, comment)
 end)
 
 mp.register_script_message("immediately_save_danmaku", save_danmaku)
