@@ -74,7 +74,7 @@
 > 2. 记得给bin文件夹下的文件赋予可执行权限
 
 ```
-~/.config/mpv/scripts 
+~/.config/mpv/scripts
 └── uosc_danmaku
     ├── api.lua
     ├── bin
@@ -634,7 +634,7 @@ title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 scrolltime=15
 #字体(名称两边不需要使用引号""括住)
 fontname=sans-serif
-#大小 
+#大小
 fontsize=50
 #是否严格保持指定的字号大小，（true false）
 #这会破坏特效弹幕的显示，建议仅当弹幕显示重叠时启用
@@ -679,3 +679,7 @@ blacklist_path=
 - b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
 - 巴哈姆特在线播放弹幕获取实现参考：[MPV-Play-BAHA-Comments](https://github.com/s594569321/MPV-Play-BAHA-Comments)
 - 向dandanplay开放平台发送请求时附加身份验证信息，避免应用凭证公开: https://github.com/zhongfly/dandanplay
+
+## 相关项目
+
+- [slqy123/uosc_danmaku](https://github.com/slqy123/uosc_danmaku) 本项目的fork版本，实现了通过dandanplay api发送弹幕的功能，由于版本的兼容性以及功能的易用性问题未被合并，具体讨论请参阅 [#220](https://github.com/Tony15246/uosc_danmaku/pull/220)
