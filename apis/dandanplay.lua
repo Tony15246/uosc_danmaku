@@ -68,8 +68,11 @@ function get_danmaku_fallback(query)
     end)
 end
 
--- 返回弹幕请求参数
-function get_danmaku_args(url)
+-- 返回弹幕请求参数，若传入data，则为视为POST请求
+---@param url string
+---@param data table?
+function get_danmaku_args(url, data)
+    local method = data and "POST" or "GET"
     local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
     if platform == "windows" then
         dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
@@ -79,13 +82,27 @@ function get_danmaku_args(url)
     local args = {
         dandanplay_path,
         "-X",
-        "GET",
+        method,
         "-H",
         "Accept: application/json",
         "-H",
         "User-Agent: " .. options.user_agent,
-        url,
     }
+
+    if data then
+        local body = utils.format_json(data)
+        table.insert(args, "-d")
+        table.insert(args, body)
+        table.insert(args, "-H")
+        table.insert(args, "Content-Type: application/json")
+    end
+
+    if AuthorizationToken then
+        table.insert(args, "-H")
+        table.insert(args, "Authorization: Bearer " .. AuthorizationToken)
+    end
+
+    table.insert(args, url)
 
     return args
 end
@@ -202,34 +219,14 @@ local function match_file(file_path, file_name, callback)
         file_name = title
     end
 
-    local url = options.api_server .. "/api/v2/match"
-    local body = utils.format_json({
-        fileName = file_name,
-        fileHash = hash or "",
-        matchMode = "hashAndFileName"
-    })
-
-    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-    if platform == "windows" then
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-    else
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-    end
-
-    local args = {
-        dandanplay_path,
-        "-X",
-        "POST",
-        "-H",
-        "Content-Type: application/json",
-        "-H",
-        "Accept: application/json",
-        "-H",
-        "User-Agent: " .. options.user_agent,
-        "-d",
-        body,
-        url,
-    }
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/match",
+        {
+            fileName = file_name,
+            fileHash = hash or "",
+            matchMode = "hashAndFileName",
+        }
+    )
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -677,32 +674,13 @@ function login_or_update_token()
 		end
 	end
 
-	local url = options.api_server .. "/api/v2/login"
-	local body = utils.format_json({
-		userName = options.username,
-		password = options.password,
-	})
-	local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-	if platform == "windows" then
-		dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-	else
-		dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-	end
-
-	local args = {
-		dandanplay_path,
-		"-X",
-		"POST",
-		"-H",
-		"Content-Type: application/json",
-		"-H",
-		"Accept: application/json",
-		"-H",
-		"User-Agent: " .. options.user_agent,
-		"-d",
-		body,
-		url,
-	}
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/login",
+        {
+            userName = options.username,
+            password = options.password,
+        }
+    )
 
 	call_cmd_async(args, function(error, json)
 		async_running = false
@@ -711,7 +689,6 @@ function login_or_update_token()
 			return
 		end
 
-		msg.info(json)
 		local data = utils.parse_json(json)
 		if not data or not data["token"] then
 			msg.error("登录失败，检查用户名和密码")
@@ -777,37 +754,21 @@ function send_danmaku(episodeId, comment)
         ::continue::
     end
     comment = comment:sub(start)
-    local url = options.api_server .. "/api/v2/comment/" .. episodeId
-    local body = utils.format_json({
-        time = mp.get_property_number("time-pos"),
-        mode = position,
-        color = color,
-        comment = comment,
-    })
-    msg.info(body)
-	local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-	if platform == "windows" then
-		dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-	else
-		dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-	end
 
-	local args = {
-		dandanplay_path,
-		"-X",
-		"POST",
-		"-H",
-		"Content-Type: application/json",
-		"-H",
-		"Accept: application/json",
-		"-H",
-		"User-Agent: " .. options.user_agent,
-		"-H",
-		"Authorization: Bearer " .. AuthorizationToken,
-		"-d",
-		body,
-		url,
-	}
+    if comment == "" then
+        msg.verbose("弹幕内容为空")
+        return
+    end
+
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/comment/" .. episodeId,
+        {
+            time = mp.get_property_number("time-pos"),
+            mode = position,
+            color = color,
+            comment = comment,
+        }
+    )
 
 	call_cmd_async(args, function(error, json)
 		async_running = false
