@@ -75,6 +75,14 @@ options = {
            "rules": [{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }],
        }]
     ]],
+	-- 用户名和密码，用于向dandanplay服务器发送弹幕
+	username = "",
+	password = "",
+	-- 用户身份验证令牌的缓存路径，支持绝对路径和相对路径
+	authorization_token_path = "~~/authentication-token.json",
+	-- 发送弹幕时默认的颜色和位置
+	user_default_danmaku_color = "white",
+	user_danmaku_position = "normal", -- normal, top, bottom
 }
 
 opt.read_options(options, mp.get_script_name(), function() end)

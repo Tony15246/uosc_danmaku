@@ -21,6 +21,8 @@ function set_episode_id(input, from_menu)
         end
     end
     local episodeId = tonumber(input)
+    danmaku.episodeId = episodeId
+    msg.info("设置剧集ID为：" .. episodeId)
     write_history(episodeId)
     set_danmaku_button()
     if options.load_more_danmaku then
@@ -66,8 +68,11 @@ function get_danmaku_fallback(query)
     end)
 end
 
--- 返回弹幕请求参数
-function get_danmaku_args(url)
+-- 返回弹幕请求参数，若传入data，则为视为POST请求
+---@param url string
+---@param data table?
+function get_danmaku_args(url, data)
+    local method = data and "POST" or "GET"
     local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
     if platform == "windows" then
         dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
@@ -77,13 +82,27 @@ function get_danmaku_args(url)
     local args = {
         dandanplay_path,
         "-X",
-        "GET",
+        method,
         "-H",
         "Accept: application/json",
         "-H",
         "User-Agent: " .. options.user_agent,
-        url,
     }
+
+    if data then
+        local body = utils.format_json(data)
+        table.insert(args, "-d")
+        table.insert(args, body)
+        table.insert(args, "-H")
+        table.insert(args, "Content-Type: application/json")
+    end
+
+    if AuthorizationToken then
+        table.insert(args, "-H")
+        table.insert(args, "Authorization: Bearer " .. AuthorizationToken)
+    end
+
+    table.insert(args, url)
 
     return args
 end
@@ -200,34 +219,14 @@ local function match_file(file_path, file_name, callback)
         file_name = title
     end
 
-    local url = options.api_server .. "/api/v2/match"
-    local body = utils.format_json({
-        fileName = file_name,
-        fileHash = hash or "",
-        matchMode = "hashAndFileName"
-    })
-
-    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-    if platform == "windows" then
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-    else
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-    end
-
-    local args = {
-        dandanplay_path,
-        "-X",
-        "POST",
-        "-H",
-        "Content-Type: application/json",
-        "-H",
-        "Accept: application/json",
-        "-H",
-        "User-Agent: " .. options.user_agent,
-        "-d",
-        body,
-        url,
-    }
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/match",
+        {
+            fileName = file_name,
+            fileHash = hash or "",
+            matchMode = "hashAndFileName",
+        }
+    )
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -647,4 +646,142 @@ function get_danmaku_with_hash(file_name, file_path)
             end
         end)
     end
+end
+
+---@type string?
+AuthorizationToken = nil -- will be assigned by login_or_update_token after file-loaded event
+function login_or_update_token() 
+  local authorization_token_path = mp.command_native({"expand-path", options.authorization_token_path})
+	if options.username == "" or options.password == "" then
+		msg.info("用户名或密码未设置，跳过登录")
+		return
+	end
+	if file_exists(authorization_token_path) then
+		local token_data = read_file(authorization_token_path)
+		local data = utils.parse_json(token_data)
+		if data and data["token"] then
+			local token = data["token"]
+			local timestamp = data["timestamp"]
+			if token and timestamp then
+				local current_time = os.time()
+				if current_time - timestamp < 60 * 60 * 24 * 21 then  -- valid for 21 days
+					AuthorizationToken = token
+					msg.info("使用缓存的身份验证令牌")
+				end
+				if current_time - timestamp < 60 * 60 * 24 * 7 then
+					return -- skip refresh within 7 days
+				end
+			end
+		end
+	end
+
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/login",
+        {
+            userName = options.username,
+            password = options.password,
+        }
+    )
+
+	call_cmd_async(args, function(error, json)
+		async_running = false
+		if error then
+			msg.error("HTTP 请求失败：" .. error)
+			return
+		end
+
+		local data = utils.parse_json(json)
+		if not data or not data["token"] then
+			msg.error("登录失败，检查用户名和密码")
+			return
+		end
+		msg.info("登录成功，token:", data["token"])
+
+		local token = data["token"]
+		local token_data = {
+			token = token,
+			timestamp = os.time(),
+		}
+		AuthorizationToken = token
+		write_json_file(authorization_token_path, token_data)
+	end)
+end
+
+---@param episodeId number
+---@param comment string
+function send_danmaku(episodeId, comment)
+    if not AuthorizationToken then
+        msg.error("弹幕发送失败：身份验证令牌未设置")
+        show_message("弹幕发送失败：身份验证令牌未设置", 5)
+        return
+    end
+    local color = NamedColors[options.user_default_danmaku_color]
+    local position_map = {
+        normal = 1,
+        n = 1,
+        bottom = 4,
+        b = 4,
+        top = 5,
+        t = 5,
+    }
+    local position = position_map[options.user_danmaku_position] or 1
+    local start = 1
+    while true do
+        local char = comment:sub(start, start)
+        if char == " " then
+            start = start + 1
+        elseif char == "/" then
+            local end_pos = comment:find(" ", start)
+            if not end_pos then
+                start = start + 1
+                goto continue
+            end
+            local cmd = comment:sub(start + 1, end_pos - 1)
+            start = end_pos + 1
+            if position_map[cmd] then
+                position = position_map[cmd]
+            elseif NamedColors[cmd] then
+                color = NamedColors[cmd]
+            else
+                if cmd:match("^[0-9A-Fa-f]+$") and #cmd == 6 then
+                    color = tonumber(cmd, 16)
+                else
+                    msg.error("无效命令：" .. cmd)
+                end
+            end
+        else
+            break
+        end
+        ::continue::
+    end
+    comment = comment:sub(start)
+
+    if comment == "" then
+        msg.verbose("弹幕内容为空")
+        return
+    end
+
+    local args = get_danmaku_args(
+        options.api_server .. "/api/v2/comment/" .. episodeId,
+        {
+            time = mp.get_property_number("time-pos"),
+            mode = position,
+            color = color,
+            comment = comment,
+        }
+    )
+
+	call_cmd_async(args, function(error, json)
+		async_running = false
+		if error then
+			msg.error("HTTP 请求失败：" .. error)
+			return
+		end
+		msg.info("弹幕发送成功")
+		show_message("弹幕发送成功", 3)
+        -- local sec = tonumber(os.clock() + 1)
+        -- while (os.clock() < sec) do
+        -- end
+		init(mp.get_property("path"))
+	end)
 end
