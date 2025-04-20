@@ -358,6 +358,7 @@ function handle_related_danmaku(index, relateds, related, shift, callback)
         else
             show_message("无数据", 3)
             msg.info("无数据")
+            callback(comments)
         end
     end)
 end
