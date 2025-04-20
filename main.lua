@@ -195,6 +195,10 @@ function remove_source_from_history(rm_source)
     local history_json = read_file(history_path)
     local path = mp.get_property("path")
 
+    if is_protocol(path) then
+        path = remove_query(path)
+    end
+
     if history_json then
         local history = utils.parse_json(history_json) or {}
 
