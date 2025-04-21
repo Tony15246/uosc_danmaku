@@ -24,7 +24,7 @@ function get_animes(query)
     end
     msg.verbose("尝试获取番剧数据：" .. full_url)
 
-    local args = get_danmaku_args(full_url)
+    local args = make_danmaku_request_args("GET", full_url)
     local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
     if res.status ~= 0 then
@@ -88,7 +88,7 @@ function get_episodes(animeTitle, bangumiId)
         show_message(message, 30)
     end
 
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
     local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
     if res.status ~= 0 then

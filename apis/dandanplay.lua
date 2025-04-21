@@ -67,7 +67,7 @@ function get_danmaku_fallback(query)
 end
 
 -- 返回弹幕请求参数
-function get_danmaku_args(url)
+function make_danmaku_request_args(method, url, headers, body)
     local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
     if platform == "windows" then
         dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
@@ -77,13 +77,25 @@ function get_danmaku_args(url)
     local args = {
         dandanplay_path,
         "-X",
-        "GET",
+        method,
+        url,
         "-H",
         "Accept: application/json",
         "-H",
         "User-Agent: " .. options.user_agent,
-        url,
     }
+
+    if headers then
+        for k, v in pairs(headers) do
+            table.insert(args, '-H')
+            table.insert(args, string.format('%s: %s', k, v))
+        end
+    end
+
+    if body then
+        table.insert(args, '-d')
+        table.insert(args, utils.format_json(body))
+    end
 
     return args
 end
@@ -91,7 +103,7 @@ end
 -- 尝试通过解析文件名匹配剧集
 local function match_episode(animeTitle, bangumiId, episode_num)
     local url = options.api_server .. "/api/v2/bangumi/" .. bangumiId
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -136,7 +148,7 @@ local function match_anime()
     local url = options.api_server .. "/api/v2/search/anime"
     local params = "keyword=" .. encoded_query
     local full_url = url .. "?" .. params
-    local args = get_danmaku_args(full_url)
+    local args = make_danmaku_request_args("GET", full_url)
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -201,33 +213,14 @@ local function match_file(file_path, file_name, callback)
     end
 
     local url = options.api_server .. "/api/v2/match"
-    local body = utils.format_json({
-        fileName = file_name,
-        fileHash = hash or "",
-        matchMode = "hashAndFileName"
-    })
-
-    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-    if platform == "windows" then
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-    else
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-    end
-
-    local args = {
-        dandanplay_path,
-        "-X",
-        "POST",
-        "-H",
-        "Content-Type: application/json",
-        "-H",
-        "Accept: application/json",
-        "-H",
-        "User-Agent: " .. options.user_agent,
-        "-d",
-        body,
-        url,
-    }
+    local args = make_danmaku_request_args("POST", url, {
+            ["Content-Type"] = "application/json"
+        }, {
+            fileName = file_name,
+            fileHash = hash or "",
+            matchMode = "hashAndFileName"
+        }
+    )
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -310,7 +303,7 @@ function handle_danmaku_data(query, data, from_menu)
         end
         -- 重新发起请求
         local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
-        local args = get_danmaku_args(url)
+        local args = make_danmaku_request_args("GET", url)
         fetch_danmaku_data(args, function(retry_data)
             if not retry_data or not retry_data["comments"] or retry_data["count"] == 0 then
                 get_danmaku_fallback(query)
@@ -331,7 +324,7 @@ function handle_related_danmaku(index, relateds, related, shift, callback)
     show_message(string.format("正在从第三方库装填弹幕 [%d/%d]", index, #relateds), 30)
     msg.verbose("正在从第三方库装填弹幕：" .. url)
 
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
     fetch_danmaku_data(args, function(data)
         local comments = {}
         if data and data["comments"] then
@@ -367,7 +360,7 @@ end
 function handle_main_danmaku(url, from_menu)
     show_message("正在从弹弹Play库装填弹幕", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["comments"] then
@@ -417,7 +410,7 @@ function fetch_danmaku(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
 
     fetch_danmaku_data(args, function(data)
         handle_fetched_danmaku(data, url, from_menu)
@@ -429,7 +422,7 @@ function fetch_danmaku_all(episodeId, from_menu)
     local url = options.api_server .. "/api/v2/related/" .. episodeId
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["relateds"] then
@@ -536,7 +529,7 @@ function add_danmaku_source_online(query, from_menu)
     local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
-    local args = get_danmaku_args(url)
+    local args = make_danmaku_request_args("GET", url)
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["comments"] then
