@@ -1,5 +1,6 @@
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
+local base64 = require("modules/base64")
 
 local Source = {
     ["b 站"] = "bilibili1",
@@ -35,7 +36,7 @@ end
 local function query_tmdb(title, class, menu)
     local encoded_title = url_encode(title)
     local url = string.format("https://api.themoviedb.org/3/search/%s?api_key=%s&query=%s&language=zh-CN",
-    class, options.tmdb_api_key, encoded_title)
+    class, base64.decode(options.tmdb_api_key), encoded_title)
 
     local cmd = {
         "curl",
@@ -294,6 +295,17 @@ function query_extra(name, class)
 
     if is_chinese(name) then
         search_query(name, class, menu)
+        return
+    end
+
+
+    if options.tmdb_api_key == "" or #base64.decode(options.tmdb_api_key) < 32 then
+        local message = "请正确设置 tmdb_api_key 或尝试使用中文搜索"
+        if uosc_available then
+            update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, name)
+        else
+            show_message(message, 3)
+        end
         return
     end
 
