@@ -298,7 +298,7 @@ function query_extra(name, class)
     end
 
     if class == "dy" then
-        title = query_tmdb(name, "moive", menu)
+        title = query_tmdb(name, "movie", menu)
     else
         title = query_tmdb(name, "tv", menu)
     end
