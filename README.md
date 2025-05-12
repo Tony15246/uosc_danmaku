@@ -329,7 +329,11 @@ key script-message immediately_save_danmaku
 ### 弹幕相关
 
 <details>
-<summary>api_server———自定义弹幕API</summary>
+<summary>
+api_server
+
+> 自定义弹幕API
+</summary>
 
 ### api_server
 
@@ -353,7 +357,11 @@ api_server=https://api.dandanplay.net
 ---
 
 <details>
-<summary>fallback_server———自定义b站和爱腾优的弹幕获取的兜底服务器地址</summary>
+<summary>
+fallback_server
+
+> 自定义b站和爱腾优的弹幕获取的兜底服务器地址
+</summary>
 
 ### fallback_server
 
@@ -378,7 +386,11 @@ fallback_server=https://fc.lyz05.cn
 ---
 
 <details>
-<summary>tmdb_api_key———设置 tmdb 的 API Key获取非动画条目的中文信息</summary>
+<summary>
+tmdb_api_key
+
+> 设置 tmdb 的 API Key获取非动画条目的中文信息
+</summary>
 
 ### tmdb_api_key
 
@@ -402,7 +414,11 @@ tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
 ---
 
 <details>
-<summary>load_more_danmaku———开关是否全量弹幕源加载</summary>
+<summary>
+load_more_danmaku
+
+> 开关是否全量弹幕源加载
+</summary>
 
 ### load_more_danmaku
 
@@ -424,7 +440,11 @@ load_more_danmaku=yes
 ---
 
 <details>
-<summary>auto_load———开关是否全自动弹幕填装</summary>
+<summary>
+auto_load
+
+> 开关是否全自动弹幕填装
+</summary>
 
 ### auto_load
 
@@ -471,7 +491,11 @@ auto_load=yes
 ---
 
 <details>
-<summary>autoload_local_danmaku———开关是否自动加载同目录下的xml格式弹幕文件</summary>
+<summary>
+autoload_local_danmaku
+
+> 开关是否自动加载同目录下的xml格式弹幕文件
+</summary>
 
 ### autoload_local_danmaku
 
@@ -491,7 +515,11 @@ autoload_local_danmaku=yes
 ---
 
 <details>
-<summary>autoload_for_url———开关是否为url视频文件弹幕关联记忆和继承</summary>
+<summary>
+autoload_for_url
+
+> 开关是否为url视频文件弹幕关联记忆和继承
+</summary>
 
 ### autoload_for_url
 
@@ -519,7 +547,11 @@ autoload_for_url=yes
 ---
 
 <details>
-<summary>add_from_source———开关是否记录通过 从弹幕源向当前弹幕添加新弹幕内容 关联过的弹幕源并下次自动加载（已废除）</summary>
+<summary>
+add_from_source
+
+> 开关是否记录通过 从弹幕源向当前弹幕添加新弹幕内容 关联过的弹幕源并下次自动加载（已废除）
+</summary>
 
 ### add_from_source
 
@@ -543,7 +575,11 @@ add_from_source=yes
 ---
 
 <details>
-<summary>save_danmaku———开关是否自动保存弹幕文件（xml格式）至视频同目录</summary>
+<summary>
+save_danmaku
+
+> 开关是否自动保存弹幕文件（xml格式）至视频同目录
+</summary>
 
 ### save_danmaku
 
@@ -573,7 +609,11 @@ save_danmaku=yes
 ---
 
 <details>
-<summary>vf_fps———开关是否使用fps视频滤镜提升弹幕平滑度（帧数）</summary>
+<summary>
+vf_fps
+
+> 开关是否使用fps视频滤镜提升弹幕平滑度（帧数）
+</summary>
 
 ### vf_fps
 
@@ -597,7 +637,11 @@ vf_fps=yes
 ---
 
 <details>
-<summary>fps———自定义fps滤镜参数</summary>
+<summary>
+fps
+
+> 自定义fps滤镜参数
+</summary>
 
 ### fps
 
@@ -619,7 +663,11 @@ fps=60/1.001
 ---
 
 <details>
-<summary>transparency———自定义弹幕的透明度</summary>
+<summary>
+transparency
+
+> 自定义弹幕的透明度
+</summary>
 
 ### transparency
 
@@ -639,7 +687,11 @@ transparency=48
 ---
 
 <details>
-<summary>merge_tolerance———指定合并重复弹幕的时间间隔的容差值</summary>
+<summary>
+merge_tolerance
+
+> 指定合并重复弹幕的时间间隔的容差值
+</summary>
 
 ### merge_tolerance
 
@@ -661,7 +713,11 @@ merge_tolerance=1
 ---
 
 <details>
-<summary>chConvert———开关是否进行中文简繁转换</summary>
+<summary>
+chConvert
+
+> 开关是否进行中文简繁转换
+</summary>
 
 ### chConvert
 
@@ -683,7 +739,11 @@ chConvert=0
 ### 插件配置相关
 
 <details>
-<summary>user_agent———自定义User Agent</summary>
+<summary>
+user_agent
+
+> 自定义User Agent
+</summary>
 
 ### user_agent
 
@@ -709,7 +769,11 @@ user_agent=mpv_danmaku/1.0
 ---
 
 <details>
-<summary>proxy———自定义代理</summary>
+<summary>
+proxy
+
+> 自定义代理
+</summary>
 
 ### proxy
 
@@ -729,7 +793,11 @@ proxy=127.0.0.1:7890
 ---
 
 <details>
-<summary>DanmakuFactory_Path———指定DanmakuFactory程序路径</summary>
+<summary>
+DanmakuFactory_Path
+
+> 指定DanmakuFactory程序路径
+</summary>
 
 ### DanmakuFactory_Path
 
@@ -754,7 +822,11 @@ DanmakuFactory_Path=/path/to/your/DanmakuFactory
 ---
 
 <details>
-<summary>OpenCC_Path———指定OpenCC程序路径</summary>
+<summary>
+OpenCC_Path
+
+> 指定OpenCC程序路径
+</summary>
 
 ### OpenCC_Path
 
@@ -779,7 +851,11 @@ OpenCC_Path=/path/to/your/opencc
 ---
 
 <details>
-<summary>history_path———指定弹幕关联历史记录文件路径</summary>
+<summary>
+history_path
+
+> 指定弹幕关联历史记录文件路径
+</summary>
 
 ### history_path
 
@@ -802,7 +878,11 @@ history_path=/path/to/your/danmaku-history.json
 ---
 
 <details>
-<summary>message_x———自定义插件相关提示的显示位置（x轴）</summary>
+<summary>
+message_x
+
+> 自定义插件相关提示的显示位置（x轴）
+</summary>
 
 ### message_x
 
@@ -822,7 +902,11 @@ message_x=30
 ---
 
 <details>
-<summary>message_y———自定义插件相关提示的显示位置（y轴）</summary>
+<summary>
+message_y
+
+> 自定义插件相关提示的显示位置（y轴）
+</summary>
 
 ### message_y
 
@@ -842,7 +926,11 @@ message_y=30
 ---
 
 <details>
-<summary>title_replace———自定义文件标题解析中的额外替换规则</summary>
+<summary>
+title_replace
+
+> 自定义文件标题解析中的额外替换规则
+</summary>
 
 ### title_replace
 
@@ -917,3 +1005,4 @@ blacklist_path=
 ## 相关项目
 
 - [slqy123/uosc_danmaku](https://github.com/slqy123/uosc_danmaku) 本项目的fork版本，实现了通过dandanplay api发送弹幕的功能，由于版本的兼容性以及功能的易用性问题未被合并，具体讨论请参阅 [#220](https://github.com/Tony15246/uosc_danmaku/pull/220)
+
