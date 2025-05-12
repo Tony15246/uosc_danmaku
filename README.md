@@ -76,11 +76,16 @@
 ```
 ~/.config/mpv/scripts
 └── uosc_danmaku
-    ├── api.lua
+    ├── apis
+    │   ├── dandanplay.lua
+    │   └── extra.lua
     ├── bin
     │   ├── dandanplay
     │   │   ├── dandanplay
     │   │   └── dandanplay.exe
+    │   ├── DanmakuFactory
+    │   │   ├── DanmakuFactory
+    │   │   └── DanmakuFactory.exe
     │   ├── OpenCC_Linux
     │   │   └── opencc
     │   └── OpenCC_Windows
@@ -94,10 +99,15 @@
     │       └── TSPhrases.ocd2
     ├── LICENSE
     ├── main.lua
-    ├── md5.lua
-    ├── options.lua
-    ├── README.md
-    └── render.lua
+    ├── modules
+    │   ├── base64.lua
+    │   ├── guess.lua
+    │   ├── md5.lua
+    │   ├── menu.lua
+    │   ├── options.lua
+    │   ├── render.lua
+    │   └── utils.lua
+    └── README.md
 ```
 
 ## 基本配置
@@ -270,7 +280,7 @@ key script-message open_add_total_menu
 
 > #### 设置弹幕延迟（可选）
 
-可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。可以为负数
+可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。秒数的含义为在当前弹幕延迟的基础上叠加新设置的延迟秒数进行调整，可以设置为负数。另外，设置为0时为特殊情况，会将弹幕延迟重置为0，回到初始状态。
 
 ```
 key script-message danmaku-delay <seconds>
@@ -330,6 +340,50 @@ key script-message immediately_save_danmaku
 
 ```
 api_server=https://api.dandanplay.net
+```
+</details>
+
+<details>
+<summary>fallback_server-指定 b 站和爱腾优的弹幕获取的兜底服务器地址</summary>
+
+### fallback_server
+
+#### 功能说明
+
+指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在弹弹play无法解析视频源对应弹幕的情况下才会使用此处设置的服务器进行解析。兜底弹幕服务器可以自托管，具体方法请参考此仓库：https://github.com/lyz05/danmaku
+
+> [!NOTE]
+>
+> 不设置此选项的情况下默认使用`https://fc.lyz05.cn`作为兜底服务器，除非你自行部署了弹幕服务器，否则不建议自定义此选项。
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+fallback_server=https://fc.lyz05.cn
+```
+</details>
+
+<details>
+<summary>tmdb_api_key-设置 tmdb 的 API Key获取非动画条目的中文信息</summary>
+
+### tmdb_api_key
+
+#### 功能说明
+
+设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)。可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取个人的tmdb 的 API Key。
+
+> [!NOTE]
+>
+> 不设置此选项的情况下默认使用专为本项目申请的API Key。另外，自定义此选项时还需要对获取到的 API Key 进行 base64 编码。
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
 ```
 </details>
 
