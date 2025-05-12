@@ -100,7 +100,7 @@
     └── render.lua
 ```
 
-### 基本配置
+## 基本配置
 
 #### uosc控件配置
 
@@ -110,8 +110,8 @@
 
 由于uosc最近才更新了部分接口和控件代码，导致老旧版本的uosc和新版的uosc配置有所不同。如果是下载的最新git版uosc或者一直保持更新的用户按照[最新版uosc的控件配置步骤](#最新版uosc的控件配置步骤)配置即可。如果不确定自己的uosc版本，或者在使用诸如[MPV_lazy](https://github.com/hooke007/MPV_lazy)等由第三方管理uosc版本的用户，可以使用兼容新版和旧版uosc的[旧版uosc控件配置步骤](#旧版uosc控件配置步骤)
 
-##### 最新版uosc的控件配置步骤
-
+<details>
+<summary>最新版uosc的控件配置步骤</summary>
 找到 `uosc.conf`文件中的 `controls`配置项，uosc官方默认的配置可能如下：
 
 ```
@@ -123,8 +123,10 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,button:danmaku,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
+</details>
 
-##### 旧版uosc控件配置步骤
+<details>
+<summary>旧版uosc控件配置步骤</summary>
 
 找到 `uosc.conf`文件中的 `controls`配置项，uosc官方默认的配置可能如下：
 
@@ -137,10 +139,14 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,command:search:script-message open_search_danmaku_menu?搜索弹幕,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
+</details>
 
-##### 修改uosc控件（可选）
+<details>
+<summary>修改uosc控件（可选）</summary>
 
 如果出于重名等各种原因，无法将本插件所放置的文件夹命名为 `uosc_danmaku`的话，需要修改 `cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的 `uosc_danmaku`为放置本插件的文件夹的名称。假如将本插件放置在 `my_folder`文件夹下，那么弹幕开关配置就要修改为 `cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
+</details>
+
 
 #### 绑定快捷键（可选）
 
@@ -165,7 +171,18 @@ open_search_danmaku_menu_key=Ctrl+i
 show_danmaku_keyboard_key=i
 ```
 
-#### 从弹幕源向当前弹幕添加新弹幕内容（可选）
+## 拓展功能（可选）
+
+本插件针对弹幕有丰厚的拓展功能
+
+---
+
+**带控件的功能**
+
+<details>
+<summary>从弹幕源向当前弹幕添加新弹幕内容</summary>
+ 
+> #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
 
 从弹幕源添加弹幕。在已经在播放弹幕的情况下会将添加的弹幕追加到现有弹幕中。
 
@@ -198,8 +215,12 @@ C:\Users\Tony\Downloads\example.xml
 ```
 
 现已更新增强了此菜单。现在在该菜单内可以可视化地控制所有弹幕源，删除或者屏蔽任何不想要的弹幕源。对于自己手动添加的弹幕源，可以进行移除。对于来自弹弹play的弹幕源，无法进行移除，但是可以进行屏蔽，将不会再从屏蔽过的弹幕源获取弹幕。当然，也可以解除对来自弹弹play的弹幕源的屏蔽。另外需要注意在菜单内对于弹幕源的可视化操作都需要下次打开视频，或者重新用弹幕搜索功能加载一次弹幕才会生效。
+</details>
 
-#### 弹幕源延迟设置
+<details>
+<summary>弹幕源延迟设置</summary>
+
+> #### 弹幕源延迟设置（可选）
 
 可以独立控制每个弹幕源的延迟，延迟支持两种输入模式。第一种模式为输入数字（最高可精确到小数点后两位），单位为秒；第二种输入模式为输入形如 `14m15s`格式的字符串，代表延迟的分钟数和秒数。
 
@@ -210,8 +231,12 @@ C:\Users\Tony\Downloads\example.xml
 ```
 key script-message open_source_delay_menu
 ```
+</details>
 
-#### 实时修改弹幕样式（可选）
+<details>
+<summary> 实时修改弹幕样式</summary>
+
+> #### 实时修改弹幕样式（可选）
 
 依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_styles`或 `command:palette:script-message open_setup_danmaku_menu?弹幕样式`到 `uosc.conf`的controls配置项中。
 
@@ -220,8 +245,12 @@ key script-message open_source_delay_menu
 ```
 key script-message open_setup_danmaku_menu
 ```
+</details>
 
-#### 弹幕设置（可选）
+<details>
+<summary> 弹幕设置总菜单</summary>
+
+> #### 弹幕设置总菜单（可选）
 
 打开多级功能复合菜单，包含了插件目前所有的图形化功能。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_menu`或 `command:grid_view:script-message open_add_total_menu?弹幕设置`到 `uosc.conf`的controls配置项中。
 
@@ -230,8 +259,16 @@ key script-message open_setup_danmaku_menu
 ```
 key script-message open_add_total_menu
 ```
+</details>
 
-#### 设置弹幕延迟（可选）
+---
+
+**仅快捷键的功能**
+
+<details>
+<summary>设置弹幕延迟</summary>
+
+> #### 设置弹幕延迟（可选）
 
 可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。可以为负数
 
@@ -240,8 +277,12 @@ key script-message danmaku-delay <seconds>
 ```
 
 > 当前弹幕延迟的值可以从 `user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
+</details>
 
-#### 清空当前视频关联的弹幕源（可选）
+<details>
+<summary>清空当前视频关联的弹幕源</summary>
+
+> #### 清空当前视频关联的弹幕源（可选）
 
 可以清空当前视频中，用户通过[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单手动添加的所有弹幕源（注意该功能不会删除来源于弹幕服务器的弹幕，此类弹幕只能屏蔽或者手动重新匹配新弹幕库）。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
 
@@ -250,8 +291,12 @@ key script-message danmaku-delay <seconds>
 ```
 key script-message clear-source
 ```
+</details>
 
-#### 保存当前视频弹幕（可选）
+<details>
+<summary>保存当前视频弹幕</summary>
+
+> #### 保存当前视频弹幕（可选）
 
 在视频播放时手动保存弹幕至视频所在文件夹，保存格式为 `xml`（注：此功能将保存为视频同名弹幕，若视频文件夹下存在同名文件将不会执行该功能）
 
@@ -260,8 +305,14 @@ key script-message clear-source
 ```
 key script-message immediately_save_danmaku
 ```
+</details>
 
-## 配置选项（可选）
+## 可配置选项（可选）
+
+### 弹幕相关
+
+<details>
+<summary>api_server-自定义弹幕API</summary>
 
 ### api_server
 
@@ -280,6 +331,10 @@ key script-message immediately_save_danmaku
 ```
 api_server=https://api.dandanplay.net
 ```
+</details>
+
+<details>
+<summary>load_more_danmaku-获取所有弹幕源加载</summary>
 
 ### load_more_danmaku
 
@@ -296,6 +351,10 @@ api_server=https://api.dandanplay.net
 ```
 load_more_danmaku=yes
 ```
+</details>
+
+<details>
+<summary>auto_load-全自动弹幕填装</summary>
 
 ### auto_load
 
@@ -337,6 +396,10 @@ auto_load=yes
 ├── 少女歌剧4.mp4
 └── 哭泣少女乐队2.mp4
 ```
+</details>
+
+<details>
+<summary>autoload_local_danmaku-自动加载同目录下的xml格式弹幕文件</summary>
 
 ### autoload_local_danmaku
 
@@ -351,6 +414,10 @@ auto_load=yes
 ```
 autoload_local_danmaku=yes
 ```
+</details>
+
+<details>
+<summary>autoload_for_url-为url视频文件弹幕实现关联记忆和继承</summary>
 
 ### autoload_for_url
 
@@ -373,6 +440,10 @@ autoload_local_danmaku=yes
 ```
 autoload_for_url=yes
 ```
+</details>
+
+<details>
+<summary>add_from_source-记录通过 `从弹幕源向当前弹幕添加新弹幕内容`关联过的弹幕源并下次自动加载（已废除）</summary>
 
 ### add_from_source
 
@@ -391,6 +462,10 @@ autoload_for_url=yes
 ```
 add_from_source=yes
 ```
+</details>
+
+<details>
+<summary>save_danmaku-自动保存弹幕文件（xml格式）至视频同目录</summary>
 
 ### save_danmaku
 
@@ -415,6 +490,10 @@ add_from_source=yes
 ```
 save_danmaku=yes
 ```
+</details>
+
+<details>
+<summary>user_agent-自定义User Agent</summary>
 
 ### user_agent
 
@@ -435,6 +514,10 @@ save_danmaku=yes
 ```
 user_agent=mpv_danmaku/1.0
 ```
+</details>
+
+<details>
+<summary>proxy-自定义代理</summary>
 
 ### proxy
 
@@ -449,6 +532,10 @@ user_agent=mpv_danmaku/1.0
 ```
 proxy=127.0.0.1:7890
 ```
+</details>
+
+<details>
+<summary>vf_fps-使用fps视频滤镜提升弹幕平滑度（帧数）</summary>
 
 ### vf_fps
 
@@ -467,6 +554,10 @@ proxy=127.0.0.1:7890
 ```
 vf_fps=yes
 ```
+</details>
+
+<details>
+<summary>fps-自定义fps滤镜参数</summary>
 
 ### fps
 
@@ -483,6 +574,10 @@ vf_fps=yes
 ```
 fps=60/1.001
 ```
+</details>
+
+<details>
+<summary>transparency-自定义弹幕的透明度</summary>
 
 ### transparency
 
@@ -497,6 +592,10 @@ fps=60/1.001
 ```
 transparency=48
 ```
+</details>
+
+<details>
+<summary>merge_tolerance-指定合并重复弹幕的时间间隔的容差值</summary>
 
 ### merge_tolerance
 
@@ -513,6 +612,10 @@ transparency=48
 ```
 merge_tolerance=1
 ```
+</details>
+
+<details>
+<summary>chConvert-中文简繁转换</summary>
 
 ### chConvert
 
@@ -527,6 +630,12 @@ merge_tolerance=1
 ```
 chConvert=0
 ```
+</details>
+
+### 配置相关
+
+<details>
+<summary>DanmakuFactory_Path-指定DanmakuFactory程序路径</summary>
 
 ### DanmakuFactory_Path
 
@@ -546,6 +655,10 @@ chConvert=0
 ```
 DanmakuFactory_Path=/path/to/your/DanmakuFactory
 ```
+</details>
+
+<details>
+<summary>OpenCC_Path-指定OpenCC程序路径</summary>
 
 ### OpenCC_Path
 
@@ -565,6 +678,10 @@ DanmakuFactory_Path=/path/to/your/DanmakuFactory
 ```
 OpenCC_Path=/path/to/your/opencc
 ```
+</details>
+
+<details>
+<summary>history_path-指定弹幕关联历史记录文件路径</summary>
 
 ### history_path
 
@@ -582,6 +699,10 @@ OpenCC_Path=/path/to/your/opencc
 ```
 history_path=/path/to/your/danmaku-history.json
 ```
+</details>
+
+<details>
+<summary>message_x-自定义插件相关提示的显示位置（x轴）</summary>
 
 ### message_x
 
@@ -596,6 +717,10 @@ history_path=/path/to/your/danmaku-history.json
 ```
 message_x=30
 ```
+</details>
+
+<details>
+<summary>message_y-自定义插件相关提示的显示位置（y轴）</summary>
 
 ### message_y
 
@@ -610,6 +735,10 @@ message_x=30
 ```
 message_y=30
 ```
+</details>
+
+<details>
+<summary>title_replace-自定义文件标题解析中的额外替换规则</summary>
 
 ### title_replace
 
@@ -622,6 +751,7 @@ message_y=30
 ```
 title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 ```
+</details>
 
 ### DanmakuFactory相关配置（自定义弹幕样式相关配置）
 
