@@ -324,6 +324,8 @@ key script-message immediately_save_danmaku
 
 ## 可配置选项（可选）
 
+本插件可以在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义下例配置可以开启额外功能或自定义功能细节
+
 ### 弹幕相关
 
 <details>
