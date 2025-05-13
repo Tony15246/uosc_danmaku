@@ -13,6 +13,8 @@
 >
 > 欲启用此支持mpv最低版本要求：0.39.0
 
+
+
 ## 项目简介
 
 插件具体效果见演示视频：
@@ -23,6 +25,7 @@
 在未安装uosc框架时，调用mpv内部的 `mp.input`进行菜单渲染，具体效果见[此pr](https://github.com/Tony15246/uosc_danmaku/pull/24)
 
 ### 主要功能
+<details open>
 
 1. 从弹弹play或自定义服务的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
 2. 通过点击uosc control bar中的弹幕搜索按钮可以显示搜索菜单供用户选择需要的弹幕
@@ -49,6 +52,9 @@
 另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台和Linux平台上本插件均调用作者自己编译构建的可执行文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
 
 字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
+</details>
+
+
 
 ## 安装
 
@@ -113,6 +119,8 @@
     └── README.md
 ```
 </details>
+
+
 
 ## 基本配置
 
@@ -186,9 +194,11 @@ open_search_danmaku_menu_key=Ctrl+i
 show_danmaku_keyboard_key=i
 ```
 
+
+
 ## 拓展功能（可选）
 
-本插件针对弹幕有丰厚的拓展功能
+本插件针对弹幕有全方面的拓展功能
 
 ---
 
@@ -232,6 +242,7 @@ C:\Users\Tony\Downloads\example.xml
 现已更新增强了此菜单。现在在该菜单内可以可视化地控制所有弹幕源，删除或者屏蔽任何不想要的弹幕源。对于自己手动添加的弹幕源，可以进行移除。对于来自弹弹play的弹幕源，无法进行移除，但是可以进行屏蔽，将不会再从屏蔽过的弹幕源获取弹幕。当然，也可以解除对来自弹弹play的弹幕源的屏蔽。另外需要注意在菜单内对于弹幕源的可视化操作都需要下次打开视频，或者重新用弹幕搜索功能加载一次弹幕才会生效。
 </details>
 
+
 <details>
 <summary>弹幕源延迟设置</summary>
 
@@ -248,6 +259,7 @@ key script-message open_source_delay_menu
 ```
 </details>
 
+
 <details>
 <summary> 实时修改弹幕样式</summary>
 
@@ -261,6 +273,7 @@ key script-message open_source_delay_menu
 key script-message open_setup_danmaku_menu
 ```
 </details>
+
 
 <details>
 <summary> 弹幕设置总菜单</summary>
@@ -294,19 +307,6 @@ key script-message danmaku-delay <seconds>
 > 当前弹幕延迟的值可以从 `user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
 </details>
 
-<details>
-<summary>清空当前视频关联的弹幕源</summary>
-
-> #### 清空当前视频关联的弹幕源（可选）
-
-可以清空当前视频中，用户通过[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单手动添加的所有弹幕源（注意该功能不会删除来源于弹幕服务器的弹幕，此类弹幕只能屏蔽或者手动重新匹配新弹幕库）。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
-
-想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `clear-source`。
-
-```
-key script-message clear-source
-```
-</details>
 
 <details>
 <summary>保存当前视频弹幕</summary>
@@ -322,11 +322,364 @@ key script-message immediately_save_danmaku
 ```
 </details>
 
+
+<details>
+<summary>清空当前视频关联的弹幕源</summary>
+
+> #### 清空当前视频关联的弹幕源（可选）
+
+可以清空当前视频中，用户通过[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单手动添加的所有弹幕源（注意该功能不会删除来源于弹幕服务器的弹幕，此类弹幕只能屏蔽或者手动重新匹配新弹幕库）。清空过弹幕源之后，下次播放该视频，就不会再加载之前手动添加过的弹幕源，可以重新添加弹幕源。
+
+想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。从源添加弹幕功能对应的脚本消息为 `clear-source`。
+
+```
+key script-message clear-source
+```
+</details>
+
+---
+
 ## 可配置选项（可选）
 
-本插件可以在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义下例配置可以开启额外功能或自定义功能细节
+本插件可以在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件自定义下例配置开启额外功能或自定义功能细节
 
-### 弹幕相关
+### 弹幕加载相关
+
+<!--  下列是弹幕加载相关  -->
+
+<details>
+<summary>
+load_more_danmaku
+
+> 开关全量弹幕源加载
+</summary>
+
+### load_more_danmaku
+
+#### 功能说明
+
+由于弹弹Play默认对于弹幕较多的番剧加载并且整合弹幕的上限大约每集7000条，而这7000条弹幕也不是均匀分配，例如有时弹幕基本只来自于哔哩哔哩，有时弹幕又只来自于巴哈姆特。这样的话弹幕观看体验就和直接在哔哩哔哩或者巴哈姆特观看没有区别了，失去了弹弹Play整合全平台弹幕的优势。
+
+因此，本人添加了配置选项 `load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
+
+```
+load_more_danmaku=yes
+```
+</details>
+
+---
+
+<details>
+<summary>
+auto_load
+
+> 开关全自动弹幕填装
+</summary>
+
+### auto_load
+
+#### 功能说明
+
+该选项控制是否开启全自动弹幕填装功能。该功能会在为某个文件夹下的某一集番剧加载过一次弹幕后，把加载过的弹幕会自动关联到该集。之后每次重新播放该文件就会自动加载对应的弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕。
+
+举个例子，比如说有一个文件夹结构如下
+
+```
+败犬女主太多了
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_02WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_03WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_04WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_05WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_06WebRipHEVC_AACCHS_JP.mp4
+├── KitaujiSub_Make_Heroine_ga_Oosugiru!_07v2WebRipHEVC_AACCHS_JP.mp4
+└── KitaujiSub_Make_Heroine_ga_Oosugiru!_08WebRipHEVC_AACCHS_JP.mp4
+```
+
+只要在播放第一集 `KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4`的时候手动搜索并且加载过一次弹幕，那么打开第二集时就会直接自动加载第二集的弹幕，打开第三集时就会直接加载第三集的弹幕，以此类推，不用再手动搜索
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
+
+```
+auto_load=yes
+```
+
+注意⚠️： 一个文件夹下有且仅有一同部番剧的若干视频文件才会生效。下面这种情况下，如果手动搜索并且加载过一次《少女歌剧》第一集的弹幕，《哭泣少女乐队》第二集必须重新手动识别，但这样会破坏《少女歌剧》的弹幕记录
+
+```
+少女歌剧
+├── 少女歌剧1.mp4
+├── 少女歌剧2.mp4
+├── 少女歌剧3.mp4
+├── 少女歌剧4.mp4
+└── 哭泣少女乐队2.mp4
+```
+</details>
+
+---
+
+<details>
+<summary>
+autoload_for_url
+
+> 开关url播放场景自动加载弹幕与关联继承
+</summary>
+
+### autoload_for_url
+
+#### 功能说明
+
+开启此选项后，会为可能支持的 url 视频文件实现弹幕关联记忆和继承，配合播放列表食用效果最佳。目前兼容在使用[embyToLocalPlayer](https://github.com/kjtsune/embyToLocalPlayer)、[mpv-torrserver](https://github.com/dyphire/mpv-config/blob/master/scripts/mpv-torrserver.lua)、[tsukimi](https://github.com/tsukinaha/tsukimi)等场景时进行弹幕关联记忆和继承。
+
+目前的具体支持情况和实现效果可以参考[此pr](https://github.com/Tony15246/uosc_danmaku/pull/16)
+
+另外，开启此选项后还会在网络播放bilibili以及巴哈姆特的视频时自动加载对应视频的弹幕，可配合[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段使用。（播放巴哈姆特的视频时弹幕自动加载如果失败，请检查[proxy](#proxy)选项配置是否正确）
+
+> **⚠️NOTE！**
+>
+> 实验性功能，尚不完善
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
+
+```
+autoload_for_url=yes
+```
+</details>
+
+---
+
+<details>
+<summary>
+autoload_local_danmaku
+
+> 开关自动加载同目录下的xml格式弹幕文件
+</summary>
+
+### autoload_local_danmaku
+
+#### 功能说明
+
+自动加载播放文件同目录下同名的 xml 格式的弹幕文件
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
+
+```
+autoload_local_danmaku=yes
+```
+</details>
+
+---
+
+<details>
+<summary>
+save_danmaku
+
+> 开关自动保存弹幕文件（xml格式）至视频同目录
+</summary>
+
+### save_danmaku
+
+#### 功能说明
+
+当文件关闭时自动保存弹幕文件（xml格式）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
+
+> **⚠️NOTE！**
+>
+> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭 `save_danmaku`选项。
+>
+> `save_danmaku`选项的打开和关闭可以运行时实时更新。在 `input.conf`中添加如下内容，可通过快捷键实时控制 `save_danmaku`选项的打开和关闭
+>
+> ```
+> key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
+> ```
+
+#### 使用方法
+
+想要启用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
+
+```
+save_danmaku=yes
+```
+</details>
+
+---
+
+<details>
+<summary>
+
+~~add_from_source~~
+
+> ~~开关记录通过 从弹幕源向当前弹幕添加新弹幕内容 关联过的弹幕源并自动加载（已废除）~~
+</summary>
+
+### add_from_source
+
+> **⚠️NOTE！**
+>
+> 该可选配置项在Release v1.2.0之后已废除。现在通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过 `add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
+
+#### 功能说明
+
+开启此选项后，通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源会被记录，并且下次播放同一个视频的时候会自动关联并加载添加过的弹幕源。
+
+#### 使用方法
+
+想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
+
+```
+add_from_source=yes
+```
+</details>
+
+---
+
+### 弹幕显示相关
+
+(如果需要更细节的弹幕样式修改请看[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置))
+
+<!--  下列是弹幕显示相关  -->
+
+<details>
+<summary>
+transparency
+
+> 自定义弹幕的透明度
+</summary>
+
+### transparency
+
+#### 功能说明
+
+自定义弹幕的透明度，0（不透明）到255（完全透明）。默认值：48
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+transparency=48
+```
+</details>
+
+---
+
+<details>
+<summary>
+chConvert
+
+> 开关中文简繁转换
+</summary>
+
+### chConvert
+
+#### 功能说明
+
+中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体。默认值: 0，不转换简繁字体，按照弹幕源原本字体显示
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+chConvert=0
+```
+</details>
+
+---
+
+<details>
+<summary>
+merge_tolerance
+
+> 开关合并重复弹幕并设置容差值
+</summary>
+
+### merge_tolerance
+
+#### 功能说明
+
+指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
+
+当值设为0时会合并同一时间相同内容的弹幕，值大于0时会合并指定秒数误差内的相同内容的弹幕
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+merge_tolerance=1
+```
+</details>
+
+---
+
+<details>
+<summary>
+vf_fps
+
+> 开关使用fps视频滤镜提升弹幕平滑度（帧数）
+</summary>
+
+### vf_fps
+
+#### 功能说明
+
+指定是否使用 fps 视频滤镜 `@danmaku:fps=fps=60/1.001`，可大幅提升弹幕平滑度。默认禁用
+
+注意该视频滤镜的性能开销较大，需在确保设备性能足够的前提下开启
+
+启用选项后仅在视频帧率小于 60 及显示器刷新率大于等于 60 时生效
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
+
+```
+vf_fps=yes
+```
+</details>
+
+---
+
+<details>
+<summary>
+fps
+
+> 自定义fps滤镜参数适配不同显示器刷新率
+</summary>
+
+### fps
+
+#### 功能说明
+
+指定要使用的 fps 滤镜参数，例如如果设置fps为 `60/1.001`，则实际生效的视频滤镜参数为 `@danmaku:fps=fps=60/1.001`
+
+使用这个选项，可以根据自己显示器的刷新率调整要使用的视频滤镜参数
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
+
+```
+fps=60/1.001
+```
+</details>
+
+---
+
+### 弹幕解析服务相关
+
+<!--  下列是弹幕解析服务相关  -->
 
 <details>
 <summary>
@@ -389,7 +742,7 @@ fallback_server=https://fc.lyz05.cn
 <summary>
 tmdb_api_key
 
-> 设置 tmdb 的 API Key获取非动画条目的中文信息
+> 自定义 tmdb 的 API Key获取非动画条目的中文信息
 </summary>
 
 ### tmdb_api_key
@@ -413,336 +766,13 @@ tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
 
 ---
 
-<details>
-<summary>
-load_more_danmaku
-
-> 开关是否全量弹幕源加载
-</summary>
-
-### load_more_danmaku
-
-#### 功能说明
-
-由于弹弹Play默认对于弹幕较多的番剧加载并且整合弹幕的上限大约每集7000条，而这7000条弹幕也不是均匀分配，例如有时弹幕基本只来自于哔哩哔哩，有时弹幕又只来自于巴哈姆特。这样的话弹幕观看体验就和直接在哔哩哔哩或者巴哈姆特观看没有区别了，失去了弹弹Play整合全平台弹幕的优势。
-
-因此，本人添加了配置选项 `load_more_danmaku`，用来将从弹弹Play获取弹幕的逻辑更改为逐一搜索所有弹幕源下的全部弹幕，并由本脚本整合加载。开启此选项可以获取到所有可用弹幕源下的所有弹幕。但是对于一些热门番剧来说，弹幕数量可能破万，如果接受不了屏幕上弹幕太多，请不要开启此选项。（嘛，不过本人看视频从来只会觉得弹幕多多益善）
-
-#### 使用方法
-
-想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
-
-```
-load_more_danmaku=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-auto_load
-
-> 开关是否全自动弹幕填装
-</summary>
-
-### auto_load
-
-#### 功能说明
-
-该选项控制是否开启全自动弹幕填装功能。该功能会在为某个文件夹下的某一集番剧加载过一次弹幕后，把加载过的弹幕会自动关联到该集。之后每次重新播放该文件就会自动加载对应的弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕。
-
-举个例子，比如说有一个文件夹结构如下
-
-```
-败犬女主太多了
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_02WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_03WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_04WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_05WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_06WebRipHEVC_AACCHS_JP.mp4
-├── KitaujiSub_Make_Heroine_ga_Oosugiru!_07v2WebRipHEVC_AACCHS_JP.mp4
-└── KitaujiSub_Make_Heroine_ga_Oosugiru!_08WebRipHEVC_AACCHS_JP.mp4
-```
-
-只要在播放第一集 `KitaujiSub_Make_Heroine_ga_Oosugiru!_01WebRipHEVC_AACCHS_JP.mp4`的时候手动搜索并且加载过一次弹幕，那么打开第二集时就会直接自动加载第二集的弹幕，打开第三集时就会直接加载第三集的弹幕，以此类推，不用再手动搜索
-
-#### 使用方法
-
-想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
-
-```
-auto_load=yes
-```
-
-注意⚠️： 一个文件夹下有且仅有一同部番剧的若干视频文件才会生效。下面这种情况下，如果手动搜索并且加载过一次《少女歌剧》第一集的弹幕，《哭泣少女乐队》第二集必须重新手动识别，但这样会破坏《少女歌剧》的弹幕记录
-
-```
-少女歌剧
-├── 少女歌剧1.mp4
-├── 少女歌剧2.mp4
-├── 少女歌剧3.mp4
-├── 少女歌剧4.mp4
-└── 哭泣少女乐队2.mp4
-```
-</details>
-
----
-
-<details>
-<summary>
-autoload_local_danmaku
-
-> 开关是否自动加载同目录下的xml格式弹幕文件
-</summary>
-
-### autoload_local_danmaku
-
-#### 功能说明
-
-自动加载播放文件同目录下同名的 xml 格式的弹幕文件
-
-#### 使用方法
-
-想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
-
-```
-autoload_local_danmaku=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-autoload_for_url
-
-> 开关是否为url视频文件弹幕关联记忆和继承
-</summary>
-
-### autoload_for_url
-
-#### 功能说明
-
-开启此选项后，会为可能支持的 url 视频文件实现弹幕关联记忆和继承，配合播放列表食用效果最佳。目前兼容在使用[embyToLocalPlayer](https://github.com/kjtsune/embyToLocalPlayer)、[mpv-torrserver](https://github.com/dyphire/mpv-config/blob/master/scripts/mpv-torrserver.lua)、[tsukimi](https://github.com/tsukinaha/tsukimi)等场景时进行弹幕关联记忆和继承。
-
-目前的具体支持情况和实现效果可以参考[此pr](https://github.com/Tony15246/uosc_danmaku/pull/16)
-
-另外，开启此选项后还会在网络播放bilibili以及巴哈姆特的视频时自动加载对应视频的弹幕，可配合[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段使用。（播放巴哈姆特的视频时弹幕自动加载如果失败，请检查[proxy](#proxy)选项配置是否正确）
-
-> **⚠️NOTE！**
->
-> 实验性功能，尚不完善
-
-#### 使用方法
-
-想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
-
-```
-autoload_for_url=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-add_from_source
-
-> 开关是否记录通过 从弹幕源向当前弹幕添加新弹幕内容 关联过的弹幕源并下次自动加载（已废除）
-</summary>
-
-### add_from_source
-
-> **⚠️NOTE！**
->
-> 该可选配置项在Release v1.2.0之后已废除。现在通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过 `add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
-
-#### 功能说明
-
-开启此选项后，通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源会被记录，并且下次播放同一个视频的时候会自动关联并加载添加过的弹幕源。
-
-#### 使用方法
-
-想要开启此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加如下内容：
-
-```
-add_from_source=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-save_danmaku
-
-> 开关是否自动保存弹幕文件（xml格式）至视频同目录
-</summary>
-
-### save_danmaku
-
-#### 功能说明
-
-当文件关闭时自动保存弹幕文件（xml格式）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
-
-> **⚠️NOTE！**
->
-> 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭 `save_danmaku`选项。
->
-> `save_danmaku`选项的打开和关闭可以运行时实时更新。在 `input.conf`中添加如下内容，可通过快捷键实时控制 `save_danmaku`选项的打开和关闭
->
-> ```
-> key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
-> ```
-
-#### 使用方法
-
-想要启用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
-
-```
-save_danmaku=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-vf_fps
-
-> 开关是否使用fps视频滤镜提升弹幕平滑度（帧数）
-</summary>
-
-### vf_fps
-
-#### 功能说明
-
-指定是否使用 fps 视频滤镜 `@danmaku:fps=fps=60/1.001`，可大幅提升弹幕平滑度。默认禁用
-
-注意该视频滤镜的性能开销较大，需在确保设备性能足够的前提下开启
-
-启用选项后仅在视频帧率小于 60 及显示器刷新率大于等于 60 时生效
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
-
-```
-vf_fps=yes
-```
-</details>
-
----
-
-<details>
-<summary>
-fps
-
-> 自定义fps滤镜参数
-</summary>
-
-### fps
-
-#### 功能说明
-
-指定要使用的 fps 滤镜参数，例如如果设置fps为 `60/1.001`，则实际生效的视频滤镜参数为 `@danmaku:fps=fps=60/1.001`
-
-使用这个选项，可以根据自己显示器的刷新率调整要使用的视频滤镜参数
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并指定如下内容：
-
-```
-fps=60/1.001
-```
-</details>
-
----
-
-<details>
-<summary>
-transparency
-
-> 自定义弹幕的透明度
-</summary>
-
-### transparency
-
-#### 功能说明
-
-自定义弹幕的透明度，0（不透明）到255（完全透明）。默认值：48
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
-
-```
-transparency=48
-```
-</details>
-
----
-
-<details>
-<summary>
-merge_tolerance
-
-> 指定合并重复弹幕的时间间隔的容差值
-</summary>
-
-### merge_tolerance
-
-#### 功能说明
-
-指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
-
-当值设为0时会合并同一时间相同内容的弹幕，值大于0时会合并指定秒数误差内的相同内容的弹幕
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
-
-```
-merge_tolerance=1
-```
-</details>
-
----
-
-<details>
-<summary>
-chConvert
-
-> 开关是否进行中文简繁转换
-</summary>
-
-### chConvert
-
-#### 功能说明
-
-中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体。默认值: 0，不转换简繁字体，按照弹幕源原本字体显示
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
-
-```
-chConvert=0
-```
-</details>
-
----
-
 ### 插件配置相关
 
 <details>
 <summary>
 user_agent
 
-> 自定义User Agent
+> 自定义请求时的User Agent
 </summary>
 
 ### user_agent
@@ -772,7 +802,7 @@ user_agent=mpv_danmaku/1.0
 <summary>
 proxy
 
-> 自定义代理
+> 自定义请求时的代理
 </summary>
 
 ### proxy
@@ -787,6 +817,76 @@ proxy
 
 ```
 proxy=127.0.0.1:7890
+```
+</details>
+
+---
+
+<details>
+<summary>
+message_x
+
+> 自定义插件相关提示的显示位置（x轴）
+</summary>
+
+### message_x
+
+#### 功能说明
+
+自定义插件相关提示的显示位置，距离屏幕左上角的x轴的距离
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+message_x=30
+```
+</details>
+
+---
+
+<details>
+<summary>
+message_y
+
+> 自定义插件相关提示的显示位置（y轴）
+</summary>
+
+### message_y
+
+#### 功能说明
+
+自定义插件相关提示的显示位置，距离屏幕左上角的y轴的距离
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+message_y=30
+```
+</details>
+
+---
+
+<details>
+<summary>
+title_replace
+
+> 自定义文件标题解析中的额外替换规则
+</summary>
+
+### title_replace
+
+自定义标题解析中的额外替换规则，内容格式为 JSON 字符串，替换模式为 lua 的 string.gsub 函数
+
+注意⚠️：由于 mpv 的 lua 版本限制，自定义规则只支持形如 %n 的捕获组写法，即示例用法，不支持直接替换字符的写法
+
+用法示例：
+
+```
+title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 ```
 </details>
 
@@ -877,74 +977,6 @@ history_path=/path/to/your/danmaku-history.json
 
 ---
 
-<details>
-<summary>
-message_x
-
-> 自定义插件相关提示的显示位置（x轴）
-</summary>
-
-### message_x
-
-#### 功能说明
-
-自定义插件相关提示的显示位置，距离屏幕左上角的x轴的距离
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
-
-```
-message_x=30
-```
-</details>
-
----
-
-<details>
-<summary>
-message_y
-
-> 自定义插件相关提示的显示位置（y轴）
-</summary>
-
-### message_y
-
-#### 功能说明
-
-自定义插件相关提示的显示位置，距离屏幕左上角的y轴的距离
-
-#### 使用方法
-
-想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
-
-```
-message_y=30
-```
-</details>
-
----
-
-<details>
-<summary>
-title_replace
-
-> 自定义文件标题解析中的额外替换规则
-</summary>
-
-### title_replace
-
-自定义标题解析中的额外替换规则，内容格式为 JSON 字符串，替换模式为 lua 的 string.gsub 函数
-
-注意⚠️：由于 mpv 的 lua 版本限制，自定义规则只支持形如 %n 的捕获组写法，即示例用法，不支持直接替换字符的写法
-
-用法示例：
-
-```
-title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
-```
-</details>
-
 ### DanmakuFactory相关配置（自定义弹幕样式相关配置）
 
 默认配置如下，可根据需求更改并自定义弹幕样式
@@ -977,6 +1009,8 @@ blockmode=REPEAT
 blacklist_path=
 ```
 
+
+
 ## 常见问题
 
 ### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”/搜索弹幕总是无结果/弹幕无法加载
@@ -988,6 +1022,8 @@ blacklist_path=
 ### 简繁转换功能无法生效
 
 检查mpv及其本插件是否安装在了含中文字符的文件夹路径下。简繁转换功能所依赖的OpenCC第三方工具在非英文路径名下无法正常工作。想了解更多可以参考[此discussion](https://github.com/Tony15246/uosc_danmaku/discussions/92)
+
+
 
 ## 特别感谢
 
