@@ -354,6 +354,42 @@ load_more_danmaku
 > 开关全量弹幕源加载
 </summary>
 
+### fallback_server
+
+#### 功能说明
+
+指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在弹弹play无法解析视频源对应弹幕的情况下才会使用此处设置的服务器进行解析。兜底弹幕服务器可以自托管，具体方法请参考此仓库：https://github.com/lyz05/danmaku
+
+> [!NOTE]
+>
+> 不设置此选项的情况下默认使用`https://fc.lyz05.cn`作为兜底服务器，除非你自行部署了弹幕服务器，否则不建议自定义此选项。
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+fallback_server=https://fc.lyz05.cn
+```
+
+### tmdb_api_key
+
+#### 功能说明
+
+设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)。可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取个人的tmdb 的 API Key。
+
+> [!NOTE]
+>
+> 不设置此选项的情况下默认使用专为本项目申请的API Key。另外，自定义此选项时还需要对获取到的 API Key 进行 base64 编码。
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
+```
+
 ### load_more_danmaku
 
 #### 功能说明
