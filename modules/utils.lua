@@ -124,6 +124,15 @@ function file_exists(path)
     return false
 end
 
+function contains_any(tab, val)
+    for _, element in pairs(tab) do
+        if string.find(val, element) then
+            return true
+        end
+    end
+    return false
+end
+
 --读history 和 写history
 function read_file(file_path)
     local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
