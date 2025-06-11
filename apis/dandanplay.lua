@@ -583,26 +583,12 @@ function get_danmaku_with_hash(file_name, file_path)
     if is_protocol(file_path) then
         set_danmaku_button()
         local temp_file = "temp-" .. pid .. ".mp4"
-        local cache_state = mp.get_property_native("demuxer-cache-state")
-        local cache_bytes = cache_state and cache_state["fw-bytes"] or 0
-        local cache_ranges = cache_state and cache_state["seekable-ranges"] or {}
-        local cache_start = cache_ranges[1] and cache_ranges[1]["start"] or nil
-        local cache_end = cache_ranges[1] and cache_ranges[1]["end"] or nil
-        if cache_start and tonumber(cache_start) == 0 and tonumber(cache_bytes) >= 16 * 1024 * 1024 then
-            local file_path = utils.join_path(danmaku_path, temp_file)
-            mp.commandv("dump-cache", cache_start, cache_end, file_path)
-            match_file(file_path, file_name, function(error)
-                if error then
-                    msg.error(error)
-                    msg.info("尝试通过解析文件名获取弹幕")
-                    match_anime()
-                end
-            end)
-            return
-        end
-
         local arg = {
             "curl",
+            "--connect-timeout",
+            "10",
+            "--max-time",
+            "30",
             "--range",
             "0-16777215",
             "--user-agent",
@@ -632,6 +618,17 @@ function get_danmaku_with_hash(file_name, file_path)
             end)
         end)
     else
+        local dir = get_parent_directory(file_path)
+        local excluded_path = utils.parse_json(options.excluded_path)
+        if platform == "windows" then
+            for i, path in pairs(excluded_path) do
+                excluded_path[i] = path:gsub("/", "\\")
+            end
+        end
+        if contains_any(excluded_path, dir) then
+            match_anime()
+            return
+        end
         match_file(file_path, file_name, function(error)
             if error then
                 msg.error(error)
