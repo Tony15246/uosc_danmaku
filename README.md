@@ -10,7 +10,7 @@
 
 > [!NOTE]
 > 已添加对mpv内部 `mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
->
+> 
 > 欲启用此支持mpv最低版本要求：0.39.0
 
 
@@ -25,6 +25,7 @@
 在未安装uosc框架时，调用mpv内部的 `mp.input`进行菜单渲染，具体效果见[此pr](https://github.com/Tony15246/uosc_danmaku/pull/24)
 
 ### 主要功能
+
 <details open>
 
 1. 从弹弹play或自定义服务的API获取剧集及弹幕数据，并根据用户选择的集数加载弹幕
@@ -52,9 +53,8 @@
 另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台和Linux平台上本插件均调用作者自己编译构建的可执行文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
 
 字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
+
 </details>
-
-
 
 ## 安装
 
@@ -75,7 +75,7 @@
 想要使用本插件，请将本插件完整地[下载](https://github.com/Tony15246/uosc_danmaku/releases)或者克隆到 `scripts`目录下即可使用，文件结构参阅下方
 
 > [!IMPORTANT]
->
+> 
 > 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
 > 2. 记得给bin文件夹下的文件赋予可执行权限
 
@@ -118,9 +118,8 @@
     │   └── utils.lua
     └── README.md
 ```
+
 </details>
-
-
 
 ## 基本配置
 
@@ -146,6 +145,7 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,button:danmaku,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
+
 </details>
 
 <details>
@@ -162,14 +162,15 @@ controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_man
 ```
 controls=menu,gap,subtitles,<has_many_audio>audio,<has_many_video>video,<has_many_edition>editions,<stream>stream-quality,command:search:script-message open_search_danmaku_menu?搜索弹幕,cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关,gap,space,speed,space,shuffle,loop-playlist,loop-file,gap,prev,items,next,gap,fullscreen
 ```
+
 </details>
 
 <details>
 <summary>修改uosc控件（可选）</summary>
 
 如果出于重名等各种原因，无法将本插件所放置的文件夹命名为 `uosc_danmaku`的话，需要修改 `cycle:toggle_on:show_danmaku@uosc_danmaku:on=toggle_on/off=toggle_off?弹幕开关`的弹幕开关配置中的 `uosc_danmaku`为放置本插件的文件夹的名称。假如将本插件放置在 `my_folder`文件夹下，那么弹幕开关配置就要修改为 `cycle:toggle_on:show_danmaku@my_folder:on=toggle_on/off=toggle_off?弹幕开关`
-</details>
 
+</details>
 
 #### 绑定快捷键（可选）
 
@@ -206,7 +207,7 @@ show_danmaku_keyboard_key=i
 
 <details>
 <summary>从弹幕源向当前弹幕添加新弹幕内容（从网络url或本地添加弹幕）</summary>
- 
+
 > #### 从弹幕源向当前弹幕添加新弹幕内容（可选）
 
 从弹幕源添加弹幕。在已经在播放弹幕的情况下会将添加的弹幕追加到现有弹幕中。
@@ -240,8 +241,8 @@ C:\Users\Tony\Downloads\example.xml
 ```
 
 现已更新增强了此菜单。现在在该菜单内可以可视化地控制所有弹幕源，删除或者屏蔽任何不想要的弹幕源。对于自己手动添加的弹幕源，可以进行移除。对于来自弹弹play的弹幕源，无法进行移除，但是可以进行屏蔽，将不会再从屏蔽过的弹幕源获取弹幕。当然，也可以解除对来自弹弹play的弹幕源的屏蔽。另外需要注意在菜单内对于弹幕源的可视化操作都需要下次打开视频，或者重新用弹幕搜索功能加载一次弹幕才会生效。
-</details>
 
+</details>
 
 <details>
 <summary>弹幕源延迟设置</summary>
@@ -257,8 +258,8 @@ C:\Users\Tony\Downloads\example.xml
 ```
 key script-message open_source_delay_menu
 ```
-</details>
 
+</details>
 
 <details>
 <summary> 实时修改弹幕样式</summary>
@@ -272,8 +273,8 @@ key script-message open_source_delay_menu
 ```
 key script-message open_setup_danmaku_menu
 ```
-</details>
 
+</details>
 
 <details>
 <summary> 弹幕设置总菜单</summary>
@@ -287,6 +288,7 @@ key script-message open_setup_danmaku_menu
 ```
 key script-message open_add_total_menu
 ```
+
 </details>
 
 ---
@@ -305,8 +307,8 @@ key script-message danmaku-delay <seconds>
 ```
 
 > 当前弹幕延迟的值可以从 `user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)
-</details>
 
+</details>
 
 <details>
 <summary>保存当前视频弹幕</summary>
@@ -320,8 +322,8 @@ key script-message danmaku-delay <seconds>
 ```
 key script-message immediately_save_danmaku
 ```
-</details>
 
+</details>
 
 <details>
 <summary>清空当前视频关联的弹幕源</summary>
@@ -335,6 +337,7 @@ key script-message immediately_save_danmaku
 ```
 key script-message clear-source
 ```
+
 </details>
 
 ---
@@ -352,6 +355,7 @@ key script-message clear-source
 load_more_danmaku
 
 > 开关全量弹幕源加载
+
 </summary>
 
 ### load_more_danmaku
@@ -369,6 +373,7 @@ load_more_danmaku
 ```
 load_more_danmaku=yes
 ```
+
 </details>
 
 ---
@@ -378,6 +383,7 @@ load_more_danmaku=yes
 auto_load
 
 > 开关全自动弹幕填装
+
 </summary>
 
 ### auto_load
@@ -420,6 +426,7 @@ auto_load=yes
 ├── 少女歌剧4.mp4
 └── 哭泣少女乐队2.mp4
 ```
+
 </details>
 
 ---
@@ -429,6 +436,7 @@ auto_load=yes
 autoload_for_url
 
 > 开关url播放场景自动加载弹幕与关联继承
+
 </summary>
 
 ### autoload_for_url
@@ -442,7 +450,7 @@ autoload_for_url
 另外，开启此选项后还会在网络播放bilibili以及巴哈姆特的视频时自动加载对应视频的弹幕，可配合[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段使用。（播放巴哈姆特的视频时弹幕自动加载如果失败，请检查[proxy](#proxy)选项配置是否正确）
 
 > **⚠️NOTE！**
->
+> 
 > 实验性功能，尚不完善
 
 #### 使用方法
@@ -452,6 +460,7 @@ autoload_for_url
 ```
 autoload_for_url=yes
 ```
+
 </details>
 
 ---
@@ -461,6 +470,7 @@ autoload_for_url=yes
 autoload_local_danmaku
 
 > 开关自动加载同目录下的xml格式弹幕文件
+
 </summary>
 
 ### autoload_local_danmaku
@@ -476,6 +486,7 @@ autoload_local_danmaku
 ```
 autoload_local_danmaku=yes
 ```
+
 </details>
 
 ---
@@ -485,6 +496,7 @@ autoload_local_danmaku=yes
 save_danmaku
 
 > 开关自动保存弹幕文件（xml格式）至视频同目录
+
 </summary>
 
 ### save_danmaku
@@ -494,11 +506,11 @@ save_danmaku
 当文件关闭时自动保存弹幕文件（xml格式）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
 
 > **⚠️NOTE！**
->
+> 
 > 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭 `save_danmaku`选项。
->
+> 
 > `save_danmaku`选项的打开和关闭可以运行时实时更新。在 `input.conf`中添加如下内容，可通过快捷键实时控制 `save_danmaku`选项的打开和关闭
->
+> 
 > ```
 > key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
 > ```
@@ -510,6 +522,7 @@ save_danmaku
 ```
 save_danmaku=yes
 ```
+
 </details>
 
 ---
@@ -520,12 +533,13 @@ save_danmaku=yes
 ~~add_from_source~~
 
 > ~~开关记录通过 从弹幕源向当前弹幕添加新弹幕内容 关联过的弹幕源并自动加载（已废除）~~
+
 </summary>
 
 ### add_from_source
 
 > **⚠️NOTE！**
->
+> 
 > 该可选配置项在Release v1.2.0之后已废除。现在通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过 `add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
 
 #### 功能说明
@@ -539,6 +553,7 @@ save_danmaku=yes
 ```
 add_from_source=yes
 ```
+
 </details>
 
 ---
@@ -554,6 +569,7 @@ add_from_source=yes
 transparency
 
 > 自定义弹幕的透明度
+
 </summary>
 
 ### transparency
@@ -569,6 +585,7 @@ transparency
 ```
 transparency=48
 ```
+
 </details>
 
 ---
@@ -578,6 +595,7 @@ transparency=48
 chConvert
 
 > 开关中文简繁转换
+
 </summary>
 
 ### chConvert
@@ -593,6 +611,7 @@ chConvert
 ```
 chConvert=0
 ```
+
 </details>
 
 ---
@@ -602,6 +621,7 @@ chConvert=0
 merge_tolerance
 
 > 开关合并重复弹幕并设置容差值
+
 </summary>
 
 ### merge_tolerance
@@ -619,6 +639,7 @@ merge_tolerance
 ```
 merge_tolerance=1
 ```
+
 </details>
 
 ---
@@ -628,6 +649,7 @@ merge_tolerance=1
 vf_fps
 
 > 开关使用fps视频滤镜提升弹幕平滑度（帧数）
+
 </summary>
 
 ### vf_fps
@@ -647,6 +669,7 @@ vf_fps
 ```
 vf_fps=yes
 ```
+
 </details>
 
 ---
@@ -656,6 +679,7 @@ vf_fps=yes
 fps
 
 > 自定义fps滤镜参数适配不同显示器刷新率
+
 </summary>
 
 ### fps
@@ -673,6 +697,7 @@ fps
 ```
 fps=60/1.001
 ```
+
 </details>
 
 ---
@@ -686,6 +711,7 @@ fps=60/1.001
 api_server
 
 > 自定义弹幕API
+
 </summary>
 
 ### api_server
@@ -695,7 +721,7 @@ api_server
 允许自定义弹幕 API 的服务地址
 
 > **⚠️NOTE！**
->
+> 
 > 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[anoraker/abetsy](https://hub.docker.com/repository/docker/anoraker/abetsy)
 
 #### 使用方法
@@ -705,6 +731,7 @@ api_server
 ```
 api_server=https://api.dandanplay.net
 ```
+
 </details>
 
 ---
@@ -714,6 +741,7 @@ api_server=https://api.dandanplay.net
 fallback_server
 
 > 自定义b站和爱腾优的弹幕获取的兜底服务器地址
+
 </summary>
 
 ### fallback_server
@@ -723,9 +751,8 @@ fallback_server
 自定义 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在弹弹play无法解析视频源对应弹幕的情况下才会使用此处设置的服务器进行解析。兜底弹幕服务器可以自托管，具体方法请参考此仓库：https://github.com/lyz05/danmaku
 
 > **⚠️NOTE！**
->
+> 
 > 不设置此选项的情况下默认使用`https://fc.lyz05.cn`作为兜底服务器，除非你自行部署了弹幕服务器，否则不建议自定义此选项。
-
 
 #### 使用方法
 
@@ -734,6 +761,7 @@ fallback_server
 ```
 fallback_server=https://fc.lyz05.cn
 ```
+
 </details>
 
 ---
@@ -743,6 +771,7 @@ fallback_server=https://fc.lyz05.cn
 tmdb_api_key
 
 > 自定义 tmdb 的 API Key获取非动画条目的中文信息
+
 </summary>
 
 ### tmdb_api_key
@@ -752,7 +781,7 @@ tmdb_api_key
 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)。可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取个人的tmdb 的 API Key。
 
 > **⚠️NOTE！**
->
+> 
 > 不设置此选项的情况下默认使用专为本项目申请的API Key。另外，自定义此选项时还需要对获取到的 API Key 进行 base64 编码。
 
 #### 使用方法
@@ -762,6 +791,7 @@ tmdb_api_key
 ```
 tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
 ```
+
 </details>
 
 ---
@@ -773,6 +803,7 @@ tmdb_api_key=NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=
 user_agent
 
 > 自定义请求时的User Agent
+
 </summary>
 
 ### user_agent
@@ -786,14 +817,15 @@ user_agent
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
 
 > **⚠️NOTE！**
->
+> 
 > User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
->
+> 
 > 若想提高URL播放的哈希匹配成功率，可以将此项设为 `mpv`或浏览器的User-Agent
 
 ```
 user_agent=mpv_danmaku/1.0
 ```
+
 </details>
 
 ---
@@ -803,6 +835,7 @@ user_agent=mpv_danmaku/1.0
 proxy
 
 > 自定义请求时的代理
+
 </summary>
 
 ### proxy
@@ -818,6 +851,7 @@ proxy
 ```
 proxy=127.0.0.1:7890
 ```
+
 </details>
 
 ---
@@ -827,6 +861,7 @@ proxy=127.0.0.1:7890
 message_x
 
 > 自定义插件相关提示的显示位置（x轴）
+
 </summary>
 
 ### message_x
@@ -842,6 +877,7 @@ message_x
 ```
 message_x=30
 ```
+
 </details>
 
 ---
@@ -851,6 +887,7 @@ message_x=30
 message_y
 
 > 自定义插件相关提示的显示位置（y轴）
+
 </summary>
 
 ### message_y
@@ -866,6 +903,7 @@ message_y
 ```
 message_y=30
 ```
+
 </details>
 
 ---
@@ -875,6 +913,7 @@ message_y=30
 title_replace
 
 > 自定义文件标题解析中的额外替换规则
+
 </summary>
 
 ### title_replace
@@ -888,6 +927,29 @@ title_replace
 ```
 title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 ```
+
+</details>
+
+---
+
+<details>
+<summary>
+excluded_path
+
+> 指定哈希匹配中需忽略的共享盘（挂载盘）的路径/目录
+
+</summary>
+
+### excluded_path
+
+指定哈希匹配中需忽略的共享盘（挂载盘）的路径/目录。支持绝对路径和相对路径，多个路径用逗号分隔
+
+用法示例：
+
+```
+excluded_path=["X:", "Z:", "F:/Download/", "Download"]
+```
+
 </details>
 
 ---
@@ -897,6 +959,7 @@ title_replace=[{"rules":[{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }]}]
 DanmakuFactory_Path
 
 > 指定DanmakuFactory程序路径
+
 </summary>
 
 ### DanmakuFactory_Path
@@ -917,6 +980,7 @@ DanmakuFactory_Path
 ```
 DanmakuFactory_Path=/path/to/your/DanmakuFactory
 ```
+
 </details>
 
 ---
@@ -926,6 +990,7 @@ DanmakuFactory_Path=/path/to/your/DanmakuFactory
 OpenCC_Path
 
 > 指定OpenCC程序路径
+
 </summary>
 
 ### OpenCC_Path
@@ -946,6 +1011,7 @@ OpenCC_Path
 ```
 OpenCC_Path=/path/to/your/opencc
 ```
+
 </details>
 
 ---
@@ -955,6 +1021,7 @@ OpenCC_Path=/path/to/your/opencc
 history_path
 
 > 指定弹幕关联历史记录文件路径
+
 </summary>
 
 ### history_path
@@ -973,6 +1040,7 @@ history_path
 ```
 history_path=/path/to/your/danmaku-history.json
 ```
+
 </details>
 
 ---
@@ -1064,4 +1132,5 @@ blacklist_path=
 ## 相关项目
 
 - [slqy123/uosc_danmaku](https://github.com/slqy123/uosc_danmaku) 本项目的fork版本，实现了通过dandanplay api发送弹幕的功能，由于版本的兼容性以及功能的易用性问题未被合并，具体讨论请参阅 [#220](https://github.com/Tony15246/uosc_danmaku/pull/220)
-
+  
+  

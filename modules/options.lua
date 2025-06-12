@@ -76,6 +76,11 @@ options = {
            "rules": [{ "^〔(.-)〕": "%1"},{ "^.*《(.-)》": "%1" }],
        }]
     ]],
+    -- 指定哈希匹配中需忽略的共享盘（挂载盘）的路径/目录。支持绝对路径和相对路径，多个路径用逗号分隔
+    -- 示例：["X:", "Z:", "F:/Download/", "Download"]
+    excluded_path = [[
+        []
+    ]],
 }
 
 opt.read_options(options, mp.get_script_name(), function() end)
