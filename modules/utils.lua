@@ -293,7 +293,10 @@ function parse_title()
     local media_title, season, episode = nil, nil, nil
     if title then
         title = title:gsub(thin_space, " ")
-        local format_title = format_filename(url_decode(title))
+        local ftitle = url_decode(title)
+        local name, class = ftitle:match("^(.-)%s*|%s*(.-)%s*$")
+        if name then ftitle = name end
+        local format_title = format_filename(ftitle)
         if format_title then
             media_title, season, episode = format_title:match("^(.-)%s*[sS](%d+)[eE](%d+)")
             if season then
