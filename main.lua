@@ -406,6 +406,12 @@ function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callba
     end
     local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
 
+    if not file_exists(danmaku_factory_path) then
+        show_message("可执行文件缺失")
+        msg.warn(danmaku_factory_path .. "不存在")
+        return
+    end
+
     local temp_file = "danmaku-" .. pid .. ".ass"
     local danmaku_file = utils.join_path(danmaku_path, temp_file)
 
@@ -496,6 +502,12 @@ function ch_convert(ass_path, case, callback)
         end
     end
     opencc_path = os.getenv("OPENCC") or opencc_path
+
+    if not file_exists(opencc_path) then
+        callback("可执行文件缺失")
+        msg.warn(opencc_path .. "不存在")
+        return
+    end
 
     local config
     if case == 1 then
