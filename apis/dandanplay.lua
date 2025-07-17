@@ -74,6 +74,13 @@ function make_danmaku_request_args(method, url, headers, body)
     else
         dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
     end
+
+    if not file_exists(dandanplay_path) then
+        show_message("可执行文件缺失")
+        msg.warn(dandanplay_path .. "不存在")
+        return nil
+    end
+
     local args = {
         dandanplay_path,
         "-X",
@@ -104,6 +111,10 @@ end
 local function match_episode(animeTitle, bangumiId, episode_num)
     local url = options.api_server .. "/api/v2/bangumi/" .. bangumiId
     local args = make_danmaku_request_args("GET", url)
+
+    if args == nil then
+        return
+    end
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -149,6 +160,10 @@ local function match_anime()
     local params = "keyword=" .. encoded_query
     local full_url = url .. "?" .. params
     local args = make_danmaku_request_args("GET", full_url)
+
+    if args == nil then
+        return
+    end
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -221,6 +236,10 @@ local function match_file(file_path, file_name, callback)
             matchMode = "hashAndFileName"
         }
     )
+
+    if args == nil then
+        return
+    end
 
     call_cmd_async(args, function(error, json)
         async_running = false
@@ -304,6 +323,11 @@ function handle_danmaku_data(query, data, from_menu)
         -- 重新发起请求
         local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(query)
         local args = make_danmaku_request_args("GET", url)
+
+        if args == nil then
+            return
+        end
+
         fetch_danmaku_data(args, function(retry_data)
             if not retry_data or not retry_data["comments"] or retry_data["count"] == 0 then
                 get_danmaku_fallback(query)
@@ -325,6 +349,11 @@ function handle_related_danmaku(index, relateds, related, shift, callback)
     msg.verbose("正在从第三方库装填弹幕：" .. url)
 
     local args = make_danmaku_request_args("GET", url)
+
+    if args == nil then
+        return
+    end
+
     fetch_danmaku_data(args, function(data)
         local comments = {}
         if data and data["comments"] then
@@ -361,6 +390,10 @@ function handle_main_danmaku(url, from_menu)
     show_message("正在从弹弹Play库装填弹幕", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local args = make_danmaku_request_args("GET", url)
+
+    if args == nil then
+        return
+    end
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["comments"] then
@@ -412,6 +445,10 @@ function fetch_danmaku(episodeId, from_menu)
     msg.verbose("尝试获取弹幕：" .. url)
     local args = make_danmaku_request_args("GET", url)
 
+    if args == nil then
+        return
+    end
+
     fetch_danmaku_data(args, function(data)
         handle_fetched_danmaku(data, url, from_menu)
     end)
@@ -423,6 +460,10 @@ function fetch_danmaku_all(episodeId, from_menu)
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local args = make_danmaku_request_args("GET", url)
+
+    if args == nil then
+        return
+    end
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["relateds"] then
@@ -530,6 +571,10 @@ function add_danmaku_source_online(query, from_menu)
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local args = make_danmaku_request_args("GET", url)
+
+    if args == nil then
+        return
+    end
 
     fetch_danmaku_data(args, function(data)
         if not data or not data["comments"] then
