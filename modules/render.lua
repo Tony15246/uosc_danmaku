@@ -49,7 +49,13 @@ local function parse_comment(event, pos, height)
 end
 
 -- 从 ASS 文件中解析样式和事件
-local function parse_ass_events(ass_file)
+local function parse_ass_events(ass_path, callback)
+    local ass_file = io.open(ass_path, "r")
+    if not ass_file then
+        callback("无法打开 ASS 文件")
+        return
+    end
+
     local events = {}
     local time_tolerance = options.merge_tolerance
 
@@ -100,25 +106,7 @@ local function parse_ass_events(ass_file)
     end)
 
     ass_file:close()
-    return events
-end
-
-local function parse_ass(ass_path, callback)
-    ch_convert(ass_path, options.chConvert, function(error)
-        if error then
-            callback(error)
-            return
-        end
-
-        -- 解析 ASS 文件
-        local ass_file = io.open(ass_path, "r")
-        if not ass_file then
-            callback("无法打开 ASS 文件")
-            return
-        end
-        local events = parse_ass_events(ass_file)
-        callback(nil, events)
-    end)
+    callback(nil, events)
 end
 
 local overlay = mp.create_osd_overlay('ass-events')
@@ -174,7 +162,7 @@ end
 local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu, no_osd)
-    parse_ass(ass_file_path, function(err, events)
+    parse_ass_events(ass_file_path, function(err, events)
         comments = events
         if err then
             msg.error("ASS 解析错误: " .. err)
