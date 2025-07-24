@@ -1,5 +1,7 @@
-local msg = require 'mp.msg'
+local msg   = require 'mp.msg'
 local utils = require 'mp.utils'
+local s2t   = require("dicts/s2t_chars")
+local t2s   = require("dicts/t2s_chars")
 
 local function ass_escape(text)
     return text:gsub("\\", "\\\\")
@@ -64,6 +66,43 @@ function is_blacklisted(str, patterns)
         end
     end
     return false
+end
+
+-- 简繁转换
+local function convert(text, dict)
+    return text:gsub("[%z\1-\127\194-\244][\128-\191]*", function(c)
+        return dict[c] or c
+    end)
+end
+
+local function ch_convert(str)
+    if options.chConvert == 1 then
+        return convert(str, t2s)
+    elseif options.chConvert == 2 then
+        return convert(str, s2t)
+    end
+    return str
+end
+
+local ch_convert_cache = {}
+local ch_cache_keys = {}
+local ch_cache_max = 5000
+
+local function ch_convert_cached(text)
+    if type(text) ~= "string" or text == "" then return text end
+    local cached = ch_convert_cache[text]
+    if cached ~= nil then return cached end
+
+    local converted = ch_convert(text)
+    ch_convert_cache[text] = converted
+    ch_cache_keys[#ch_cache_keys+1] = text
+
+    if #ch_cache_keys > ch_cache_max then
+        local old_key = table.remove(ch_cache_keys, 1)
+        ch_convert_cache[old_key] = nil
+    end
+
+    return converted
 end
 
 local function parse_xml_danmaku(xml_string, delay)
@@ -398,6 +437,7 @@ function parse_danmaku_files(danmaku_input, delays)
                 for _, d in ipairs(parsed) do
                     local matched, pattern = is_blacklisted(d.text, black_patterns)
                     if not matched then
+                        d.text = ch_convert_cached(d.text)
                         table.insert(all_danmaku, d)
                     else
                         --msg.debug("命中黑名单: " .. pattern)

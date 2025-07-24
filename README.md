@@ -50,9 +50,6 @@
 
 插件本身支持Linux和Windows平台。项目依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)。欲使用本插件强烈建议为mpv播放器中安装uosc。uosc的安装步骤可以参考其[官方安装教程](https://github.com/tomasklaen/uosc?tab=readme-ov-file#install)。当然，如果使用[MPV_lazy](https://github.com/hooke007/MPV_lazy)等内置了uosc的懒人包则只需安装本插件即可。
 
-
-字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
-
 </details>
 
 ## 安装
@@ -91,17 +88,6 @@
     │   ├── dandanplay
     │   │   ├── dandanplay
     │   │   └── dandanplay.exe
-    │   ├── OpenCC_Linux
-    │   │   └── opencc
-    │   └── OpenCC_Windows
-    │       ├── opencc.dll
-    │       ├── opencc.exe
-    │       ├── s2t.json
-    │       ├── STCharacters.ocd2
-    │       ├── STPhrases.ocd2
-    │       ├── t2s.json
-    │       ├── TSCharacters.ocd2
-    │       └── TSPhrases.ocd2
     ├── LICENSE
     ├── main.lua
     ├── modules
@@ -952,37 +938,6 @@ excluded_path=["X:", "Z:", "F:/Download/", "Download"]
 
 <details>
 <summary>
-OpenCC_Path
-
-> 指定OpenCC程序路径
-
-</summary>
-
-### OpenCC_Path
-
-#### 功能说明
-
-指定 OpenCC 程序的路径，支持绝对路径和相对路径
-不特殊指定或者留空（默认值）会在脚本同目录的 bin 中查找，调用本人构建好的 OpenCC 可执行文件
-示例：`OpenCC_Path=opencc` 会在环境变量 PATH 中或 mpv 程序旁查找该程序
-
-#### 使用示例
-
-想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
-
-> **⚠️IMPORTANT！**
-> 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
-
-```
-OpenCC_Path=/path/to/your/opencc
-```
-
-</details>
-
----
-
-<details>
-<summary>
 history_path
 
 > 指定弹幕关联历史记录文件路径
@@ -1050,9 +1005,6 @@ blacklist_path=
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
 
-### 简繁转换功能无法生效
-
-检查mpv及其本插件是否安装在了含中文字符的文件夹路径下。简繁转换功能所依赖的OpenCC第三方工具在非英文路径名下无法正常工作。想了解更多可以参考[此discussion](https://github.com/Tony15246/uosc_danmaku/discussions/92)
 
 ### 来自弹弹play的弹幕源问题如何从根源进行调整解决
 

@@ -18,8 +18,6 @@ require('apis/extra')
 danmaku_path = os.getenv("TEMP") or "/tmp/"
 history_path = mp.command_native({"expand-path", options.history_path})
 
-local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
-
 platform = (function()
     local platform = mp.get_property_native("platform")
     if platform then
@@ -377,59 +375,6 @@ function load_danmaku(from_menu, no_osd)
 
     convert_danmaku_format(danmaku_input, danmaku_file, delays)
     parse_danmaku(danmaku_file, from_menu, no_osd)
-end
-
--- 简繁转换
-function ch_convert(ass_path, case, callback)
-    if case == 0 then
-        callback(nil)
-        return
-    end
-
-    if opencc_path == "" then
-        opencc_path = utils.join_path(mp.get_script_directory(), "bin")
-        if platform == "windows" then
-            opencc_path = utils.join_path(opencc_path, "OpenCC_Windows/opencc.exe")
-        else
-            opencc_path = utils.join_path(opencc_path, "OpenCC_Linux/opencc")
-        end
-    end
-    opencc_path = os.getenv("OPENCC") or opencc_path
-
-    if not file_exists(opencc_path) then
-        callback("可执行文件缺失")
-        msg.warn(opencc_path .. "不存在")
-        return
-    end
-
-    local config
-    if case == 1 then
-        config = "t2s.json"
-    elseif case == 2 then
-        config = "s2t.json"
-    else
-        callback("无效的转换配置")
-        return
-    end
-
-    local arg = {
-        opencc_path,
-        "-i",
-        ass_path,
-        "-o",
-        ass_path,
-        "-c",
-        config,
-    }
-
-    call_cmd_async(arg, function(error)
-        async_running = false
-        if error then
-            callback("OpenCC 转换失败：" .. error)
-        else
-            callback(nil)
-        end
-    end)
 end
 
 -- 为 bilibli 网站的视频播放加载弹幕
