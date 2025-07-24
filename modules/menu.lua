@@ -339,25 +339,21 @@ end
 local menu_items_config = {
     bold = { title = "粗体", hint = options.bold, original = options.bold,
         footnote = "true / false", },
-    font_size_strict = { title = "统一大小", hint = options.font_size_strict, original = options.font_size_strict,
-        footnote = "true / false", },
     fontsize = { title = "大小", hint = options.fontsize, original = options.fontsize,
         scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
     outline = { title = "描边", hint = options.outline, original = options.outline,
         scope = { min = 0.0, max = 4.0 }, footnote = "输入范围：(0.0-4.0)" },
     shadow = { title = "阴影", hint = options.shadow, original = options.shadow,
         scope = { min = 0, max = math.huge }, footnote = "请输入整数(>=0)", },
-    density = { title = "密度", hint = options.density, original = options.density,
-        scope = { min = -1, max = math.huge }, footnote = "整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数", },
     scrolltime = { title = "速度", hint = options.scrolltime, original = options.scrolltime,
         scope = { min = 1, max = math.huge }, footnote = "请输入整数(>=1)", },
-    transparency = { title = "透明度", hint = options.transparency, original = options.transparency,
-        scope = { min = 0, max = 255 }, footnote = "输入整数：0(不透明)到255(完全透明)", },
+    opacity = { title = "透明度", hint = options.opacity, original = options.opacity,
+        scope = { min = 0, max = 1 }, footnote = "输入范围：0（完全透明）到1（不透明）", },
     displayarea = { title = "弹幕显示范围", hint = options.displayarea, original = options.displayarea,
         scope = { min = 0.0, max = 1.0 }, footnote = "显示范围(0.0-1.0)", },
 }
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
-local ordered_keys = {"bold", "font_size_strict", "fontsize", "outline", "shadow", "density", "scrolltime", "transparency", "displayarea"}
+local ordered_keys = {"bold", "fontsize", "outline", "shadow", "scrolltime", "opacity", "displayarea"}
 
 -- 设置弹幕样式菜单
 function add_danmaku_setup(actived, status)
@@ -377,7 +373,8 @@ function add_danmaku_setup(actived, status)
             selectable = true,
         }
         if config.hint ~= config.original then
-            item_config.actions = {{icon = "refresh", name = key, label = "恢复默认配置 < " .. config.original .. " >"}}
+            local original_str = tostring(config.original)
+            item_config.actions = {{icon = "refresh", name = key, label = "恢复默认配置 < " .. original_str .. " >"}}
         end
         table.insert(items, item_config)
     end
@@ -673,18 +670,11 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
         if event.type == "activate" then
             if not event.action then
                 if ordered_keys[event.index] == "bold" then
-                    options.bold = options.bold == "true" and "false" or "true"
-                    menu_items_config.bold.hint = options.bold
-                elseif ordered_keys[event.index] == "font_size_strict" then
-                    options.font_size_strict = options.font_size_strict == "true" and "false" or "true"
-                    menu_items_config.font_size_strict.hint = options.font_size_strict
+                    options.bold = not options.bold
+                    menu_items_config.bold.hint = options.bold and "true" or "false"
                 end
                 -- "updata" 模式会保留输入框文字
                 add_danmaku_setup(ordered_keys[event.index], "updata")
-                if ordered_keys[event.index] == "font_size_strict" then
-                    print("font_size_strict")
-                    load_danmaku(true, true)
-                end
                 return
             else
                 -- msg.info("event.action：" .. event.action)

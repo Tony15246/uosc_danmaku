@@ -32,6 +32,78 @@ function abbr_str(str, length)
     return str
 end
 
+function get_str_width(text, font_size)
+    local width = 0
+    for i = 1, #text do
+        local byte = string.byte(text, i)
+        if byte > 127 then
+            width = width + 2
+        else
+            width = width + 1
+        end
+    end
+
+    local unicode_width = 0
+    local i = 1
+    while i <= #text do
+        local byte = string.byte(text, i)
+        local char_len
+        if byte < 128 then char_len = 1; unicode_width = unicode_width + 1
+        elseif byte >= 192 and byte < 224 then char_len = 2; unicode_width = unicode_width + 2
+        elseif byte >= 224 and byte < 240 then char_len = 3; unicode_width = unicode_width + 2
+        elseif byte >= 240 and byte < 248 then char_len = 4; unicode_width = unicode_width + 2
+        else char_len = 1; unicode_width = unicode_width + 1
+        end
+        i = i + char_len
+    end
+    return unicode_width * (font_size / 2)
+end
+
+function unicode_to_utf8(unicode)
+    if unicode < 0x80 then
+        return string.char(unicode)
+    else
+        local byte_count
+        if unicode < 0x800 then
+            byte_count = 2
+        elseif unicode < 0x10000 then
+            byte_count = 3
+        elseif unicode < 0x110000 then
+            byte_count = 4
+        else
+            return
+        end
+
+        local res = {}
+        local shift = 2 ^ 6
+        local after_shift = unicode
+        for _ = byte_count, 2, -1 do
+            local before_shift = after_shift
+            after_shift = math.floor(before_shift / shift)
+            table.insert(res, 1, before_shift - after_shift * shift + 0x80)
+        end
+        shift = 2 ^ (8 - byte_count)
+        table.insert(res, 1, after_shift + math.floor(0xFF / shift) * shift)
+        ---@diagnostic disable-next-line: deprecated
+        return string.char(unpack(res))
+    end
+end
+
+-- 从时间字符串转换为秒数
+function time_to_seconds(time_str)
+    local h, m, s = time_str:match("(%d+):(%d+):([%d%.]+)")
+    return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
+end
+
+-- 从秒数转换为时间字符串
+function seconds_to_time(seconds)
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    local centiseconds = math.floor((seconds - math.floor(seconds)) * 100)
+    return string.format("%d:%02d:%02d.%02d", hours, minutes, secs, centiseconds)
+end
+
 function is_chinese(str)
     return string.match(str, "[\228-\233][\128-\191]") ~= nil
 end
@@ -120,6 +192,16 @@ function file_exists(path)
     if path then
         local meta = utils.file_info(path)
         return meta and meta.is_file
+    end
+    return false
+end
+
+function is_writable(path)
+    local file = io.open(path, "w")
+    if file then
+        file:close()
+        os.remove(path)
+        return true
     end
     return false
 end
