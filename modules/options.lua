@@ -22,14 +22,8 @@ options = {
     vf_fps = false,
     -- 设置要使用的 fps 滤镜参数
     fps = "60/1.001",
-    -- 透明度：0（不透明）到255（完全透明）
-    transparency = 0x30,
     -- 指定合并重复弹幕的时间间隔的容差值，单位为秒。默认值: -1，表示禁用
     merge_tolerance = -1,
-    -- 指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
-    -- 留空（默认值）会在脚本同目录的 bin 中查找
-    -- 示例：DanmakuFactory_Path = 'DanmakuFactory' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
-    DanmakuFactory_Path = "",
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
     open_search_danmaku_menu_key = "Ctrl+d",
@@ -40,28 +34,26 @@ options = {
     -- 留空（默认值）会在脚本同目录的 bin 中查找
     -- 示例：OpenCC_Path = 'opencc' 会在环境变量 PATH 中或 mpv 程序旁查找该程序
     OpenCC_Path = "",
-    --速度
-    scrolltime = "15",
+    --滚动弹幕的显示时间
+    scrolltime = 15,
+    --固定弹幕的显示时间
+    fixtime = 5,
     --字体
     fontname = "sans-serif",
-    --大小 
-    fontsize = "50",
-    --是否严格保持指定的字号大小
-    --这会破坏特效弹幕的显示，建议仅当弹幕显示重叠时启用
-    font_size_strict = "false",
-    --阴影
-    shadow = "0",
-    --粗体 true false
-    bold = "true",
-    --弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
-    density = "0.0",
+    --字体大小 
+    fontsize = 50,
+    --字体阴影
+    shadow = 0,
+    --字体粗体
+    bold = true,
+    -- 透明度：0（完全透明）到 1（不透明）
+    opacity = 0.7,
     --全部弹幕的显示范围(0.0-1.0)
-    displayarea = "0.85",
+    displayarea = 0.85,
     --描边 0-4
-    outline = "1.0",
-    -- 指定不会显示在屏幕上的弹幕类型。使用“-”连接类型名称，例如“L2R-TOP-BOTTOM”。可用的类型包括：L2R,R2L,TOP,BOTTOM,SPECIAL,COLOR,REPEAT
-    blockmode = "",
+    outline = 1.0,
     --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
+    --支持 lua 的正则表达式写法
     blacklist_path = "",
     --指定脚本相关消息显示的消息的对齐方式
     message_anlignment = 7,

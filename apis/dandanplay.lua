@@ -284,7 +284,7 @@ function save_danmaku_data(comments, query, danmaku_source)
     local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
     local danmaku_file = utils.join_path(danmaku_path, temp_file)
     danmaku.count = danmaku.count + 1
-    local success = save_json_for_factory(comments, danmaku_file)
+    local success = save_danmaku_json(comments, danmaku_file)
 
     if success then
         if danmaku.sources[query] ~= nil then
@@ -590,7 +590,7 @@ function add_danmaku_source_online(query, from_menu)
 end
 
 -- 将弹幕转换为factory可读的json格式
-function save_json_for_factory(comments, json_filename)
+function save_danmaku_json(comments, json_filename)
     local temp_file = "danmaku-" .. pid .. ".json"
     json_filename = json_filename or utils.join_path(danmaku_path, temp_file)
     local json_file = io.open(json_filename, "w")
@@ -612,6 +612,9 @@ function save_json_for_factory(comments, json_filename)
                     fields[2]  -- second field of p to third field of c
                 )
                 local m_value = comment["m"]
+                                :gsub("[%z\1-\31]", "")
+                                :gsub("\\", "")
+                                :gsub("\"", "")
 
                 -- Write the JSON object as a single line, no spaces or extra formatting
                 local json_entry = string.format('{"c":"%s","m":"%s"},\n', c_value, m_value)

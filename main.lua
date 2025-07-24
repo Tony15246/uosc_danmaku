@@ -7,6 +7,7 @@ delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name(
 
 require("modules/options")
 require("modules/utils")
+require("modules/parse")
 require("modules/guess")
 require('modules/render')
 require('modules/menu')
@@ -17,9 +18,7 @@ require('apis/extra')
 danmaku_path = os.getenv("TEMP") or "/tmp/"
 history_path = mp.command_native({"expand-path", options.history_path})
 
-local exec_path = mp.command_native({ "expand-path", options.DanmakuFactory_Path })
 local opencc_path = mp.command_native({ "expand-path", options.OpenCC_Path })
-local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 
 platform = (function()
     local platform = mp.get_property_native("platform")
@@ -308,54 +307,11 @@ function read_danmaku_source_record(path)
     end
 end
 
--- 视频播放时保存弹幕
-function save_danmaku()
-    local danmaku_file = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass")
-    if file_exists(danmaku_file) then
-        local path = mp.get_property("path")
-        -- 排除网络播放场景
-        if not path or is_protocol(path) then
-            show_message("此弹幕文件不支持保存至本地")
-            msg.warn("此弹幕文件不支持保存至本地")
-        else
-            local dir = get_parent_directory(path)
-            local filename = mp.get_property('filename/no-ext')
-            local danmaku_out = utils.join_path(dir, filename .. ".xml")
-            -- show_message(danmaku_out)
-            if file_exists(danmaku_out) then
-                show_message("已存在同名弹幕文件：" .. danmaku_out)
-                msg.info("已存在同名弹幕文件：" .. danmaku_out)
-                return
-            else
-                convert_with_danmaku_factory(danmaku_file, danmaku_out)
-                if file_exists(danmaku_out) then
-                    if not options.save_danmaku then
-                        show_message("成功保存 xml 弹幕文件到视频文件目录")
-                    end
-                    msg.warn("成功保存 xml 弹幕文件到: " .. danmaku_out)
-                else
-                    if not options.save_danmaku then
-                        show_message("弹幕保存失败", 3)
-                    end
-                    msg.error("弹幕保存失败")
-                end
-            end
-        end
-    else
-        show_message("找不到弹幕文件：" .. danmaku_file)
-        msg.warn("找不到弹幕文件：" .. danmaku_file)
-    end
-end
-
--- 加载弹幕
-function load_danmaku(from_menu, no_osd)
-    if not enabled then return end
-    local temp_file = "danmaku-" .. pid .. ".ass"
-    local danmaku_file = utils.join_path(danmaku_path, temp_file)
+-- 收集现有的弹幕文件和延迟记录
+local function collect_danmaku_sources()
     local danmaku_input = {}
     local delays = {}
 
-    -- 收集需要加载的弹幕文件
     for _, source in pairs(danmaku.sources) do
         if not source.blocked and source.fname then
             if not file_exists(source.fname) then
@@ -373,6 +329,44 @@ function load_danmaku(from_menu, no_osd)
         end
     end
 
+    return danmaku_input, delays
+end
+
+-- 视频播放时保存弹幕
+function save_danmaku()
+    local danmaku_input, delays = collect_danmaku_sources()
+    if #danmaku_input == 0 then
+        show_message("弹幕内容为空，无法保存", 3)
+        msg.verbose("弹幕内容为空，无法保存")
+        comments = {}
+        return
+    end
+
+    local path = mp.get_property("path")
+    local dir = get_parent_directory(path) or ""
+    local filename = mp.get_property('filename/no-ext')
+    local danmaku_out = utils.join_path(dir, filename .. ".xml")
+    -- 排除网络播放场景
+    if not path or is_protocol(path) or not is_writable(danmaku_out) then
+        show_message("此弹幕文件不支持保存至本地")
+        msg.warn("此弹幕文件不支持保存至本地")
+    else
+        if file_exists(danmaku_out) then
+            show_message("已存在同名弹幕文件：" .. danmaku_out)
+            msg.info("已存在同名弹幕文件：" .. danmaku_out)
+            return
+        else
+            convert_danmaku_to_xml(danmaku_input, danmaku_out, delays)
+        end
+    end
+end
+
+-- 加载弹幕
+function load_danmaku(from_menu, no_osd)
+    if not enabled then return end
+    local temp_file = "danmaku-" .. pid .. ".ass"
+    local danmaku_file = utils.join_path(danmaku_path, temp_file)
+    local danmaku_input, delays = collect_danmaku_sources()
     -- 如果没有弹幕文件，退出加载
     if #danmaku_input == 0 then
         show_message("该集弹幕内容为空，结束加载", 3)
@@ -381,109 +375,8 @@ function load_danmaku(from_menu, no_osd)
         return
     end
 
-    -- 异步执行弹幕转换
-    convert_with_danmaku_factory(danmaku_input, nil, delays, function(error)
-        if error then
-            show_message("弹幕转换失败", 3)
-            msg.error("弹幕转换失败：" .. error)
-            return
-        end
-
-        -- 转换完成后加载弹幕
-        parse_danmaku(danmaku_file, from_menu, no_osd)
-    end)
-end
-
--- 使用 DanmakuFactory 转换弹幕文件
-function convert_with_danmaku_factory(danmaku_input, danmaku_out, delays, callback)
-    if exec_path == "" then
-        exec_path = utils.join_path(mp.get_script_directory(), "bin/DanmakuFactory")
-        if platform == "windows" then
-            exec_path = utils.join_path(exec_path, "DanmakuFactory.exe")
-        else
-            exec_path = utils.join_path(exec_path, "DanmakuFactory")
-        end
-    end
-    local danmaku_factory_path = os.getenv("DANMAKU_FACTORY") or exec_path
-
-    if not file_exists(danmaku_factory_path) then
-        show_message("可执行文件缺失")
-        msg.warn(danmaku_factory_path .. "不存在")
-        return
-    end
-
-    local temp_file = "danmaku-" .. pid .. ".ass"
-    local danmaku_file = utils.join_path(danmaku_path, temp_file)
-
-    local arg = {
-        danmaku_factory_path,
-        "-o",
-        danmaku_out and danmaku_out or danmaku_file,
-        "-i",
-        "-t",
-        "--ignore-warnings",
-        "--scrolltime", options.scrolltime,
-        "--fontname", "sans-serif",
-        "--fontsize", options.fontsize,
-        "--shadow", options.shadow,
-        "--bold", options.bold,
-        "--density", options.density,
-    --  "--displayarea", options.displayarea,
-        "--outline", options.outline,
-    }
-
-    local shift = 1
-
-    if options.font_size_strict == "true" or danmaku.strict then
-        table.insert(arg, 13, "--font-size-strict")
-    end
-
-    -- 检查 danmaku_input 是字符串还是数组，并插入到正确的位置
-    if type(danmaku_input) == "string" then
-        -- 如果是单个字符串，直接插入
-        table.insert(arg, 5, danmaku_input)
-    else
-        -- 如果是字符串数组，逐个插入
-        for i, input in ipairs(danmaku_input) do
-            table.insert(arg, 4 + i, input)
-        end
-        shift = #danmaku_input
-    end
-
-    if delays then
-        for i, delay in ipairs(delays) do
-            table.insert(arg, 5 + shift + i, delay)
-        end
-    else
-        table.insert(arg, 6 + shift, "0.0")
-    end
-
-    if blacklist_file ~= "" and file_exists(blacklist_file) then
-        table.insert(arg, "--blacklist")
-        table.insert(arg, blacklist_file)
-    end
-
-    if options.blockmode ~= "" then
-        table.insert(arg, "--blockmode")
-        table.insert(arg, options.blockmode)
-    end
-
-    if not callback then
-        mp.command_native({
-            name = 'subprocess',
-            playback_only = false,
-            capture_stdout = true,
-            args = arg,
-        })
-    else
-        -- 异步执行命令
-        call_cmd_async(arg, function(error)
-            async_running = false
-            if callback then
-                callback(error)
-            end
-        end)
-    end
+    convert_danmaku_format(danmaku_input, danmaku_file, delays)
+    parse_danmaku(danmaku_file, from_menu, no_osd)
 end
 
 -- 简繁转换

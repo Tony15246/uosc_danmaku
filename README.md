@@ -39,7 +39,7 @@
 9. 在没有手动加载过弹幕，没有填装自动弹幕记忆之前，通过文件哈希匹配的方式自动添加弹幕（~仅限本地文件~，现已支持网络视频），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
 10. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
 11. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
-12. 自定义默认播放弹幕样式（具体设置方法详见[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)）
+12. 自定义默认播放弹幕样式（具体设置方法详见[自定义弹幕样式](#自定义弹幕样式相关配置)）
 13. 在使用如[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段时，自动加载弹幕（注意⚠️：目前支持自动加载bilibili和巴哈姆特这两个网站的弹幕，具体说明查看[autoload_for_url配置项说明](#autoload_for_url)）
 14. 保存当前弹幕到本地（详细功能说明见[save_danmaku配置项说明](#save_danmaku)）
 15. 可以合并一定时间段内同时出现的大量重复弹幕（具体设置方法详见[merge_tolerance配置项说明](#merge_tolerance)）
@@ -50,7 +50,6 @@
 
 插件本身支持Linux和Windows平台。项目依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)。欲使用本插件强烈建议为mpv播放器中安装uosc。uosc的安装步骤可以参考其[官方安装教程](https://github.com/tomasklaen/uosc?tab=readme-ov-file#install)。当然，如果使用[MPV_lazy](https://github.com/hooke007/MPV_lazy)等内置了uosc的懒人包则只需安装本插件即可。
 
-另外本插件也使用了DanmakuFactory弹幕格式转换工具。在Windows平台和Linux平台上本插件均调用作者自己编译构建的可执行文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[DanmakuFactory项目地址](https://github.com/hihkm/DanmakuFactory)，按照其教程选择或编译兼容自己环境的可执行文件。
 
 字体简繁转换基于OpenCC简繁转换工具。在Windows平台上本插件调用OpenCC官方编译的x86_64版本，在Linux平台上本插件调用基于作者自己Linux系统编译的二进制文件。如果本项目仓库中bin文件夹下提供的可执行文件无法正确运行，请前往[OpenCC项目地址](https://github.com/BYVoid/OpenCC)，按照其教程选择或编译兼容自己环境的可执行文件。
 
@@ -92,9 +91,6 @@
     │   ├── dandanplay
     │   │   ├── dandanplay
     │   │   └── dandanplay.exe
-    │   ├── DanmakuFactory
-    │   │   ├── DanmakuFactory
-    │   │   └── DanmakuFactory.exe
     │   ├── OpenCC_Linux
     │   │   └── opencc
     │   └── OpenCC_Windows
@@ -266,7 +262,7 @@ key script-message open_source_delay_menu
 
 > #### 实时修改弹幕样式（可选）
 
-依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_styles`或 `command:palette:script-message open_setup_danmaku_menu?弹幕样式`到 `uosc.conf`的controls配置项中。
+依赖于[uosc UI框架](https://github.com/tomasklaen/uosc)实现**弹幕样式实时修改**，将打开弹幕样式修改图形化菜单供用户手动修改，该功能目前仅依靠 uosc 实现（uosc不可用时无法使用此功能，并默认使用[自定义弹幕样式](#自定义弹幕样式相关配置)里的样式配置）。想要启用此功能，需要参照[uosc控件配置](#uosc控件配置)，根据uosc版本添加 `button:danmaku_styles`或 `command:palette:script-message open_setup_danmaku_menu?弹幕样式`到 `uosc.conf`的controls配置项中。
 
 想要通过快捷键使用此功能，请添加类似下面的配置到 `input.conf`中。实时修改弹幕样式功能对应的脚本消息为 `open_setup_danmaku_menu`。
 
@@ -560,30 +556,30 @@ add_from_source=yes
 
 ### 弹幕显示相关
 
-(如果需要更细节的弹幕样式修改请看[自定义弹幕样式](#DanmakuFactory相关配置自定义弹幕样式相关配置))
+(如果需要更细节的弹幕样式修改请看[自定义弹幕样式](#自定义弹幕样式相关配置))
 
 <!--  下列是弹幕显示相关  -->
 
 <details>
 <summary>
-transparency
+opacity
 
 > 自定义弹幕的透明度
 
 </summary>
 
-### transparency
+### opacity
 
 #### 功能说明
 
-自定义弹幕的透明度，0（不透明）到255（完全透明）。默认值：48
+自定义弹幕的透明度，0（完全透明）到1（不透明）。默认值：0.7
 
 #### 使用方法
 
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
-transparency=48
+opacity=0.7
 ```
 
 </details>
@@ -956,37 +952,6 @@ excluded_path=["X:", "Z:", "F:/Download/", "Download"]
 
 <details>
 <summary>
-DanmakuFactory_Path
-
-> 指定DanmakuFactory程序路径
-
-</summary>
-
-### DanmakuFactory_Path
-
-#### 功能说明
-
-指定 DanmakuFactory 程序的路径，支持绝对路径和相对路径
-不特殊指定或者留空（默认值）会在脚本同目录的 bin 中查找，调用本人构建好的 DanmakuFactory 可执行文件
-示例：`DanmakuFactory_Path=DanmakuFactory` 会在环境变量 PATH 中或 mpv 程序旁查找该程序
-
-#### 使用示例
-
-想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
-
-> **⚠️IMPORTANT！**
-> 不要直接复制这里的配置，这只是一个示例，路径要写成真实存在的路径。此选项可以不配置，脚本会默认选择环境变量或bin文件夹中的可执行文件。
-
-```
-DanmakuFactory_Path=/path/to/your/DanmakuFactory
-```
-
-</details>
-
----
-
-<details>
-<summary>
 OpenCC_Path
 
 > 指定OpenCC程序路径
@@ -1045,28 +1010,25 @@ history_path=/path/to/your/danmaku-history.json
 
 ---
 
-### DanmakuFactory相关配置（自定义弹幕样式相关配置）
+### 自定义弹幕样式相关配置
 
 默认配置如下，可根据需求更改并自定义弹幕样式
 
 想要配置此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并添加类似如下内容：
 
 ```
-#速度
+#滚动弹幕的显示时间
 scrolltime=15
+#固定弹幕的显示时间
+fixtime=5
 #字体(名称两边不需要使用引号""括住)
 fontname=sans-serif
 #大小
 fontsize=50
-#是否严格保持指定的字号大小，（true false）
-#这会破坏特效弹幕的显示，建议仅当弹幕显示重叠时启用
-font_size_strict=false
 #阴影
 shadow=0
-#粗体（true false）
-bold=true
-#弹幕密度 整数(>=-1) -1：表示不重叠 0：表示无限制 其他表示限定条数
-density=0.0
+#粗体
+bold=yes
 #全部弹幕的显示范围(0.0-1.0)
 displayarea=0.85
 #描边 0-4
@@ -1074,6 +1036,7 @@ outline=1
 #指定不会显示在屏幕上的弹幕类型。使用“-”连接类型名称，例如“L2R-TOP-BOTTOM”。可用的类型包括：L2R,R2L,TOP,BOTTOM,SPECIAL,COLOR,REPEAT
 blockmode=REPEAT
 #指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
+##支持 lua 的正则表达式写法
 blacklist_path=
 ```
 
@@ -1083,7 +1046,7 @@ blacklist_path=
 
 ### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”/搜索弹幕总是无结果/弹幕无法加载
 
-可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有 `bin\DanmakuFactory`文件夹下的DanmakuFactory.exe，和 `bin\dandanplay`文件夹下的 `dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
+可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有`bin\dandanplay`文件夹下的 `dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
 
 <img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
 
@@ -1122,7 +1085,7 @@ blacklist_path=
 
 - 弹幕api：[弹弹play](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md)
 - 菜单api：[uosc](https://github.com/tomasklaen/uosc)
-- 弹幕格式转换：[DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
+- 弹幕格式解析转换：[DanmakuConvert](https://github.com/timerring/DanmakuConvert)
 - 简繁转换：[OpenCC](https://github.com/BYVoid/OpenCC)
 - lua原生md5计算实现：https://github.com/rkscv/danmaku
 - b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)

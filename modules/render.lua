@@ -7,20 +7,6 @@ local osd_width, osd_height, pause = 0, 0, true
 enabled, comments, delay = false, nil, 0
 mp.set_property_native(delay_property, 0)
 
--- 从时间字符串转换为秒数
-function time_to_seconds(time_str)
-    local h, m, s = time_str:match("(%d+):(%d+):([%d%.]+)")
-    return tonumber(h) * 3600 + tonumber(m) * 60 + tonumber(s)
-end
-
--- 从秒数转换为时间字符串
-function seconds_to_time(seconds)
-    local h = math.floor(seconds / 3600)
-    local m = math.floor(seconds / 60) % 60
-    local s = math.floor(seconds % 60)
-    return string.format("%02d:%02d:%02d", h, m, s)
-end
-
 -- 提取 \move 参数 (x1, y1, x2, y2) 并返回
 local function parse_move_tag(text)
     -- 匹配包括小数和负数在内的坐标值
@@ -36,7 +22,7 @@ local function parse_comment(event, pos, height)
     local displayarea = tonumber(height * options.displayarea)
     if not x1 then
         local current_x, current_y = event.text:match("\\pos%((%-?[%d%.]+),%s*(%-?[%d%.]+).*%)")
-        if tonumber(current_y) > displayarea then return end
+        if not current_y or tonumber(current_y) > displayarea then return end
         if event.style ~= "SP" and event.style ~= "MSG" then
             return string.format("{\\an8}%s", event.text)
         else
@@ -147,6 +133,7 @@ function render()
 
     local fontname = options.fontname
     local fontsize = options.fontsize
+    local alpha = string.format("%02X", (1 - tonumber(options.opacity)) * 255)
 
     local width, height = 1920, 1080
     local ratio = osd_width / osd_height
@@ -170,9 +157,9 @@ function render()
             end
 
             -- 构建 ASS 字符串
-            local ass_text = text and string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%x\\bord%s\\shad%s\\b%s\\q2}%s",
+            local ass_text = text and string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%s\\bord%s\\shad%s\\b%s\\q2}%s",
                 fontname, text:match("{\\b1\\i1}x%d+$") and fontsize + text:match("x(%d+)$") or fontsize,
-                options.transparency, options.outline, options.shadow, options.bold == "true" and "1" or "0", text)
+                alpha, options.outline, options.shadow, options.bold and "1" or "0", text)
 
             table.insert(ass_events, ass_text)
         end
