@@ -85,7 +85,6 @@ function make_danmaku_request_args(method, url, headers, body)
         dandanplay_path,
         "-X",
         method,
-        url,
         "-H",
         "Accept: application/json",
         "-H",
@@ -102,7 +101,11 @@ function make_danmaku_request_args(method, url, headers, body)
     if body then
         table.insert(args, '-d')
         table.insert(args, utils.format_json(body))
+        table.insert(args, '-H')
+        table.insert(args, 'Content-Type: application/json')
     end
+
+    table.insert(args, url)
 
     return args
 end
