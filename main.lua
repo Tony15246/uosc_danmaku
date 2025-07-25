@@ -360,7 +360,8 @@ function save_danmaku()
     local filename = mp.get_property('filename/no-ext')
     local danmaku_out = utils.join_path(dir, filename .. ".xml")
     -- 排除网络播放场景
-    if not path or is_protocol(path) or not is_writable(danmaku_out) then
+    if not path or is_protocol(path) or (not file_exists(danmaku_out)
+    and not is_writable(danmaku_out)) then
         show_message("此弹幕文件不支持保存至本地")
         msg.warn("此弹幕文件不支持保存至本地")
     else
