@@ -300,7 +300,7 @@ mp.add_hook("on_unload", 50, function()
     }
 
     if options.save_danmaku and file_exists(files_to_remove.file2) then
-        save_danmaku()
+        save_danmaku(true)
     end
 
     for _, file in pairs(files_to_remove) do
