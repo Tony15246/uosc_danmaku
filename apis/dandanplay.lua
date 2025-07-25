@@ -1,6 +1,23 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
-local md5 = require("modules/md5")
+
+local function extract_url(url)
+    local path = url:match("^https?://[^/]+(/[^%?]*)")
+    return path
+end
+
+local function generateXSignature(url, time, appid, app_accept)
+    local url_path = extract_url(url)
+    if not url_path then
+        return nil
+    end
+
+    local dataToHash = string.format("%s%d%s%s", AES.ECB.decrypt(KEY, Base64.decode(appid)),
+    time, url_path, AES.ECB.decrypt(KEY, Base64.decode(app_accept)))
+    local hash = Sha256(dataToHash)
+    local base64Hash = Base64.encode(hex_to_bin(hash))
+    return base64Hash
+end
 
 -- 写入history.json
 -- 读取episodeId获取danmaku
@@ -68,21 +85,9 @@ end
 
 -- 返回弹幕请求参数
 function make_danmaku_request_args(method, url, headers, body)
-    local dandanplay_path = utils.join_path(mp.get_script_directory(), "bin")
-    if platform == "windows" then
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay.exe")
-    else
-        dandanplay_path = utils.join_path(dandanplay_path, "dandanplay/dandanplay")
-    end
-
-    if not file_exists(dandanplay_path) then
-        show_message("可执行文件缺失")
-        msg.warn(dandanplay_path .. "不存在")
-        return nil
-    end
-
     local args = {
-        dandanplay_path,
+        "curl",
+        "-L",
         "-X",
         method,
         "-H",
@@ -103,6 +108,18 @@ function make_danmaku_request_args(method, url, headers, body)
         table.insert(args, utils.format_json(body))
         table.insert(args, '-H')
         table.insert(args, 'Content-Type: application/json')
+    end
+
+    if url:find("api%.dandanplay%.") then
+        local time = os.time()
+        local appid = "UgjRIH45lE1BBLNmir1WKw=="
+        local app_accept = "SzuWlFZAPRMqeWf9qmfp8dcvYr3hvxuSrIRZuAeEfko="
+        table.insert(args, '-H')
+        table.insert(args, string.format('X-AppId: %s', AES.ECB.decrypt(KEY, Base64.decode(appid))))
+        table.insert(args, '-H')
+        table.insert(args, string.format('X-Signature: %s', generateXSignature(url, time, appid, app_accept)))
+        table.insert(args, '-H')
+        table.insert(args, string.format('X-Timestamp: %s', time))
     end
 
     table.insert(args, url)
@@ -204,7 +221,7 @@ local function match_file(file_path, file_name, callback)
     if file_info and file_info.size > 16 * 1024 * 1024 then
         local file, error = io.open(normalize(file_path), 'rb')
         if file and not error then
-            local m = md5.new()
+            local m = MD5.new()
             for _ = 1, 16 * 1024 do
                 local content = file:read(1024)
                 if not content then

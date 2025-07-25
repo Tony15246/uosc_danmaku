@@ -32,7 +32,7 @@ function get_animes(query)
 
     local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
-    if res.status ~= 0 then
+    if not res.status or res.status ~= 0 then
         local message = "获取数据失败"
         if uosc_available then
             update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query)
@@ -101,7 +101,7 @@ function get_episodes(animeTitle, bangumiId)
 
     local res = mp.command_native({ name = 'subprocess', capture_stdout = true, capture_stderr = true, args = args })
 
-    if res.status ~= 0 then
+    if not res.status or res.status ~= 0 then
         local message = "获取数据失败"
         if uosc_available then
             update_menu_uosc(menu_type, menu_title, message, footnote)

@@ -1,6 +1,5 @@
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
-local base64 = require("modules/base64")
 
 local Source = {
     ["b 站"] = "bilibili1",
@@ -36,7 +35,7 @@ end
 local function query_tmdb(title, class, menu)
     local encoded_title = url_encode(title)
     local url = string.format("https://api.themoviedb.org/3/search/%s?api_key=%s&query=%s&language=zh-CN",
-    class, base64.decode(options.tmdb_api_key), encoded_title)
+    class, Base64.decode(options.tmdb_api_key), encoded_title)
 
     local cmd = {
         "curl",
@@ -58,7 +57,7 @@ local function query_tmdb(title, class, menu)
     })
 
     local data = utils.parse_json(res.stdout)
-    if res.status ~= 0 or not data.results or #data.results == 0 then
+    if not res.status or res.status ~= 0 or not data.results or #data.results == 0 then
         local message = "获取 tmdb 中文数据失败"
         if uosc_available then
             update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, title)
@@ -87,7 +86,7 @@ local function get_number(cat, id, site)
         capture_stderr = true,
     })
 
-    if res.status ~= 0 then
+    if not res.status or res.status ~= 0 then
         msg.error("Failed to fetch data: " .. (res.stderr or "unknown error"))
         return nil
     end
@@ -146,7 +145,7 @@ function get_details(class, id, site, title, year, number, episodenum)
         capture_stderr = true,
     })
 
-    if res.status ~= 0 then
+    if not res.status or res.status ~= 0 then
         local message = "无结果"
         if uosc_available and not episodenum then
             update_menu_uosc(menu_type, menu_title, message, footnote)
@@ -222,7 +221,7 @@ local function search_query(query, class, menu)
         capture_stderr = true,
     })
 
-    if res.status ~= 0 then
+    if not res.status or res.status ~= 0 then
         local message = "无结果"
         if uosc_available then
             update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, query)
@@ -299,7 +298,7 @@ function query_extra(name, class)
     end
 
 
-    if options.tmdb_api_key == "" or #base64.decode(options.tmdb_api_key) < 32 then
+    if options.tmdb_api_key == "" or #Base64.decode(options.tmdb_api_key) < 32 then
         local message = "请正确设置 tmdb_api_key 或尝试使用中文搜索"
         if uosc_available then
             update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, name)
