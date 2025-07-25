@@ -302,6 +302,8 @@ function process_danmaku_file(all_danmaku, danmaku_file)
     local fontsize = tonumber(options.fontsize) or 50
     local scrolltime = tonumber(options.scrolltime) or 15
     local fixtime = tonumber(options.fixtime) or 5
+    local outline = tonumber(options.outline) or 1.0
+    local shadow = tonumber(options.shadow) or 0.0
 
     local res_x = 1920
     local res_y = 1080
@@ -322,14 +324,15 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: R2L,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,1,1,7,0,0,0,1
-Style: TOP,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,1,1,8,0,0,0,1
-Style: BTM,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,1,1,2,0,0,0,1
+Style: R2L,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,%.1f,%.1f,7,0,0,0,1
+Style: TOP,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,%.1f,%.1f,8,0,0,0,1
+Style: BTM,%s,%d,&H%sFFFFFF,&H00FFFFFF,&H00000000,&H%s000000,%d,0,0,0,100,100,0,0,1,%.1f,%.1f,2,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-]], res_x, res_y, options.fontname, fontsize, alpha, alpha, bold, options.fontname, fontsize, alpha, alpha, bold,
-    options.fontname, fontsize, alpha, alpha, bold)
+]], res_x, res_y, options.fontname, fontsize, alpha, alpha, bold, outline, shadow,
+    options.fontname, fontsize, alpha, alpha, bold, outline, shadow,
+    options.fontname, fontsize, alpha, alpha, bold, outline, shadow)
 
     local ass_events = {}
 

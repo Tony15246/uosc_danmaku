@@ -5,6 +5,11 @@ pid = utils.getpid()
 danmaku = {sources = {}, count = 1}
 delay_property = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
 
+AES = require("modules/aes")
+Base64 = require("modules/base64")
+MD5 = require("modules/md5")
+Sha256 = require("modules/hash")
+
 require("modules/options")
 require("modules/utils")
 require("modules/parse")
@@ -17,6 +22,16 @@ require('apis/extra')
 
 danmaku_path = os.getenv("TEMP") or "/tmp/"
 history_path = mp.command_native({"expand-path", options.history_path})
+
+KEY = table_to_zero_indexed({
+    0x00,0x01,0x02,0x03,0x04,
+    0x05,0x06,0x07,0x08,0x09,
+    0x0a,0x0b,0x0c,0x0d,0x0e,
+    0x0f,0x10,0x11,0x12,0x13,
+    0x14,0x15,0x16,0x17,0x18,
+    0x19,0x1a,0x1b,0x1c,0x1d,
+    0x1e,0x1f
+})
 
 platform = (function()
     local platform = mp.get_property_native("platform")

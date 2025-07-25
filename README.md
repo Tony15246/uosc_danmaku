@@ -84,10 +84,6 @@
     ├── apis
     │   ├── dandanplay.lua
     │   └── extra.lua
-    ├── bin
-    │   ├── dandanplay
-    │   │   ├── dandanplay
-    │   │   └── dandanplay.exe
     ├── LICENSE
     ├── main.lua
     ├── modules
@@ -999,13 +995,6 @@ blacklist_path=
 
 ## 常见问题
 
-### 我在Windows平台上使用此插件，总是会显示“未找到弹幕文件”/搜索弹幕总是无结果/弹幕无法加载
-
-可能是Windows系统的病毒威胁与保护误查杀了本插件使用的可执行程序，把可执行程序当成了病毒。windows平台上，插件运行必不可少的可执行程序有`bin\dandanplay`文件夹下的 `dandanplay.exe`。请检查这些程序是否已经被系统自动删除，如果已经被删除，找到下图中的界面还原可执行程序并允许此应用
-
-<img width="902" alt="image_2024-10-06_11-50-12" src="https://github.com/user-attachments/assets/ebcc1a37-0041-42ce-8afe-0e9c2899dd29">
-
-
 ### 来自弹弹play的弹幕源问题如何从根源进行调整解决
 
 本插件动画弹幕均来自[弹弹play api](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md)，所以你可能会遇到`部分动画没有弹幕`和`弹幕时间轴对不上`这类问题，虽然你可以使用本插件的 [从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选) 和 [弹幕源延迟设置](#弹幕源延迟设置可选) 这两个功能解决，但你如果想为弹幕源做贡献从根源解决帮所有用户解决这类问题，可以参考下列教程:
@@ -1042,7 +1031,6 @@ blacklist_path=
 - lua原生md5计算实现：https://github.com/rkscv/danmaku
 - b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
 - 巴哈姆特在线播放弹幕获取实现参考：[MPV-Play-BAHA-Comments](https://github.com/s594569321/MPV-Play-BAHA-Comments)
-- 向dandanplay开放平台发送请求时附加身份验证信息，避免应用凭证公开: https://github.com/zhongfly/dandanplay
 
 ## 相关项目
 

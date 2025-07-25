@@ -112,6 +112,12 @@ function is_protocol(path)
     return type(path) == 'string' and (path:find('^%a[%w.+-]-://') ~= nil or path:find('^%a[%w.+-]-:%?') ~= nil)
 end
 
+function hex_to_bin(hexstr)
+    return (hexstr:gsub('..', function (cc)
+        return string.char(tonumber(cc, 16))
+    end))
+end
+
 function hex_to_char(x)
     return string.char(tonumber(x, 16))
 end
@@ -149,6 +155,14 @@ function split(str, delim)
         table.insert(result, match)
     end
     return result
+end
+
+function table_to_zero_indexed(tbl)
+    for i = #tbl, 1, -1 do
+        tbl[i - 1] = tbl[i]
+    end
+    tbl[#tbl] = nil
+    return tbl
 end
 
 function itable_index_of(itable, value)
