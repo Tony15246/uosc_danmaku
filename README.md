@@ -5,15 +5,10 @@
 > [!WARNING]
 > Release1.2.0及Release1.2.0之前的发行版，都由于弹弹play接口使用政策改版，部分功能无法使用。如果发现插件功能异常，比如搜索弹幕总是显示无结果，请拉取或下载主分支最新源代码；或下载[最新发行版](https://github.com/Tony15246/uosc_danmaku/releases/latest)
 
-> [!IMPORTANT]
-> mpv 需基于 LuaJIT 或 Lua 5.2 构建，脚本不支持 Lua 5.1
-
 > [!NOTE]
 > 已添加对mpv内部 `mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
-> 
+>
 > 欲启用此支持mpv最低版本要求：0.39.0
-
-
 
 ## 项目简介
 
@@ -37,6 +32,9 @@
 7. 通过点击加入uosc control bar中的[弹幕源延迟设置](#弹幕源延迟设置可选)按钮可以打开弹幕源延迟控制菜单，可以独立控制每个弹幕源的延迟（注意⚠️：未安装uosc框架时该功能不可用）
 8. 记忆型全自动弹幕填装，在为某个文件夹下的某一集番剧加载过一次弹幕后，加载过的弹幕会自动关联到该集；之后每次重新播放该文件就会自动加载弹幕，同时该文件对应的文件夹下的所有其他集数的文件都会在播放时自动加载弹幕，无需再重复手动输入番剧名进行搜索（注意⚠️：全自动弹幕填装默认关闭，如需开启请阅读[auto_load配置项说明](#auto_load)）
 9. 在没有手动加载过弹幕，没有填装自动弹幕记忆之前，通过文件哈希匹配的方式自动添加弹幕（~仅限本地文件~，现已支持网络视频），对于能够哈希匹配关联的文件不再需要手动搜索关联，实现全自动加载弹幕并添加记忆。该功能随记忆型全自动弹幕填装功能一起开启（哈希匹配自动加载准确率较低，如关联到错误的剧集请手动加载正确的剧集）
+    
+    > 哈希匹配功能需要 mpv 基于 LuaJIT 或 Lua 5.2 构建，不支持 Lua 5.1
+
 10. 通过打开配置项load_more_danmaku可以爬取所有可用弹幕源，获取更多弹幕（注意⚠️：爬取所有可用弹幕源默认关闭，如需开启请阅读[load_more_danmaku配置项说明](#load_more_danmaku)）
 11. 自动记忆弹幕开关情况，播放视频时保持上次关闭时的弹幕开关状态
 12. 自定义默认播放弹幕样式（具体设置方法详见[自定义弹幕样式](#自定义弹幕样式相关配置)）
@@ -71,7 +69,7 @@
 想要使用本插件，请将本插件完整地[下载](https://github.com/Tony15246/uosc_danmaku/releases)或者克隆到 `scripts`目录下即可使用，文件结构参阅下方
 
 > [!IMPORTANT]
-> 
+>
 > 1. scripts目录下放置本插件的文件夹名称必须为uosc_danmaku，否则必须参照uosc控件配置部分[修改uosc控件](#修改uosc控件可选)
 > 2. 记得给bin文件夹下的文件赋予可执行权限
 
@@ -172,8 +170,6 @@ j script-message show_danmaku_keyboard
 open_search_danmaku_menu_key=Ctrl+i
 show_danmaku_keyboard_key=i
 ```
-
-
 
 ## 拓展功能（可选）
 
@@ -428,7 +424,7 @@ autoload_for_url
 另外，开启此选项后还会在网络播放bilibili以及巴哈姆特的视频时自动加载对应视频的弹幕，可配合[Play-With-MPV](https://github.com/LuckyPuppy514/Play-With-MPV)或[ff2mpv](https://github.com/woodruffw/ff2mpv)等网络播放手段使用。（播放巴哈姆特的视频时弹幕自动加载如果失败，请检查[proxy](#proxy)选项配置是否正确）
 
 > **⚠️NOTE！**
-> 
+>
 > 实验性功能，尚不完善
 
 #### 使用方法
@@ -484,11 +480,11 @@ save_danmaku
 当文件关闭时自动保存弹幕文件（xml格式）至视频同目录，保存的弹幕文件名与对应的视频文件名相同。配合[autoload_local_danmaku选项](#autoload_local_danmaku)可以实现弹幕自动保存到本地并且下次播放时自动加载本地保存的弹幕。此功能默认禁用。
 
 > **⚠️NOTE！**
-> 
+>
 > 当开启[autoload_local_danmaku选项](#autoload_local_danmaku)时，会自动加载播放文件同目录下同名的 xml 格式的弹幕文件，优先级高于一切其他自动加载弹幕功能。如果不希望每次播放都加载之前保存的本地弹幕，则请关闭[autoload_local_danmaku选项](#autoload_local_danmaku)；或者在保存完弹幕之后转移弹幕文件至其他路径并关闭 `save_danmaku`选项。
-> 
+>
 > `save_danmaku`选项的打开和关闭可以运行时实时更新。在 `input.conf`中添加如下内容，可通过快捷键实时控制 `save_danmaku`选项的打开和关闭
-> 
+>
 > ```
 > key cycle-values script-opts uosc_danmaku-save_danmaku=yes uosc_danmaku-save_danmaku=no
 > ```
@@ -517,7 +513,7 @@ save_danmaku=yes
 ### add_from_source
 
 > **⚠️NOTE！**
-> 
+>
 > 该可选配置项在Release v1.2.0之后已废除。现在通过 `从弹幕源向当前弹幕添加新弹幕内容`功能关联过的弹幕源被记录，并且下次播放同一个视频的时候自动关联并加载所有添加过的弹幕源，这样的行为已经成为了插件的默认行为，不需要再通过 `add_from_source`来开启。在[从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选)菜单中可以可视化地管理所有添加过的弹幕源。
 
 #### 功能说明
@@ -699,7 +695,7 @@ api_server
 允许自定义弹幕 API 的服务地址
 
 > **⚠️NOTE！**
-> 
+>
 > 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[anoraker/abetsy](https://hub.docker.com/repository/docker/anoraker/abetsy)
 
 #### 使用方法
@@ -729,8 +725,8 @@ fallback_server
 自定义 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在弹弹play无法解析视频源对应弹幕的情况下才会使用此处设置的服务器进行解析。兜底弹幕服务器可以自托管，具体方法请参考此仓库：https://github.com/lyz05/danmaku
 
 > **⚠️NOTE！**
-> 
-> 不设置此选项的情况下默认使用`https://fc.lyz05.cn`作为兜底服务器，除非你自行部署了弹幕服务器，否则不建议自定义此选项。
+>
+> 不设置此选项的情况下默认使用 `https://fc.lyz05.cn`作为兜底服务器，除非你自行部署了弹幕服务器，否则不建议自定义此选项。
 
 #### 使用方法
 
@@ -759,7 +755,7 @@ tmdb_api_key
 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)。可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取个人的tmdb 的 API Key。
 
 > **⚠️NOTE！**
-> 
+>
 > 不设置此选项的情况下默认使用专为本项目申请的API Key。另外，自定义此选项时还需要对获取到的 API Key 进行 base64 编码。
 
 #### 使用方法
@@ -795,9 +791,9 @@ user_agent
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容（不可为空）：
 
 > **⚠️NOTE！**
-> 
+>
 > User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
-> 
+>
 > 若想提高URL播放的哈希匹配成功率，可以将此项设为 `mpv`或浏览器的User-Agent
 
 ```
@@ -991,17 +987,15 @@ blockmode=REPEAT
 blacklist_path=
 ```
 
-
-
 ## 常见问题
 
 ### 来自弹弹play的弹幕源问题如何从根源进行调整解决
 
-本插件动画弹幕均来自[弹弹play api](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md)，所以你可能会遇到`部分动画没有弹幕`和`弹幕时间轴对不上`这类问题，虽然你可以使用本插件的 [从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选) 和 [弹幕源延迟设置](#弹幕源延迟设置可选) 这两个功能解决，但你如果想为弹幕源做贡献从根源解决帮所有用户解决这类问题，可以参考下列教程:
+本插件动画弹幕均来自[弹弹play api](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md)，所以你可能会遇到 `部分动画没有弹幕`和 `弹幕时间轴对不上`这类问题，虽然你可以使用本插件的 [从源获取弹幕](#从弹幕源向当前弹幕添加新弹幕内容可选) 和 [弹幕源延迟设置](#弹幕源延迟设置可选) 这两个功能解决，但你如果想为弹幕源做贡献从根源解决帮所有用户解决这类问题，可以参考下列教程:
 
 1.下载[弹弹play pc端](https://www.dandanplay.com)
 
-2.使用弹弹play`播放任意视频文件`并`绑定你想要调整的动画弹幕库`
+2.使用弹弹play `播放任意视频文件`并 `绑定你想要调整的动画弹幕库`
 
 3.然后就可以参考下方详细教程对弹幕源进行操作并使所有用户同步操作内容了
 
@@ -1014,11 +1008,9 @@ blacklist_path=
 
 **为动画弹幕源调整延迟**
 
-如果你想为动画弹幕源修改延迟，请在`视频设置菜单`-→`编辑弹幕来源`中复制下你要编辑的弹幕源的具体网址，然后点击删除，然后使用 `视频设置菜单`-→`弹幕列表`-→`添加更多弹幕` 这项功能进行重新添加，添加时在下方`已选弹幕`中更改`弹幕偏移`（单位为秒）调整延迟，然后依旧是重复添加三次就能使API弹幕同步了
+如果你想为动画弹幕源修改延迟，请在 `视频设置菜单`-→`编辑弹幕来源`中复制下你要编辑的弹幕源的具体网址，然后点击删除，然后使用 `视频设置菜单`-→`弹幕列表`-→`添加更多弹幕` 这项功能进行重新添加，添加时在下方 `已选弹幕`中更改 `弹幕偏移`（单位为秒）调整延迟，然后依旧是重复添加三次就能使API弹幕同步了
 
 另外，弹弹play的弹幕源一直是人工维护人工绑定制，感谢所有用此方式做贡献的人
-
-
 
 ## 特别感谢
 
@@ -1035,5 +1027,3 @@ blacklist_path=
 ## 相关项目
 
 - [slqy123/uosc_danmaku](https://github.com/slqy123/uosc_danmaku) 本项目的fork版本，实现了通过dandanplay api发送弹幕的功能，由于版本的兼容性以及功能的易用性问题未被合并，具体讨论请参阅 [#220](https://github.com/Tony15246/uosc_danmaku/pull/220)
-  
-  
