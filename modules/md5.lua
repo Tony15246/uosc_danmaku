@@ -6,16 +6,15 @@
 local byte, char, sub, rep = string.byte, string.char, string.sub, string.rep
 
 local tobit, tohex, bnot, bor, band, bxor, lshift, rshift, rol, bswap
-local ok, bit = pcall(require, 'bit')  --LuaJIT
-if ok then
-    tobit, tohex = bit.tobit or bit.cast, bit.tohex
-    bnot, bor, band, bxor, lshift, rshift = bit.bnot, bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift
-    rol, bswap = bit.rol, bit.bswap
-elseif bit32 then --Lua 5.2
-    local bit32_bnot = bit32.bnot
-    tobit = function(a) return a <= 0x7fffffff and a or -(bit32_bnot(a) + 1) end
+if _G.bit then  --LuaJIT
+    tobit, tohex = _G.bit.tobit or _G.bit.cast, _G.bit.tohex
+    bnot, bor, band, bxor, lshift, rshift = _G.bit.bnot, _G.bit.bor, _G.bit.band, _G.bit.bxor, _G.bit.lshift, _G.bit.rshift
+    rol, bswap = _G.bit.rol, _G.bit.bswap
+elseif _G.bit32 then --Lua 5.2
+    local bit32_bnot = _G.bit32.bnot
+    tobit = function(a) return a <= 0x7fffffff and a or -(_G.bit32.bnot(a) + 1) end
     bnot = function(a) return tobit(bit32_bnot(tobit(a))) end
-    bor, band, bxor, lshift, rshift, rol = bit32.bor, bit32.band, bit32.bxor, bit32.lshift, bit32.rshift, bit32.lrotate
+    bor, band, bxor, lshift, rshift, rol = _G.bit32.bor, _G.bit32.band, _G.bit32.bxor, _G.bit32.lshift, _G.bit32.rshift, _G.bit32.lrotate
 else
     return nil
 end
