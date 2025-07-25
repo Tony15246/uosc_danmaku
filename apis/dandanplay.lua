@@ -648,6 +648,11 @@ end
 
 -- 通过文件前 16M 的 hash 值进行弹幕匹配
 function get_danmaku_with_hash(file_name, file_path)
+    if type(MD5) ~= "table" or not MD5.sum then
+        msg.warn("MD5 模块不支持 Lua 5.1，回退到文件名匹配")
+        match_anime()
+        return
+    end
     if is_protocol(file_path) then
         set_danmaku_button()
         local temp_file = "temp-" .. pid .. ".mp4"

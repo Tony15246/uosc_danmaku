@@ -11,11 +11,13 @@ if ok then
     tobit, tohex = bit.tobit or bit.cast, bit.tohex
     bnot, bor, band, bxor, lshift, rshift = bit.bnot, bit.bor, bit.band, bit.bxor, bit.lshift, bit.rshift
     rol, bswap = bit.rol, bit.bswap
-else
-    local bit32_bnot = bit32.bnot --Lua 5.2
+elseif bit32 then --Lua 5.2
+    local bit32_bnot = bit32.bnot
     tobit = function(a) return a <= 0x7fffffff and a or -(bit32_bnot(a) + 1) end
     bnot = function(a) return tobit(bit32_bnot(tobit(a))) end
     bor, band, bxor, lshift, rshift, rol = bit32.bor, bit32.band, bit32.bxor, bit32.lshift, bit32.rshift, bit32.lrotate
+else
+    return nil
 end
 if not tohex then
     tohex = function(a) return string.sub(string.format('%08x', a), -8) end
