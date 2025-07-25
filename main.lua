@@ -346,7 +346,7 @@ local function collect_danmaku_sources()
 end
 
 -- 视频播放时保存弹幕
-function save_danmaku()
+function save_danmaku(not_forced)
     local danmaku_input, delays = collect_danmaku_sources()
     if #danmaku_input == 0 then
         show_message("弹幕内容为空，无法保存", 3)
@@ -365,7 +365,7 @@ function save_danmaku()
         show_message("此弹幕文件不支持保存至本地")
         msg.warn("此弹幕文件不支持保存至本地")
     else
-        if file_exists(danmaku_out) then
+        if not_forced and file_exists(danmaku_out) then
             show_message("已存在同名弹幕文件：" .. danmaku_out)
             msg.info("已存在同名弹幕文件：" .. danmaku_out)
             return
