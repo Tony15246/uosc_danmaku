@@ -74,29 +74,7 @@ local function parse_ass_events(ass_path, callback)
                     move = text:match("\\move"),
                 }
 
-                local merged = false
-                for _, existing_event in ipairs(events) do
-                    if existing_event.clean_text == event.clean_text and
-                       math.abs(existing_event.start_time - event.start_time) <= time_tolerance then
-                        if (existing_event.style == event.style) or
-                        (existing_event.pos == event.pos) or (existing_event.move == event.move) then
-                            existing_event.end_time = math.max(existing_event.end_time, event.end_time)
-                            existing_event.count = (existing_event.count or 1) + 1
-                            if not existing_event.text:find("{\\b1\\i1}x%d+$") then
-                                existing_event.text = existing_event.text .. "{\\b1\\i1}x" .. existing_event.count
-                            else
-                                existing_event.text = existing_event.text:gsub("x%d+$", "x" .. existing_event.count)
-                            end
-                            merged = true
-                            break
-                        end
-                    end
-                end
-
-                if not merged then
-                    event.count = 1
-                    table.insert(events, event)
-                end
+                table.insert(events, event)
             end
         end
     end

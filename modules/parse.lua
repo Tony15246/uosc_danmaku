@@ -28,6 +28,7 @@ local function decode_html_entities(text)
     end)
 end
 
+-- 加载黑名单模式
 local function load_blacklist_patterns(filepath)
     local patterns = {}
     if not file_exists(filepath) then
@@ -53,6 +54,7 @@ end
 local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
 local black_patterns = load_blacklist_patterns(blacklist_file)
 
+-- 检查字符串是否在黑名单中
 function is_blacklisted(str, patterns)
     for _, pattern in ipairs(patterns) do
         local ok, result = pcall(function()
@@ -62,7 +64,7 @@ function is_blacklisted(str, patterns)
         if ok and result then
             return true, pattern
         elseif not ok then
-            msg.debug("黑名单规则错误，跳过: " .. pattern .. "，错误信息：" .. result)
+            -- msg.debug("黑名单规则错误，跳过: " .. pattern .. "，错误信息：" .. result)
         end
     end
     return false
@@ -105,6 +107,65 @@ local function ch_convert_cached(text)
     return converted
 end
 
+-- 合并重复弹幕
+local function merge_duplicate_danmaku(danmakus, threshold)
+    if not threshold or tonumber(threshold) < 0 then return danmakus end
+
+    local groups = {}
+
+    for _, d in ipairs(danmakus) do
+        local key = d.type .. "|" .. d.color .. "|" .. d.text
+        if not groups[key] then groups[key] = {} end
+        table.insert(groups[key], d)
+    end
+
+    local merged = {}
+
+    for _, group in pairs(groups) do
+        table.sort(group, function(a, b) return a.time < b.time end)
+
+        local i = 1
+        while i <= #group do
+            local base = group[i]
+            local times = { base.time }
+            local count = 1
+            local j = i + 1
+
+            while j <= #group and math.abs(group[j].time - base.time) <= threshold do
+                table.insert(times, group[j].time)
+                count = count + 1
+                j = j + 1
+            end
+
+            local same_time = true
+            for k = 2, #times do
+                if times[k] ~= times[1] then
+                    same_time = false
+                    break
+                end
+            end
+
+            local danmaku = {
+                time = base.time,
+                type = base.type,
+                size = base.size,
+                color = base.color,
+                text = base.text,
+            }
+            if count > 2 or not same_time then
+                danmaku.text = danmaku.text .. string.format("x%d", count)
+            end
+
+            table.insert(merged, danmaku)
+            i = j
+        end
+    end
+
+    table.sort(merged, function(a, b) return a.time < b.time end)
+    return merged
+end
+
+-- 解析 XML 弹幕
 local function parse_xml_danmaku(xml_string, delay)
     local danmakus = {}
     for p_attr, text in xml_string:gmatch('<d p="([^"]+)">([^<]+)</d>') do
@@ -130,6 +191,7 @@ local function parse_xml_danmaku(xml_string, delay)
     return danmakus
 end
 
+-- 解析 JSON 弹幕
 local function parse_json_danmaku(json_string, delay)
     local danmakus = {}
     if json_string:sub(1, 3) == "\239\187\191" then
@@ -167,6 +229,63 @@ local function parse_json_danmaku(json_string, delay)
 
     table.sort(danmakus, function(a, b) return a.time < b.time end)
     return danmakus
+end
+
+-- 解析弹幕文件
+function parse_danmaku_files(danmaku_input, delays)
+    local danmaku_paths = {}
+    if type(danmaku_input) == "string" then
+        danmaku_paths = { danmaku_input }
+    else
+        for i, input in ipairs(danmaku_input) do
+            danmaku_paths[#danmaku_paths + 1] = input
+        end
+    end
+
+    local all_danmaku = {}
+
+    for i, danmaku_path in ipairs(danmaku_paths) do
+        if file_exists(danmaku_path) then
+            local content = read_file(danmaku_path)
+            if content then
+                local parsed = {}
+                local delay = (delays and tonumber(delays[i])) or 0
+                if danmaku_path:match("%.xml$") then
+                    parsed = parse_xml_danmaku(content, delay)
+                elseif danmaku_path:match("%.json$") then
+                    parsed = parse_json_danmaku(content, delay)
+                end
+
+                for _, d in ipairs(parsed) do
+                    local matched, pattern = is_blacklisted(d.text, black_patterns)
+                    if not matched then
+                        d.text = ch_convert_cached(d.text)
+                        table.insert(all_danmaku, d)
+                    else
+                        -- msg.debug("命中黑名单: " .. pattern)
+                    end
+                end
+            else
+                msg.info("无法读取文件内容: " .. danmaku_path)
+            end
+        else
+            msg.info("文件不存在: " .. danmaku_path)
+        end
+    end
+
+    if #all_danmaku == 0 then
+        msg.info("未能解析任何弹幕")
+        return nil
+    end
+
+    -- 按时间排序
+    table.sort(all_danmaku, function(a, b)
+        return a.time < b.time
+    end)
+
+    all_danmaku = merge_duplicate_danmaku(all_danmaku, options.merge_tolerance)
+
+    return all_danmaku
 end
 
 --# 弹幕数组与布局算法 (Danmaku Array & Layout Algorithms)
@@ -244,16 +363,11 @@ function get_position_y(font_size, appear_time, text_length, resolution_x, roll_
             if bias > 0 then
                 array:set_time_length(i, appear_time, text_length)
                 return 1 + (i - 1) * font_size
-            elseif best_row == 0 or bias > best_bias then
+            elseif bias > best_bias then
                 best_bias = bias
                 best_row = i
             end
         end
-    end
-
-    if best_row > 0 then
-        array:set_time_length(best_row, appear_time, text_length)
-        return 1 + (best_row - 1) * font_size
     end
     -- 所有行都被占用，放弃渲染
     return nil
@@ -290,7 +404,8 @@ function get_fixed_y(font_size, appear_time, fixtime, array, from_top)
     return nil
 end
 
-function process_danmaku_file(all_danmaku, danmaku_file)
+-- 将弹幕转换为 ASS 格式
+function convert_danmaku_to_ass(all_danmaku, danmaku_file)
     if #all_danmaku == 0 then
         msg.info("弹幕文件为空或解析失败")
         return false
@@ -337,9 +452,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     local ass_events = {}
 
     for _, d in ipairs(all_danmaku) do
-        local appear_time = d.time
+        local time = d.type == 1 and math.floor(d.time + 0.5) or d.time
+        local appear_time = time
         local danmaku_type = d.type
         local text = ass_escape(decode_html_entities(d.text))
+                    :gsub("x(%d+)$", "{\\b1\\i1}x%1")
 
         -- 颜色从十进制转为 BGR Hex
         local color = math.max(0, math.min(d.color or 0xFFFFFF, 0xFFFFFF))
@@ -413,60 +530,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     return true
 end
 
-function parse_danmaku_files(danmaku_input, delays)
-    local danmaku_paths = {}
-    if type(danmaku_input) == "string" then
-        danmaku_paths = { danmaku_input }
-    else
-        for i, input in ipairs(danmaku_input) do
-            danmaku_paths[#danmaku_paths + 1] = input
-        end
-    end
-
-    local all_danmaku = {}
-
-    for i, danmaku_path in ipairs(danmaku_paths) do
-        if file_exists(danmaku_path) then
-            local content = read_file(danmaku_path)
-            if content then
-                local parsed = {}
-                local delay = (delays and tonumber(delays[i])) or 0
-                if danmaku_path:match("%.xml$") then
-                    parsed = parse_xml_danmaku(content, delay)
-                elseif danmaku_path:match("%.json$") then
-                    parsed = parse_json_danmaku(content, delay)
-                end
-
-                for _, d in ipairs(parsed) do
-                    local matched, pattern = is_blacklisted(d.text, black_patterns)
-                    if not matched then
-                        d.text = ch_convert_cached(d.text)
-                        table.insert(all_danmaku, d)
-                    else
-                        --msg.debug("命中黑名单: " .. pattern)
-                    end
-                end
-            else
-                msg.info("无法读取文件内容: " .. danmaku_path)
-            end
-        else
-            msg.info("文件不存在: " .. danmaku_path)
-        end
-    end
-
-    if #all_danmaku == 0 then
-        msg.info("未能解析任何弹幕")
-        return nil
-    end
-
-    -- 按时间排序
-    table.sort(all_danmaku, function(a, b)
-        return a.time < b.time
-    end)
-
-    return all_danmaku
-end
-
+-- 将弹幕转换为 XML 格式
 function convert_danmaku_to_xml(danmaku_input, danmaku_out, delays)
    local all_danmaku = parse_danmaku_files(danmaku_input, delays)
    if not all_danmaku then
@@ -508,10 +572,11 @@ function convert_danmaku_to_xml(danmaku_input, danmaku_out, delays)
     return true
 end
 
+-- 解析和转换弹幕
 function convert_danmaku_format(danmaku_input, danmaku_file, delays)
     local all_danmaku = parse_danmaku_files(danmaku_input, delays)
     if all_danmaku then
-        process_danmaku_file(all_danmaku, danmaku_file)
+        convert_danmaku_to_ass(all_danmaku, danmaku_file)
     else
         msg.info("未能解析对应的 .xml 或 .json 弹幕文件")
         return false
