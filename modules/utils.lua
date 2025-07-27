@@ -186,10 +186,30 @@ function is_nested_table(t)
 end
 
 function shallow_copy(original)
+    if type(original) ~= "table" then
+        return original
+    end
     local copy = {}
     for k, v in pairs(original) do
         copy[k] = v
     end
+    return copy
+end
+
+function deep_copy(obj, seen)
+    if type(obj) ~= "table" then
+        return obj
+    end
+    if seen and seen[obj] then
+        return seen[obj]
+    end
+    local s = seen or {}
+    local copy = {}
+    s[obj] = copy
+    for k, v in pairs(obj) do
+        copy[deep_copy(k, s)] = deep_copy(v, s)
+    end
+    setmetatable(copy, getmetatable(obj))
     return copy
 end
 

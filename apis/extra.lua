@@ -15,7 +15,7 @@ local function load_extra_danmaku(url, episode, number, class, id, site, title, 
     else
         play_url = url:gsub("%?bsource=360ogvys$","")
     end
-    enabled = true
+    ENABLED = true
     danmaku.anime = title .. " (" .. year .. ")"
     danmaku.episode = "第" .. episode .. "话"
     danmaku.source = site
