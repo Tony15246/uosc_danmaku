@@ -23,17 +23,17 @@ end
 -- 读取episodeId获取danmaku
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
-    danmaku.source = "dandanplay"
-    for url, source in pairs(danmaku.sources) do
+    DANMAKU.source = "dandanplay"
+    for url, source in pairs(DANMAKU.sources) do
         if source.from == "api_server" then
             if source.fname and file_exists(source.fname) then
                 os.remove(source.fname)
             end
 
             if not source.from_history then
-                danmaku.sources[url] = nil
+                DANMAKU.sources[url] = nil
             else
-                danmaku.sources[url]["fname"] = nil
+                DANMAKU.sources[url]["fname"] = nil
             end
         end
     end
@@ -51,9 +51,9 @@ end
 function get_danmaku_fallback(query)
     local url = options.fallback_server .. "/?url=" .. query
     msg.verbose("尝试获取弹幕：" .. url)
-    local temp_file = "danmaku-" .. pid .. danmaku.count .. ".xml"
-    local danmaku_xml = utils.join_path(danmaku_path, temp_file)
-    danmaku.count = danmaku.count + 1
+    local temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".xml"
+    local danmaku_xml = utils.join_path(DANMAKU_PATH, temp_file)
+    DANMAKU.count = DANMAKU.count + 1
     local arg = {
         "curl",
         "-L",
@@ -75,7 +75,7 @@ function get_danmaku_fallback(query)
         end
         if file_exists(danmaku_xml) then
             if query:find("iqiyi%.com") ~= nil then
-                danmaku.strict = true
+                DANMAKU.strict = true
             end
             save_danmaku_downloaded(query, danmaku_xml)
             load_danmaku(true)
@@ -152,8 +152,8 @@ local function match_episode(animeTitle, bangumiId, episode_num)
 
         for _, episode in ipairs(data.bangumi.episodes) do
             if tonumber(episode.episodeNumber) == tonumber(episode_num) then
-                danmaku.anime = animeTitle
-                danmaku.episode = episode.episodeTitle
+                DANMAKU.anime = animeTitle
+                DANMAKU.episode = episode.episodeTitle
                 set_episode_id(episode.episodeId)
                 break
             end
@@ -274,8 +274,8 @@ local function match_file(file_path, file_name, callback)
             return
         end
 
-        danmaku.anime = data.matches[1].animeTitle
-        danmaku.episode = data.matches[1].episodeTitle
+        DANMAKU.anime = data.matches[1].animeTitle
+        DANMAKU.episode = data.matches[1].episodeTitle
 
         -- 获取并加载弹幕数据
         set_episode_id(data.matches[1].episodeId)
@@ -298,31 +298,31 @@ end
 
 -- 保存弹幕数据
 function save_danmaku_data(comments, query, danmaku_source)
-    local temp_file = "danmaku-" .. pid .. danmaku.count .. ".json"
-    local danmaku_file = utils.join_path(danmaku_path, temp_file)
-    danmaku.count = danmaku.count + 1
+    local temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".json"
+    local danmaku_file = utils.join_path(DANMAKU_PATH, temp_file)
+    DANMAKU.count = DANMAKU.count + 1
     local success = save_danmaku_json(comments, danmaku_file)
 
     if success then
-        if danmaku.sources[query] ~= nil then
-            if danmaku.sources[query].fname and file_exists(danmaku.sources[query].fname) then
-                os.remove(danmaku.sources[query].fname)
+        if DANMAKU.sources[query] ~= nil then
+            if DANMAKU.sources[query].fname and file_exists(DANMAKU.sources[query].fname) then
+                os.remove(DANMAKU.sources[query].fname)
             end
-            danmaku.sources[query]["fname"] = danmaku_file
+            DANMAKU.sources[query]["fname"] = danmaku_file
         else
-            danmaku.sources[query] = {from = danmaku_source, fname = danmaku_file}
+            DANMAKU.sources[query] = {from = danmaku_source, fname = danmaku_file}
         end
     end
 end
 
 function save_danmaku_downloaded(url, downloaded_file)
-    if danmaku.sources[url] ~= nil then
-        if danmaku.sources[url].fname and file_exists(danmaku.sources[url].fname) then
-            os.remove(danmaku.sources[url].fname)
+    if DANMAKU.sources[url] ~= nil then
+        if DANMAKU.sources[url].fname and file_exists(DANMAKU.sources[url].fname) then
+            os.remove(DANMAKU.sources[url].fname)
         end
-        danmaku.sources[url]["fname"] = downloaded_file
+        DANMAKU.sources[url]["fname"] = downloaded_file
     else
-        danmaku.sources[url] = {from = "user_custom", fname = downloaded_file}
+        DANMAKU.sources[url] = {from = "user_custom", fname = downloaded_file}
     end
 end
 
@@ -426,8 +426,8 @@ function handle_main_danmaku(url, from_menu)
         local count = data["count"]
 
         if count == 0 then
-            if danmaku.sources[url] == nil then
-                danmaku.sources[url] = {from = "api_server"}
+            if DANMAKU.sources[url] == nil then
+                DANMAKU.sources[url] = {from = "api_server"}
             end
             load_danmaku(from_menu)
             return
@@ -442,8 +442,8 @@ end
 function handle_fetched_danmaku(data, url, from_menu)
     if data and data["comments"] then
         if data["count"] == 0 then
-            if danmaku.sources[url] == nil then
-                danmaku.sources[url] = {from = "api_server"}
+            if DANMAKU.sources[url] == nil then
+                DANMAKU.sources[url] = {from = "api_server"}
             end
             show_message("该集弹幕内容为空，结束加载", 3)
             msg.verbose("该集弹幕内容为空，结束加载")
@@ -508,8 +508,8 @@ function fetch_danmaku_all(episodeId, from_menu)
             -- 处理当前的相关弹幕
             handle_related_danmaku(index, relateds, related, shift, function(comments)
                 if #comments == 0 then
-                    if danmaku.sources[related["url"]] == nil then
-                        danmaku.sources[related["url"]] = {from = "api_server"}
+                    if DANMAKU.sources[related["url"]] == nil then
+                        DANMAKU.sources[related["url"]] = {from = "api_server"}
                     end
                 else
                     save_danmaku_data(comments, related["url"], "api_server")
@@ -528,13 +528,13 @@ end
 -- 从用户添加过的弹幕源添加弹幕
 function addon_danmaku(dir, from_menu)
     if dir then
-        local history_json = read_file(history_path)
+        local history_json = read_file(HISTORY_PATH)
         local history = utils.parse_json(history_json) or {}
         if history[dir] and history[dir].extra ~= nil then
             return
         end
     end
-    for url, source in pairs(danmaku.sources) do
+    for url, source in pairs(DANMAKU.sources) do
         if source.from ~= "api_server" then
             add_danmaku_source(url, from_menu)
         end
@@ -543,13 +543,13 @@ end
 
 --通过输入源url获取弹幕库
 function add_danmaku_source(query, from_menu)
-    if danmaku.sources[query] == nil then
-        danmaku.sources[query] = {from = "user_custom"}
+    if DANMAKU.sources[query] == nil then
+        DANMAKU.sources[query] = {from = "user_custom"}
     end
 
     from_menu = from_menu or false
     if from_menu then
-        add_source_to_history(query, danmaku.sources[query])
+        add_source_to_history(query, DANMAKU.sources[query])
     end
 
     if is_protocol(query) then
@@ -570,14 +570,14 @@ function add_danmaku_source_local(query, from_menu)
         return
     end
 
-    if danmaku.sources[query] ~= nil then
-        if danmaku.sources[query].fname and file_exists(danmaku.sources[query].fname) then
-            os.remove(danmaku.sources[query].fname)
+    if DANMAKU.sources[query] ~= nil then
+        if DANMAKU.sources[query].fname and file_exists(DANMAKU.sources[query].fname) then
+            os.remove(DANMAKU.sources[query].fname)
         end
-        danmaku.sources[query]["from"] = "user_local"
-        danmaku.sources[query]["fname"] = path
+        DANMAKU.sources[query]["from"] = "user_local"
+        DANMAKU.sources[query]["fname"] = path
     else
-        danmaku.sources[query] = {from = "user_local", fname = path}
+        DANMAKU.sources[query] = {from = "user_local", fname = path}
     end
 
     set_danmaku_button()
@@ -608,8 +608,8 @@ end
 
 -- 将弹幕转换为factory可读的json格式
 function save_danmaku_json(comments, json_filename)
-    local temp_file = "danmaku-" .. pid .. ".json"
-    json_filename = json_filename or utils.join_path(danmaku_path, temp_file)
+    local temp_file = "danmaku-" .. PID .. ".json"
+    json_filename = json_filename or utils.join_path(DANMAKU_PATH, temp_file)
     local json_file = io.open(json_filename, "w")
 
     if json_file then
@@ -655,7 +655,7 @@ function get_danmaku_with_hash(file_name, file_path)
     end
     if is_protocol(file_path) then
         set_danmaku_button()
-        local temp_file = "temp-" .. pid .. ".mp4"
+        local temp_file = "temp-" .. PID .. ".mp4"
         local arg = {
             "curl",
             "--connect-timeout",
@@ -667,7 +667,7 @@ function get_danmaku_with_hash(file_name, file_path)
             "--user-agent",
             options.user_agent,
             "--output",
-            utils.join_path(danmaku_path, temp_file),
+            utils.join_path(DANMAKU_PATH, temp_file),
             "-L",
             file_path,
         }
@@ -680,7 +680,7 @@ function get_danmaku_with_hash(file_name, file_path)
         call_cmd_async(arg, function(error)
             async_running = false
 
-            file_path = utils.join_path(danmaku_path, temp_file)
+            file_path = utils.join_path(DANMAKU_PATH, temp_file)
 
             match_file(file_path, file_name, function(error)
                 if error then

@@ -277,7 +277,10 @@ key script-message open_add_total_menu
 可以通过快捷键绑定以下命令来调整弹幕延迟，单位：秒。秒数的含义为在当前弹幕延迟的基础上叠加新设置的延迟秒数进行调整，可以设置为负数。另外，设置为0时为特殊情况，会将弹幕延迟重置为0，回到初始状态。
 
 ```
+# 设置整体弹幕延迟
 key script-message danmaku-delay <seconds>
+# 设置当前播放时间点的弹幕延迟
+key script-message danmaku-delay <seconds> ${=time-pos}
 ```
 
 > 当前弹幕延迟的值可以从 `user-data/uosc_danmaku/danmaku-delay`属性中获取到，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/77)

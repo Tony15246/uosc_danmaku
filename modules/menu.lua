@@ -207,11 +207,11 @@ end
 function open_input_menu_uosc()
     local items = {}
 
-    if danmaku.anime and danmaku.episode then
-        local episode = danmaku.episode:gsub("%s.-$","")
+    if DANMAKU.anime and DANMAKU.episode then
+        local episode = DANMAKU.episode:gsub("%s.-$","")
         episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
+            title = string.format("已关联弹幕：%s-%s", DANMAKU.anime, episode),
             bold = true,
             italic = true,
             keep_open = true,
@@ -261,7 +261,7 @@ end
 
 function open_add_menu_uosc()
     local sources = {}
-    for url, source in pairs(danmaku.sources) do
+    for url, source in pairs(DANMAKU.sources) do
         if source.fname then
             local item = {title = url, value = url, keep_open = true,}
             if source.from == "api_server" then
@@ -306,16 +306,20 @@ end
 function open_content_menu(pos)
     local items = {}
     local time_pos = pos or mp.get_property_native("time-pos")
+    local duration = mp.get_property_number("duration", 0)
 
-    if comments ~= nil then
-        for _, event in ipairs(comments) do
+    if COMMENTS ~= nil then
+        for _, event in ipairs(COMMENTS) do
             local text = event.clean_text:gsub("^m%s[mbl%s%-%d%.]+$", ""):gsub("^%s*(.-)%s*$", "%1")
-            if text and text ~= "" then
+            local delay = get_delay_for_time(DELAYS, event.start_time)
+            local start_time = event.start_time + delay
+            local end_time = event.end_time + delay
+            if text and text ~= "" and start_time >= 0 and start_time <= duration then
                 table.insert(items, {
                     title = abbr_str(text, 60),
-                    hint = seconds_to_time(event.start_time + delay),
-                    value = { "seek", event.start_time + delay, "absolute" },
-                    active = event.start_time + delay <= time_pos and time_pos <= event.end_time + delay,
+                    hint = seconds_to_time(start_time),
+                    value = { "seek", start_time, "absolute" },
+                    active = time_pos >= start_time and time_pos <= end_time,
                 })
             end
         end
@@ -422,10 +426,19 @@ function danmaku_delay_setup(source_url)
     end
 
     local sources = {}
-    for url, source in pairs(danmaku.sources) do
+    for url, source in pairs(DANMAKU.sources) do
         if source.fname and not source.blocked then
+            local delay = 0
+            if source.delay_segments then
+                for _, seg in ipairs(source.delay_segments) do
+                    if seg.start == 0 then
+                        delay = seg.delay or 0
+                        break
+                    end
+                end
+            end
             local item = {title = url, value = url, keep_open = true,}
-            item.hint = "当前弹幕源延迟:" .. (source.delay and string.format("%.1f", source.delay + 1e-10) or "0.0") .. "秒"
+            item.hint = "当前弹幕源延迟:" .. string.format("%.1f", delay + 1e-10) .. "秒"
             item.active = url == source_url
             table.insert(sources, item)
         end
@@ -462,11 +475,11 @@ function open_add_total_menu_uosc()
     }
 
 
-    if danmaku.anime and danmaku.episode then
-        local episode = danmaku.episode:gsub("%s.-$","")
+    if DANMAKU.anime and DANMAKU.episode then
+        local episode = DANMAKU.episode:gsub("%s.-$","")
         episode = episode:match("^(第.*[话回集]+)%s*") or episode
         items[#items + 1] = {
-            title = string.format("已关联弹幕：%s-%s", danmaku.anime, episode),
+            title = string.format("已关联弹幕：%s-%s", DANMAKU.anime, episode),
             bold = true,
             italic = true,
             keep_open = true,
@@ -596,9 +609,9 @@ mp.register_script_message("set", function(prop, value)
     end
 
     if value == "on" then
-        enabled = true
+        ENABLED = true
         set_danmaku_visibility(true)
-        if comments == nil then
+        if COMMENTS == nil then
             local path = mp.get_property("path")
             init(path)
         else
@@ -607,7 +620,7 @@ mp.register_script_message("set", function(prop, value)
         end
     else
         show_message("关闭弹幕", 2)
-        enabled = false
+        ENABLED = false
         set_danmaku_visibility(false)
         hide_danmaku_func()
     end
@@ -636,9 +649,9 @@ end)
 
 -- Register script message to show the input menu
 mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, episodeId)
-    enabled = true
-    danmaku.anime = animeTitle
-    danmaku.episode = episodeTitle
+    ENABLED = true
+    DANMAKU.anime = animeTitle
+    DANMAKU.episode = episodeTitle
     set_episode_id(episodeId, true)
 end)
 
@@ -646,7 +659,7 @@ mp.register_script_message("add-source-event", function(query)
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
     end
-    enabled = true
+    ENABLED = true
     add_danmaku_source(query, true)
 end)
 
@@ -681,7 +694,7 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 options[event.action] = menu_items_config[event.action]["original"]
                 menu_items_config[event.action]["hint"] = options[event.action]
                 add_danmaku_setup(event.action, "updata")
-                if event.action == "density" or event.action == "scrolltime" then
+                if event.action == "fontsize" or event.action == "scrolltime" then
                     load_danmaku(true)
                 end
             end
@@ -705,7 +718,7 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 menu_items_config[query]["hint"] = options[query]
                 -- "refresh" 模式会清除输入框文字
                 add_danmaku_setup(query, "refresh")
-                if query == "density" or query == "scrolltime" then
+                if query == "fontsize" or query == "scrolltime" then
                     load_danmaku(true, true)
                 end
                 return
@@ -720,11 +733,11 @@ mp.register_script_message('setup-danmaku-source', function(json)
     if event.type == 'activate' then
 
         if event.action == "delete" then
-            local rm = danmaku.sources[event.value]["fname"]
-            if rm and file_exists(rm) and danmaku.sources[event.value]["from"] ~= "user_local" then
+            local rm = DANMAKU.sources[event.value]["fname"]
+            if rm and file_exists(rm) and DANMAKU.sources[event.value]["from"] ~= "user_local" then
                 os.remove(rm)
             end
-            danmaku.sources[event.value] = nil
+            DANMAKU.sources[event.value] = nil
             remove_source_from_history(event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
@@ -732,16 +745,16 @@ mp.register_script_message('setup-danmaku-source', function(json)
         end
 
         if event.action == "block" then
-            danmaku.sources[event.value]["blocked"] = true
-            add_source_to_history(event.value, danmaku.sources[event.value])
+            DANMAKU.sources[event.value]["blocked"] = true
+            add_source_to_history(event.value, DANMAKU.sources[event.value])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
             load_danmaku(true)
         end
 
         if event.action == "unblock" then
-            danmaku.sources[event.value]["blocked"] = false
-            add_source_to_history(event.value, danmaku.sources[event.value])
+            DANMAKU.sources[event.value]["blocked"] = false
+            add_source_to_history(event.value, DANMAKU.sources[event.value])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
             open_add_menu_uosc()
             load_danmaku(true)
@@ -762,10 +775,17 @@ mp.register_script_message("setup-source-delay", function(query, text)
             return
         end
         local newText, _ = text:gsub("%s", "") -- 移除所有空白字符
-        if tonumber(newText) ~= nil then
-            local num = tonumber(newText)
-            danmaku.sources[query]["delay"] = tostring(num)
-            add_source_to_history(query, danmaku.sources[query])
+        local num = tonumber(newText)
+        local delay_segments = shallow_copy(DANMAKU.sources[query]["delay_segments"] or {})
+        for i = #delay_segments, 1, -1 do
+            if delay_segments[i].start == 0 then
+                table.remove(delay_segments, i)
+            end
+        end
+        if num ~= nil then
+            table.insert(delay_segments, 1, { start = 0, delay = tonumber(num) })
+            DANMAKU.sources[query]["delay_segments"] = delay_segments
+            add_source_to_history(query, DANMAKU.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
             load_danmaku(true, true)
@@ -774,8 +794,9 @@ mp.register_script_message("setup-source-delay", function(query, text)
             minutes = tonumber(minutes)
             seconds = tonumber(seconds)
             if minutes < 0 then seconds = -seconds end
-            danmaku.sources[query]["delay"] = tostring(60 * minutes + seconds)
-            add_source_to_history(query, danmaku.sources[query])
+            table.insert(delay_segments, 1, { start = 0, delay = 60 * minutes + seconds })
+            DANMAKU.sources[query]["delay_segments"] = delay_segments
+            add_source_to_history(query, DANMAKU.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
             load_danmaku(true, true)

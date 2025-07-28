@@ -166,7 +166,7 @@ local function merge_duplicate_danmaku(danmakus, threshold)
 end
 
 -- 解析 XML 弹幕
-local function parse_xml_danmaku(xml_string, delay)
+local function parse_xml_danmaku(xml_string, delay_segments)
     local danmakus = {}
     for p_attr, text in xml_string:gmatch('<d p="([^"]+)">([^<]+)</d>') do
         local params = {}
@@ -177,8 +177,10 @@ local function parse_xml_danmaku(xml_string, delay)
         end
 
         if params[1] and params[2]  and params[3] and params[4] then
+            local base_time = params[1]
+            local delay = get_delay_for_time(delay_segments, base_time)
             table.insert(danmakus, {
-                time = params[1] + delay,
+                time = base_time + delay,
                 type = params[2] or 1,
                 size = params[3] or 25,
                 color = params[4] or 0xFFFFFF,
@@ -192,7 +194,7 @@ local function parse_xml_danmaku(xml_string, delay)
 end
 
 -- 解析 JSON 弹幕
-local function parse_json_danmaku(json_string, delay)
+local function parse_json_danmaku(json_string, delay_segments)
     local danmakus = {}
     if json_string:sub(1, 3) == "\239\187\191" then
         json_string = json_string:sub(4)
@@ -216,8 +218,10 @@ local function parse_json_danmaku(json_string, delay)
             end
 
             if params[1] and params[2] and params[3] and params[4] then
+                local base_time = params[1]
+                local delay = get_delay_for_time(delay_segments, base_time)
                 table.insert(danmakus, {
-                    time = params[1] + delay,
+                    time = base_time + delay,
                     color = params[2] or 0xFFFFFF,
                     type = params[3] or 1,
                     size = params[4] or 25,
@@ -233,27 +237,27 @@ end
 
 -- 解析弹幕文件
 function parse_danmaku_files(danmaku_input, delays)
-    local danmaku_paths = {}
+    local DANMAKU_PATHs = {}
     if type(danmaku_input) == "string" then
-        danmaku_paths = { danmaku_input }
+        DANMAKU_PATHs = { danmaku_input }
     else
         for i, input in ipairs(danmaku_input) do
-            danmaku_paths[#danmaku_paths + 1] = input
+            DANMAKU_PATHs[#DANMAKU_PATHs + 1] = input
         end
     end
 
     local all_danmaku = {}
 
-    for i, danmaku_path in ipairs(danmaku_paths) do
-        if file_exists(danmaku_path) then
-            local content = read_file(danmaku_path)
+    for i, DANMAKU_PATH in ipairs(DANMAKU_PATHs) do
+        if file_exists(DANMAKU_PATH) then
+            local content = read_file(DANMAKU_PATH)
             if content then
                 local parsed = {}
-                local delay = (delays and tonumber(delays[i])) or 0
-                if danmaku_path:match("%.xml$") then
-                    parsed = parse_xml_danmaku(content, delay)
-                elseif danmaku_path:match("%.json$") then
-                    parsed = parse_json_danmaku(content, delay)
+                local delay_segments = delays and delays[i] or {}
+                if DANMAKU_PATH:match("%.xml$") then
+                    parsed = parse_xml_danmaku(content, delay_segments)
+                elseif DANMAKU_PATH:match("%.json$") then
+                    parsed = parse_json_danmaku(content, delay_segments)
                 end
 
                 for _, d in ipairs(parsed) do
@@ -266,10 +270,10 @@ function parse_danmaku_files(danmaku_input, delays)
                     end
                 end
             else
-                msg.info("无法读取文件内容: " .. danmaku_path)
+                msg.info("无法读取文件内容: " .. DANMAKU_PATH)
             end
         else
-            msg.info("文件不存在: " .. danmaku_path)
+            msg.info("文件不存在: " .. DANMAKU_PATH)
         end
     end
 

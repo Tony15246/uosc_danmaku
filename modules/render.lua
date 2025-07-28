@@ -4,8 +4,6 @@ local utils = require("mp.utils")
 
 local INTERVAL = options.vf_fps and 0.01 or 0.001
 local osd_width, osd_height, pause = 0, 0, true
-enabled, comments, delay = false, nil, 0
-mp.set_property_native(delay_property, 0)
 
 -- 提取 \move 参数 (x1, y1, x2, y2) 并返回
 local function parse_move_tag(text)
@@ -17,7 +15,7 @@ local function parse_move_tag(text)
     return nil
 end
 
-local function parse_comment(event, pos, height)
+local function parse_comment(event, pos, height, delay)
     local x1, y1, x2, y2 = parse_move_tag(event.text)
     local displayarea = tonumber(height * options.displayarea)
     if not x1 then
@@ -90,12 +88,14 @@ end
 local overlay = mp.create_osd_overlay('ass-events')
 
 function render()
-    if comments == nil then return end
+    if COMMENTS == nil then return end
 
     local pos, err = mp.get_property_number('time-pos')
     if err ~= nil then
         return msg.error(err)
     end
+
+    local delay = get_delay_for_time(DELAYS, pos)
 
     local fontname = options.fontname
     local fontsize = options.fontsize
@@ -110,22 +110,22 @@ function render()
 
     local ass_events = {}
 
-    for _, event in ipairs(comments) do
+    for _, event in ipairs(COMMENTS) do
         if pos >= event.start_time + delay and pos <= event.end_time + delay then
-            local text = parse_comment(event, pos, height)
+            local text = parse_comment(event, pos, height, delay)
             if text then
                 text = text:gsub("&#%d+;","")
             end
 
             if text and text:match("\\fs%d+") then
-                local font_size = text:match("\\fs(%d+)") * 1.5
-                text = text:gsub("\\fs%d+", string.format("\\fs%s", font_size))
+                text = text:gsub("\\fs(%d+)", function(size)
+                    return string.format("\\fs%d", size * 1.5)
+                end)
             end
 
             -- 构建 ASS 字符串
             local ass_text = text and string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%s\\bord%s\\shad%s\\b%s\\q2}%s",
-                fontname, text:match("{\\b1\\i1}x%d+$") and fontsize + text:match("x(%d+)$") or fontsize,
-                alpha, options.outline, options.shadow, options.bold and "1" or "0", text)
+                fontname, fontsize, alpha, options.outline, options.shadow, options.bold and "1" or "0", text)
 
             table.insert(ass_events, ass_text)
         end
@@ -141,13 +141,13 @@ local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu, no_osd)
     parse_ass_events(ass_file_path, function(err, events)
-        comments = events
+        COMMENTS = events
         if err then
             msg.error("ASS 解析错误: " .. err)
             return
         end
 
-        if enabled and (from_menu or get_danmaku_visibility()) then
+        if ENABLED and (from_menu or get_danmaku_visibility()) then
             if not no_osd then
                 show_loaded(true)
             end
@@ -227,13 +227,13 @@ mp.observe_property('display-fps', 'number', function(_, value)
         if interval > INTERVAL then
             timer:kill()
             timer = mp.add_periodic_timer(interval, render, true)
-            if enabled then
+            if ENABLED then
                 timer:resume()
             end
         else
             timer:kill()
             timer = mp.add_periodic_timer(INTERVAL, render, true)
-            if enabled then
+            if ENABLED then
                 timer:resume()
             end
         end
@@ -243,10 +243,10 @@ mp.observe_property('pause', 'bool', function(_, value)
     if value ~= nil then
         pause = value
     end
-    if enabled then
+    if ENABLED then
         if pause then
             timer:kill()
-        elseif comments ~= nil then
+        elseif COMMENTS ~= nil then
             timer:resume()
         end
     end
@@ -256,25 +256,25 @@ mp.register_event('playback-restart', function(event)
     if event.error then
         return msg.error(event.error)
     end
-    if enabled and comments ~= nil then
+    if ENABLED and COMMENTS ~= nil then
         render()
     end
 end)
 
 mp.add_hook("on_unload", 50, function()
-    comments, delay = nil, 0
+    COMMENTS, DELAY = nil, 0
     timer:kill()
     overlay:remove()
-    mp.set_property_native(delay_property, 0)
+    mp.set_property_native(DELAY_PROPERTY, 0)
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")
     end
 
     local files_to_remove = {
-        file1 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".json"),
-        file2 = utils.join_path(danmaku_path, "danmaku-" .. pid .. ".ass"),
-        file3 = utils.join_path(danmaku_path, "temp-" .. pid .. ".mp4"),
-        file4 = utils.join_path(danmaku_path, "bahamut-" .. pid .. ".json")
+        file1 = utils.join_path(DANMAKU_PATH, "danmaku-" .. PID .. ".json"),
+        file2 = utils.join_path(DANMAKU_PATH, "danmaku-" .. PID .. ".ass"),
+        file3 = utils.join_path(DANMAKU_PATH, "temp-" .. PID .. ".mp4"),
+        file4 = utils.join_path(DANMAKU_PATH, "bahamut-" .. PID .. ".json")
     }
 
     if options.save_danmaku and file_exists(files_to_remove.file2) then
@@ -287,10 +287,10 @@ mp.add_hook("on_unload", 50, function()
         end
     end
 
-    for _, source in pairs(danmaku.sources) do
+    for _, source in pairs(DANMAKU.sources) do
         if source.fname and source.from and source.from ~= "user_local" and file_exists(source.fname) then
             os.remove(source.fname)
         end
     end
-    danmaku = {sources = {}, count = 1}
+    DANMAKU = {sources = {}, count = 1}
 end)
