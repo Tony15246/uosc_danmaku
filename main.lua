@@ -243,7 +243,9 @@ local function set_danmaku_delay(dly, time)
     for url, source in pairs(DANMAKU.sources) do
         if source.fname and not source.blocked then
             source.delay_segments = source.delay_segments or {}
-            if time then
+            if dly == 0 then
+                source.delay_segments = {}
+            elseif time then
                 table.insert(source.delay_segments, {start = time, delay = dly})
             else
                 table.insert(source.delay_segments, {start = 0, delay = dly})
@@ -260,13 +262,15 @@ local function set_danmaku_delay(dly, time)
     else
         table.insert(DELAYS, {start = 0, delay = dly})
     end
-    DELAYS = merge_delay_segments(DELAYS)
 
     if dly == 0 then
         DELAY = 0
+        DELAYS = {}
     else
         DELAY = DELAY + dly
     end
+
+    DELAYS = merge_delay_segments(DELAYS)
 
     if ENABLED and COMMENTS ~= nil then
         render()
