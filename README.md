@@ -635,6 +635,31 @@ merge_tolerance=1
 </details>
 
 ---
+<details>
+<summary>
+max_screen_danmaku
+
+> 限制屏幕中同时显示的弹幕数量
+
+</summary>
+
+### max_screen_danmaku
+
+#### 功能说明
+
+当该值大于0时，脚本会在解析弹幕时丢弃部分弹幕，确保任意时刻屏幕中显示的弹幕不超过设定值
+
+#### 使用方法
+
+在 `script-opts` 目录下创建 `uosc_danmaku.conf` 并添加如下内容：
+
+```
+max_screen_danmaku=60
+```
+
+</details>
+
+---
 
 <details>
 <summary>
