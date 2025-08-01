@@ -300,7 +300,7 @@ function query_extra(name, class)
 
     if options.tmdb_api_key == "" or #Base64.decode(options.tmdb_api_key) < 32 then
         local message = "请正确设置 tmdb_api_key 或尝试使用中文搜索"
-        if uosc_available 键，然后
+        if uosc_available then
             update_menu_uosc(menu.type, menu.title, message, menu.footnote, menu.cmd, name)
         else
             show_message(message, 3)
@@ -340,8 +340,8 @@ mp.register_script_message("get-extra-event", function(cat, id, playlink, source
 end)
 
 mp.register_script_message("add-extra-event", function(url, episode, number, class, id, site, title, year)
-    if uosc_available 键，然后
-        mp.commandv("script-message-to"， "uosc", "close-menu", "menu_details")
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "close-menu", "menu_details")
     end
     load_extra_danmaku(url, episode, number, class, id, site, title, year)
 end)
