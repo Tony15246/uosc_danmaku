@@ -62,7 +62,7 @@ function get_danmaku_visibility()
     local history_json = read_file(HISTORY_PATH)
     local history
     if history_json ~= nil then
-        history = utils.parse_json(history_json)
+        history = utils.parse_json(history_json) or {}
         local flag = history["show_danmaku"]
         if flag == nil then
             history["show_danmaku"] = false
@@ -82,7 +82,7 @@ function set_danmaku_visibility(flag)
     local history = {}
     local history_json = read_file(HISTORY_PATH)
     if history_json ~= nil then
-        history = utils.parse_json(history_json)
+        history = utils.parse_json(history_json) or {}
     end
     history["show_danmaku"] = flag
     write_json_file(HISTORY_PATH, history)
