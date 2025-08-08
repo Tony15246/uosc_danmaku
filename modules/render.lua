@@ -1,7 +1,6 @@
 -- modified from https://github.com/rkscv/danmaku/blob/main/danmaku.lua
 local msg = require('mp.msg')
 local utils = require("mp.utils")
-math.randomseed(os.time())
 
 local INTERVAL = options.vf_fps and 0.01 or 0.001
 local osd_width, osd_height, pause = 0, 0, true
@@ -85,8 +84,6 @@ local function parse_ass_events(ass_path, callback)
     ass_file:close()
     callback(nil, events)
 end
-
-
 
 local overlay = mp.create_osd_overlay('ass-events')
 
