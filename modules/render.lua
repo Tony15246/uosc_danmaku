@@ -86,45 +86,6 @@ local function parse_ass_events(ass_path, callback)
     callback(nil, events)
 end
 
-local function limit_danmaku(events, limit)
-    if not limit or limit <= 0 then
-        return events
-    end
-
-    local window = {}
-    for _, ev in ipairs(events) do
-        for i = #window, 1, -1 do
-            if window[i].end_time <= ev.start_time then
-                table.remove(window, i)
-            end
-        end
-
-        if #window < limit then
-            table.insert(window, ev)
-        else
-            local max_idx = 1
-            for i = 2, #window do
-                if window[i].end_time > window[max_idx].end_time then
-                    max_idx = i
-                end
-            end
-            if window[max_idx].end_time > ev.end_time then
-                window[max_idx].drop = true
-                window[max_idx] = ev
-            else
-                ev.drop = true
-            end
-        end
-    end
-
-    local result = {}
-    for _, ev in ipairs(events) do
-        if not ev.drop then
-            table.insert(result, ev)
-        end
-    end
-    return result
-end
 
 
 local overlay = mp.create_osd_overlay('ass-events')
@@ -183,9 +144,6 @@ local timer = mp.add_periodic_timer(INTERVAL, render, true)
 
 function parse_danmaku(ass_file_path, from_menu, no_osd)
     parse_ass_events(ass_file_path, function(err, events)
-        if options.max_screen_danmaku and options.max_screen_danmaku > 0 then
-            events = limit_danmaku(events, options.max_screen_danmaku)
-        end
         COMMENTS = events
         if err then
             msg.error("ASS 解析错误: " .. err)
