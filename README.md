@@ -186,10 +186,6 @@ show_danmaku_keyboard_key=i
 
 从弹幕源添加弹幕。在已经在播放弹幕的情况下会将添加的弹幕追加到现有弹幕中。
 
-~目前尚未解决弹幕去重等问题~
-
-弹幕去重问题已解决，可参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/31)
-
 可添加的弹幕源如哔哩哔哩上任意视频通过video路径加BV号，或者巴哈姆特上的视频地址等。比如说以下地址均可作为有效弹幕源被添加：
 
 ```
@@ -710,7 +706,7 @@ api_server
 
 > **⚠️NOTE！**
 >
-> 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[anoraker/abetsy](https://hub.docker.com/repository/docker/anoraker/abetsy)
+> 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[l429609201/misaka_danmu_server](https://github.com/l429609201/misaka_danmu_server)，[laozishen/abetsy](https://hub.docker.com/r/laozishen/abetsy)
 
 #### 使用方法
 
