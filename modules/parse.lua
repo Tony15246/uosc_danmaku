@@ -497,11 +497,33 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     options.fontname, fontsize, alpha, alpha, bold, outline, shadow,
     options.fontname, fontsize, alpha, alpha, bold, outline, shadow)
 
-    local events = {}
-
+    -- 预处理弹幕，先计算时间段以便进行数量限制
+    local pre_events = {}
     for _, d in ipairs(all_danmaku) do
         local time = d.type == 1 and math.floor(d.time + 0.5) or d.time
         local appear_time = time
+        local danmaku_type = d.type
+
+        local end_time = nil
+        if danmaku_type >= 1 and danmaku_type <= 3 then
+            end_time = appear_time + scrolltime
+        elseif danmaku_type == 5 or danmaku_type == 4 then
+            end_time = appear_time + fixtime
+        end
+
+        if end_time then
+            table.insert(pre_events, {start_time = appear_time, end_time = end_time, danmaku = d})
+        end
+    end
+
+    if options.max_screen_danmaku > 0 then
+        pre_events = limit_danmaku(pre_events, options.max_screen_danmaku)
+    end
+
+    local ass_events = {}
+    for _, ev in ipairs(pre_events) do
+        local d = ev.danmaku
+        local appear_time = ev.start_time
         local danmaku_type = d.type
         local text = ass_escape(decode_html_entities(d.text))
                     :gsub("x(%d+)$", "{\\b1\\i1}x%1")
@@ -515,13 +537,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         local color_text = string.format("{\\c&H%s%s%s&}", b, g, r)
 
         local start_time_str = seconds_to_time(appear_time)
-        local layer, end_time, end_time_str, style, effect
+        local layer, end_time_str, style, effect
 
         -- 滚动弹幕 (类型 1, 2, 3)
         if danmaku_type >= 1 and danmaku_type <= 3 then
             layer = 0
-            end_time = appear_time + scrolltime
-            end_time_str = seconds_to_time(end_time)
+            end_time_str = seconds_to_time(ev.end_time)
             style = "R2L"
             local text_length = get_str_width(text, fontsize)
             local x1 = res_x + text_length / 2
@@ -534,8 +555,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         -- 顶部弹幕 (类型 5)
         elseif danmaku_type == 5 then
             layer = 1
-            end_time = appear_time + fixtime
-            end_time_str = seconds_to_time(end_time)
+            end_time_str = seconds_to_time(ev.end_time)
             style = "TOP"
             local x = res_x / 2
             local y = get_fixed_y(fontsize, appear_time, fixtime, top_array, true)
@@ -546,8 +566,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         -- 底部弹幕 (类型 4)
         elseif danmaku_type == 4 then
             layer = 1
-            end_time = appear_time + fixtime
-            end_time_str = seconds_to_time(end_time)
+            end_time_str = seconds_to_time(ev.end_time)
             style = "BTM"
             local x = res_x / 2
             local y = get_fixed_y(fontsize, appear_time, fixtime, top_array, false)
@@ -563,17 +582,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             else
                line = string.format("Comment: %d,%s,%s,%s,,0,0,0,,%s%s", layer, start_time_str, end_time_str, style, color_text, text)
             end
-            table.insert(events, {start_time = appear_time, end_time = end_time, line = line})
+            table.insert(ass_events, line)
         end
-    end
-
-    if options.max_screen_danmaku > 0 then
-        events = limit_danmaku(events, options.max_screen_danmaku)
-    end
-
-    local ass_events = {}
-    for _, ev in ipairs(events) do
-        table.insert(ass_events, ev.line)
     end
 
     local final_ass = ass_header .. table.concat(ass_events, "\n")
