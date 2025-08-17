@@ -165,6 +165,47 @@ local function merge_duplicate_danmaku(danmakus, threshold)
     return merged
 end
 
+-- 限制每屏弹幕条数
+local function limit_danmaku(danmakus, limit)
+    if not limit or limit <= 0 then
+        return danmakus
+    end
+
+    local window = {}
+    for _, d in ipairs(danmakus) do
+        for i = #window, 1, -1 do
+            if window[i].end_time <= d.start_time then
+                table.remove(window, i)
+            end
+        end
+
+        if #window < limit then
+            table.insert(window, d)
+        else
+            local max_idx = 1
+            for i = 2, #window do
+                if window[i].end_time > window[max_idx].end_time then
+                    max_idx = i
+                end
+            end
+            if window[max_idx].end_time > d.end_time then
+                window[max_idx].drop = true
+                window[max_idx] = d
+            else
+                d.drop = true
+            end
+        end
+    end
+
+    local result = {}
+    for _, d in ipairs(danmakus) do
+        if not d.drop then
+            table.insert(result, d)
+        end
+    end
+    return result
+end
+
 -- 解析 XML 弹幕
 local function parse_xml_danmaku(xml_string, delay_segments)
     local danmakus = {}
@@ -410,46 +451,6 @@ function get_fixed_y(font_size, appear_time, fixtime, array, from_top)
     end
     -- 所有行都被占用，放弃渲染
     return nil
-end
-
-local function limit_danmaku(danmakus, limit)
-    if not limit or limit <= 0 then
-        return danmakus
-    end
-
-    local window = {}
-    for _, d in ipairs(danmakus) do
-        for i = #window, 1, -1 do
-            if window[i].end_time <= d.start_time then
-                table.remove(window, i)
-            end
-        end
-
-        if #window < limit then
-            table.insert(window, d)
-        else
-            local max_idx = 1
-            for i = 2, #window do
-                if window[i].end_time > window[max_idx].end_time then
-                    max_idx = i
-                end
-            end
-            if window[max_idx].end_time > d.end_time then
-                window[max_idx].drop = true
-                window[max_idx] = d
-            else
-                d.drop = true
-            end
-        end
-    end
-
-    local result = {}
-    for _, d in ipairs(danmakus) do
-        if not d.drop then
-            table.insert(result, d)
-        end
-    end
-    return result
 end
 
 -- 将弹幕转换为 ASS 格式
