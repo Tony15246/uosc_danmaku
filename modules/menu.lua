@@ -3,6 +3,16 @@ local utils = require("mp.utils")
 
 input_loaded, input = pcall(require, "mp.input")
 uosc_available = false
+SEARCH_BUTTON_VISIBILITY = string.format("user-data/%s/search-button-visibility", mp.get_script_name())
+ADD_SOURCE_BUTTON_VISIBILITY = string.format("user-data/%s/add-source-button-visibility", mp.get_script_name())
+DANMAKU_STYLE_BUTTON_VISIBILITY = string.format("user-data/%s/danmaku-style-button-visibility", mp.get_script_name())
+DANMAKU_DELAY_BUTTON_VISIBILITY = string.format("user-data/%s/danmaku-delay-button-visibility", mp.get_script_name())
+TOTAL_MENU_BUTTON_VISIBILITY = string.format("user-data/%s/total-menu-button-visibility", mp.get_script_name())
+mp.set_property_bool(SEARCH_BUTTON_VISIBILITY, false)
+mp.set_property_bool(ADD_SOURCE_BUTTON_VISIBILITY, false)
+mp.set_property_bool(DANMAKU_STYLE_BUTTON_VISIBILITY, false)
+mp.set_property_bool(DANMAKU_DELAY_BUTTON_VISIBILITY, false)
+mp.set_property_bool(TOTAL_MENU_BUTTON_VISIBILITY, false)
 
 -- 打开番剧数据匹配菜单
 function get_animes(query)
@@ -537,7 +547,6 @@ function open_add_total_menu()
     end
 end
 
--- 添加 uosc 菜单栏按钮
 mp.commandv(
     "script-message-to",
     "uosc",
@@ -598,6 +607,21 @@ mp.commandv(
     })
 )
 
+function hide_buttons()
+    mp.set_property_bool(SEARCH_BUTTON_VISIBILITY, false)
+    mp.set_property_bool(ADD_SOURCE_BUTTON_VISIBILITY, false)
+    mp.set_property_bool(DANMAKU_STYLE_BUTTON_VISIBILITY, false)
+    mp.set_property_bool(DANMAKU_DELAY_BUTTON_VISIBILITY, false)
+    mp.set_property_bool(TOTAL_MENU_BUTTON_VISIBILITY, false)
+end
+
+function show_buttons()
+    mp.set_property_bool(SEARCH_BUTTON_VISIBILITY, true)
+    mp.set_property_bool(ADD_SOURCE_BUTTON_VISIBILITY, true)
+    mp.set_property_bool(DANMAKU_STYLE_BUTTON_VISIBILITY, true)
+    mp.set_property_bool(DANMAKU_DELAY_BUTTON_VISIBILITY, true)
+    mp.set_property_bool(TOTAL_MENU_BUTTON_VISIBILITY, true)
+end
 
 mp.register_script_message('uosc-version', function()
     uosc_available = true
@@ -617,12 +641,14 @@ mp.register_script_message("set", function(prop, value)
             init(path)
         else
             show_loaded()
+            show_buttons()
             show_danmaku_func()
         end
     else
         show_message("关闭弹幕", 2)
         ENABLED = false
         set_danmaku_visibility(false)
+        hide_buttons()
         hide_danmaku_func()
     end
 

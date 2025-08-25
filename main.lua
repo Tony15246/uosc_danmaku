@@ -29,7 +29,6 @@ DELAYS = {}
 ENABLED, COMMENTS, DELAY = false, nil, 0
 DELAY_PROPERTY = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
 mp.set_property_native(DELAY_PROPERTY, 0)
-
 KEY = table_to_zero_indexed({
     0x00,0x01,0x02,0x03,0x04,
     0x05,0x06,0x07,0x08,0x09,
@@ -910,12 +909,14 @@ mp.register_script_message("show_danmaku_keyboard", function()
             init(path)
         else
             show_loaded()
+            show_buttons()
             show_danmaku_func()
         end
     else
         show_message("关闭弹幕", 2)
         mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "off")
         set_danmaku_visibility(false)
+        hide_buttons()
         hide_danmaku_func()
     end
 end)

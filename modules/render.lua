@@ -152,9 +152,11 @@ function parse_danmaku(ass_file_path, from_menu, no_osd)
                 show_loaded(true)
             end
             mp.commandv("script-message-to", "uosc", "set", "show_danmaku", "on")
+            show_buttons()
             show_danmaku_func()
         else
             show_message("")
+            hide_buttons()
             hide_danmaku_func()
         end
     end)
