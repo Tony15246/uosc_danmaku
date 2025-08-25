@@ -166,8 +166,7 @@ local function match_anime()
     local animes = {}
     local anime_type = "tvseries"
     local type_count = 0
-    local title, season, episode_num = parse_title()
-    local season_num = season or title:match("第%s*(%d+)%s*[季部]")
+    local title, season_num, episode_num = parse_title()
     if not episode_num then
         msg.info("无法解析剧集信息")
         return
@@ -210,7 +209,7 @@ local function match_anime()
             match_episode(animes[1].animeTitle, animes[1].bangumiId, episode_num)
         elseif type_count > 1 and season_num then
             local best_match, best_score = nil, -1
-            local target_title = title:gsub("第%s*%d+%s*季", ""):gsub("第%s*%d+%s*部", "")
+            local target_title = title
             if tonumber(season_num) > 1 then
                 target_title = title .. " 第" .. number_to_chinese(season_num) .. "季"
             end
