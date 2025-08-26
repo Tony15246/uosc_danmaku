@@ -20,19 +20,19 @@ local formatters = {
         end
     },
     {
-        regex = "^(.-)%s*[_%-%.%s]%s*第%s*(%d+)%s*[季部]+%s*[_%-%.%s]%s*[eEpP]+[_%-%.%s]?(%d+[%.v]?%d*)",
-        format = function(name, season, episode)
-            return clean_name(name) .. " S" .. season .. "E" .. episode:gsub("v%d+$","")
-        end
-    },
-    {
         regex = "^(.-)%s*[_%-%.%s]%s*第([一二三四五六七八九十]+)[季部]+%s*[_%-%.%s]%s*第%s*(%d+[%.v]?%d*)%s*[话集回]",
         format = function(name, season, episode)
             return clean_name(name) .. " S" .. chinese_to_number(season) .. "E" .. episode:gsub("v%d+$","")
         end
     },
     {
-        regex = "^(.-)%s*[_%-%.%s]%s*第([一二三四五六七八九十]+)[季部]+%s*[_%-%.%s]%s*[eEpP]+[_%-%.%s]?(%d+[%.v]?%d*)",
+        regex = "^(.-)%s*[_%-%.%s]%s*第%s*(%d+)%s*[季部]+%s*[_%-%.%s]%s*[^%ddD][eEpP]+(%d+[%.v]?%d*)",
+        format = function(name, season, episode)
+            return clean_name(name) .. " S" .. season .. "E" .. episode:gsub("v%d+$","")
+        end
+    },
+    {
+        regex = "^(.-)%s*[_%-%.%s]%s*第([一二三四五六七八九十]+)[季部]+%s*[_%-%.%s]%s*[^%ddD][eEpP]+(%d+[%.v]?%d*)",
         format = function(name, season, episode)
             return clean_name(name) .. " S" .. chinese_to_number(season) .. "E" .. episode:gsub("v%d+$","")
         end
@@ -54,7 +54,7 @@ local formatters = {
         end
     },
     {
-        regex = "^(.-)%s*[_%.%s]%s*(%d%d%d%d)%s*[_%.%s]%s*[eEpP]+[_%-%.%s]?(%d+%.?%d*)",
+        regex = "^(.-)%s*[_%.%s]%s*(%d%d%d%d)%s*[_%.%s]%s*[^%ddD][eEpP]+(%d+%.?%d*)",
         format = function(name, year, episode)
             return clean_name(name) .. " (" .. year .. ") E" .. episode
         end
@@ -78,13 +78,13 @@ local formatters = {
         end
     },
     {
-        regex = "^(.-)%s*[^dD][eEpP]+[_%-%.%s]?(%d+[%.v]?%d*)[_%.%s]%s*(%d%d%d%d)[^%dhHxXvVpPkKxXbBfF]",
+        regex = "^(.-)%s*[^%ddD][eEpP]+(%d+[%.v]?%d*)[_%.%s]%s*(%d%d%d%d)[^%dhHxXvVpPkKxXbBfF]",
         format = function(name, episode, year)
             return clean_name(name) .. " (" .. year .. ") E" .. episode:gsub("v%d+$","")
         end
     },
     {
-        regex = "^(.-)%s*[^dD][eEpP]+[_%-%.%s]?(%d+%.?%d*)",
+        regex = "^(.-)%s*[^%ddD][eEpP]+(%d+%.?%d*)",
         format = function(name, episode)
             return clean_name(name) .. " E" .. episode
         end
