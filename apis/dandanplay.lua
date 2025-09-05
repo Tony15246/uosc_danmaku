@@ -40,7 +40,7 @@ function set_episode_id(input, from_menu)
     local episodeId = tonumber(input)
     write_history(episodeId)
     set_danmaku_button()
-    if options.load_more_danmaku then
+    if options.load_more_danmaku and options.api_server:find("api%.dandanplay%.") then
         fetch_danmaku_all(episodeId, from_menu)
     else
         fetch_danmaku(episodeId, from_menu)
