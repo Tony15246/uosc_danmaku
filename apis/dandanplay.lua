@@ -74,9 +74,6 @@ function get_danmaku_fallback(query)
             return
         end
         if file_exists(danmaku_xml) then
-            if query:find("iqiyi%.com") ~= nil then
-                DANMAKU.strict = true
-            end
             save_danmaku_downloaded(query, danmaku_xml)
             load_danmaku(true)
         end
