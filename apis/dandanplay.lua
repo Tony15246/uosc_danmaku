@@ -273,7 +273,7 @@ local function match_file(file_path, file_name, callback)
             ["Content-Type"] = "application/json"
         }, {
             fileName = file_name,
-            fileHash = hash or "",
+            fileHash = hash or "a1b2c3d4e5f67890abcd1234ef567890",
             matchMode = "hashAndFileName"
         }
     )
