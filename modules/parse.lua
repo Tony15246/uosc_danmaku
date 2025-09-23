@@ -389,25 +389,16 @@ function get_position_y(font_size, appear_time, text_length, resolution_x, roll_
         local previous_length = array:get_length(i)
         local previous_velocity = (previous_length + resolution_x) / roll_time
         local delta_velocity = velocity - previous_velocity
-        local delta_x = (appear_time - previous_appear_time) * previous_velocity - (previous_length + text_length) / 2
+        local delta_x = (appear_time - previous_appear_time) * previous_velocity - previous_length
 
-        if (appear_time - previous_appear_time) * previous_velocity >= previous_length and delta_x >= 0 then
+        if delta_x >= 0 then
             if delta_velocity <= 0 then
                 array:set_time_length(i, appear_time, text_length)
                 return 1 + (i - 1) * font_size
             end
 
             local delta_time = delta_x / delta_velocity
-            local bias = appear_time - previous_appear_time - delta_time
-            -- 判断：追及点是否在屏幕之外
-            local t_catch = previous_appear_time + delta_time
-            local distance_prev = previous_velocity * (t_catch - previous_appear_time)
-            if distance_prev > resolution_x then
-                -- 追及发生在屏幕之外，允许放置
-                array:set_time_length(i, appear_time, text_length)
-                return 1 + (i - 1) * font_size
-            end
-            if bias > 0 then
+            if delta_time >= roll_time then
                 array:set_time_length(i, appear_time, text_length)
                 return 1 + (i - 1) * font_size
             end
