@@ -209,7 +209,7 @@ end
 -- 解析 XML 弹幕
 local function parse_xml_danmaku(xml_string, delay_segments)
     local danmakus = {}
-    for p_attr, text in xml_string:gmatch('<d p="([^"]+)">([^<]+)</d>') do
+    for p_attr, text in xml_string:gmatch('<d[^>]+p="([^"]+)"[^>]*>([^<]+)</d>') do
         local params = {}
         local i = 1
         for val in p_attr:gmatch("([^,]+)") do
