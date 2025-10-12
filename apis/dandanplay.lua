@@ -66,6 +66,11 @@ function get_danmaku_fallback(query)
         url,
     }
 
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
     call_cmd_async(arg, function(error)
         async_running = false
         if error then
@@ -117,6 +122,11 @@ function make_danmaku_request_args(method, url, headers, body)
         table.insert(args, string.format('X-Signature: %s', generateXSignature(url, time, appid, app_accept)))
         table.insert(args, '-H')
         table.insert(args, string.format('X-Timestamp: %s', time))
+    end
+
+    if options.proxy ~= "" then
+        table.insert(args, '-x')
+        table.insert(args, options.proxy)
     end
 
     table.insert(args, url)
