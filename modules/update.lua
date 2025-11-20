@@ -5,11 +5,12 @@ local repo = "Tony15246/uosc_danmaku"
 local zip_file = utils.join_path(os.getenv("TEMP") or "/tmp/", "uosc_danmaku.zip")
 
 local local_version = VERSION or "0.0.0"
+local platform = mp.get_property("platform")
 
 local function version_greater(v1, v2)
     local function parse(ver)
         local a, b, c = ver:match("v?(%d+)%.(%d+)%.(%d+)")
-        return tonumber(a), tonumber(b), tonumber(c)
+        return tonumber(a) or 0, tonumber(b) or 0, tonumber(c) or 0
     end
     local a1, a2, a3 = parse(v1)
     local b1, b2, b3 = parse(v2)
@@ -34,41 +35,25 @@ local function get_latest_release(repo)
     return tag, zip_url
 end
 
-local function delete_directory_contents(path)
-    local cmd = {}
-    if PLATFORM == "windows" then
-        cmd = {
-            "powershell", "-NoProfile", "-Command",
-            "Remove-Item -Path '" .. path .. "\\*' -Recurse -Force"
-        }
-    else
-        cmd = { "rm", "-rf", path .. "/*" }
-    end
-    local res = mp.command_native({
-        name = "subprocess",
-        args = cmd,
-        capture_stdout = true,
-        capture_stderr = true,
-        playback_only = false,
-    })
-    return res and res.status == 0
-end
-
 local function unzip_overwrite(zip_file)
     local cmd = {}
     local outpath = mp.get_script_directory()
 
-    msg.verbose("🧹 清理原始目录内容...")
-    if not delete_directory_contents(outpath) then
-        msg.verbose("❌ 清理失败")
-    end
+    msg.info("正在解压到: " .. outpath)
+    -- 覆盖解压替代删除再解压，避免文件被删除后解压失败导致插件目录被清空
+    if platform == "windows" then
+        -- Windows PowerShell
+        local ps_script = string.format(
+            "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force",
+            zip_file:gsub("/", "\\"),
+            outpath:gsub("/", "\\")
+        )
 
-    if PLATFORM == "windows" then
         cmd = {
-            "powershell", "-NoProfile", "-Command",
-            "Expand-Archive", "-Force", zip_file, "-DestinationPath", outpath
+            "powershell", "-NoProfile", "-Command", ps_script
         }
     else
+        -- Linux/Mac
         cmd = { "unzip", "-o", zip_file, "-d", outpath }
     end
 
@@ -79,6 +64,9 @@ local function unzip_overwrite(zip_file)
         capture_stderr = true,
         playback_only = false,
     })
+    if res.status ~= 0 then
+        msg.error("解压命令输出: " .. (res.stdout or "") .. (res.stderr or ""))
+    end
 
     return res and res.status == 0
 end
@@ -86,19 +74,20 @@ end
 function check_for_update()
     local latest_version, download_url = get_latest_release(repo)
     if not latest_version or not download_url then
-        show_message("❌ 无法获取最新版本信息，更新失败")
-        msg.warn("❌ 无法获取最新版本信息，更新失败")
+        show_message("❌ 无法获取最新版本信息")
+        msg.warn("❌ 无法获取最新版本信息")
         return
     end
 
     if not version_greater(latest_version, local_version) then
-        show_message("✅ 已是最新版本，无需更新")
-        msg.info("✅ 已是最新版本，无需更新")
+        show_message("✅ 已是最新版本 ("..local_version..")")
+        msg.info("✅ 已是最新版本")
         return
     end
 
     show_message("⬇️ 发现新版本: " .. latest_version .. "，正在下载...")
-    msg.info("⬇️ 发现新版本: " .. latest_version .. "，正在下载...")
+    msg.info("⬇️ 发现新版本: " .. latest_version .. "，地址: " .. download_url)
+
     local cmd = { "curl", "-L", "-o", zip_file, download_url }
     local res = mp.command_native({
         name = "subprocess",
@@ -112,15 +101,17 @@ function check_for_update()
         msg.warn("❌ 下载失败！")
         return
     end
+
     show_message("📦 下载完成，开始解压覆盖...")
     msg.info("📦 下载完成，开始解压覆盖...")
+
     if unzip_overwrite(zip_file) then
         os.remove(zip_file)
-        show_message("✅ 更新成功，当前版本为：" .. latest_version)
+        show_message("✅ 更新成功！请重启 mpv 以应用更新，当前版本为：" .. latest_version)
         msg.info("✅ 更新成功，当前版本为：" .. latest_version)
     else
         os.remove(zip_file)
-        show_message("❌ 解压失败！")
+        show_message("❌ 解压失败！请查看控制台日志")
         msg.warn("❌ 解压失败！")
     end
 end
