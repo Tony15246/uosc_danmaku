@@ -35,40 +35,90 @@ local function get_latest_release(repo)
     return tag, zip_url
 end
 
-local function unzip_overwrite(zip_file)
-    local cmd = {}
-    local outpath = mp.get_script_directory()
+local function escape_ps(str)
+    return tostring(str):gsub("'", "''")
+end
 
-    msg.info("正在解压到: " .. outpath)
-    -- 覆盖解压替代删除再解压，避免文件被删除后解压失败导致插件目录被清空
+local function unzip_overwrite(zip_file)
+    local outpath = mp.get_script_directory()
+    -- 定义临时目录路径，用于安全更新
+    local tmpdir = utils.join_path(
+        (platform == "windows" and (os.getenv("TEMP") or "C:\\Windows\\Temp") or "/tmp"),
+        "uosc_update_" .. tostring(os.time())
+    )
+    
+    local cmd_unzip = {}
+
+    msg.info("创建临时目录并解压: " .. tmpdir)
+
     if platform == "windows" then
-        -- Windows PowerShell
+        -- PowerShell: Expand-Archive (会自动创建目标目录)
         local ps_script = string.format(
             "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force",
-            zip_file:gsub("/", "\\"),
-            outpath:gsub("/", "\\")
+            escape_ps(zip_file),
+            escape_ps(tmpdir)
         )
-
-        cmd = {
-            "powershell", "-NoProfile", "-Command", ps_script
-        }
+        cmd_unzip = { "powershell", "-NoProfile", "-Command", ps_script }
     else
-        -- Linux/Mac
-        cmd = { "unzip", "-o", zip_file, "-d", outpath }
+        -- Unix: unzip
+        cmd_unzip = { "unzip", "-o", zip_file, "-d", tmpdir }
     end
 
     local res = mp.command_native({
         name = "subprocess",
-        args = cmd,
+        args = cmd_unzip,
         capture_stdout = true,
         capture_stderr = true,
         playback_only = false,
     })
-    if res.status ~= 0 then
-        msg.error("解压命令输出: " .. (res.stdout or "") .. (res.stderr or ""))
+
+    if not res or res.status ~= 0 then
+        msg.error("❌ 解压失败:\n" .. (res and (res.stdout .. res.stderr) or "未知错误"))
+        -- 清理残留的临时目录
+        if platform == "windows" then
+            mp.command_native({
+                name = "subprocess",
+                args = {"powershell", "-NoProfile", "-Command", "Remove-Item -LiteralPath '"..escape_ps(tmpdir).."' -Recurse -Force"}
+            })
+        else
+            os.execute("rm -rf \"" .. tmpdir .. "\"")
+        end
+        return false
     end
 
-    return res and res.status == 0
+    msg.info("解压成功，准备替换旧目录...")
+
+    local cmd_swap = {}
+    
+    if platform == "windows" then
+        -- Windows: 在一个 PowerShell 实例中执行删除和移动
+        local ps_swap = string.format(
+            "Remove-Item -LiteralPath '%s' -Recurse -Force -ErrorAction SilentlyContinue; Move-Item -LiteralPath '%s' -Destination '%s' -Force",
+            escape_ps(outpath),
+            escape_ps(tmpdir),
+            escape_ps(outpath)
+        )
+        cmd_swap = { "powershell", "-NoProfile", "-Command", ps_swap }
+    else
+        -- Unix: rm && mv
+        cmd_swap = { "sh", "-c", string.format("rm -rf \"%s\" && mv \"%s\" \"%s\"", outpath, tmpdir, outpath) }
+    end
+
+    local res_swap = mp.command_native({
+        name = "subprocess",
+        args = cmd_swap,
+        capture_stdout = true,
+        capture_stderr = true,
+        playback_only = false,
+    })
+
+    if not res_swap or res_swap.status ~= 0 then
+        msg.error("❌ 替换目录失败:\n" .. (res_swap and (res_swap.stdout .. res_swap.stderr) or ""))
+        return false
+    end
+
+    msg.info("更新完成")
+    return true
 end
 
 function check_for_update()
