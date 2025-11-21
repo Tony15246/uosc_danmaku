@@ -10,7 +10,7 @@ local platform = mp.get_property("platform")
 local function version_greater(v1, v2)
     local function parse(ver)
         local a, b, c = ver:match("v?(%d+)%.(%d+)%.(%d+)")
-        return tonumber(a) or 0, tonumber(b) or 0, tonumber(c) or 0
+        return tonumber(a), tonumber(b), tonumber(c)
     end
     local a1, a2, a3 = parse(v1)
     local b1, b2, b3 = parse(v2)
