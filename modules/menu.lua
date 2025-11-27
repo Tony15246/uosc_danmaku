@@ -651,6 +651,7 @@ mp.register_script_message("load-danmaku", function(animeTitle, episodeTitle, ep
     ENABLED = true
     DANMAKU.anime = animeTitle
     DANMAKU.episode = episodeTitle
+    set_danmaku_visibility(true)
     set_episode_id(episodeId, true)
 end)
 
