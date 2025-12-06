@@ -1,4 +1,5 @@
 local utils = require("mp.utils")
+local unpack = unpack or table.unpack
 
 -- from http://lua-users.org/wiki/LuaUnicode
 local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
