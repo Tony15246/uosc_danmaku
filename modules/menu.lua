@@ -1,5 +1,6 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
+local unpack = unpack or table.unpack
 
 input_loaded, input = pcall(require, "mp.input")
 uosc_available = false
@@ -263,19 +264,19 @@ end
 function open_add_menu_uosc()
     local sources = {}
     for url, source in pairs(DANMAKU.sources) do
-        if source.fname then
+        if source.data then
             local item = {title = url, value = url, keep_open = true,}
             if source.from == "api_server" then
                 if source.blocked then
                     item.hint = "来源：弹幕服务器（已屏蔽）"
-                    item.actions = {{icon = "check", name = "unblock"},}
+                    item.actions = {{icon = "check", name = "unblock", label = "解除屏蔽"},}
                 else
                     item.hint = "来源：弹幕服务器（未屏蔽）"
-                    item.actions = {{icon = "not_interested", name = "block"},}
+                    item.actions = {{icon = "not_interested", name = "block", label = "屏蔽"},}
                 end
             else
                 item.hint = "来源：用户添加"
-                item.actions = {{icon = "delete", name = "delete"},}
+                item.actions = {{icon = "delete", name = "delete", label = "删除"},}
             end
             table.insert(sources, item)
         end
@@ -318,7 +319,19 @@ function open_content_menu(pos)
             if text and text ~= "" and start_time >= 0 and start_time <= duration then
                 table.insert(items, {
                     title = abbr_str(text, 60),
-                    hint = seconds_to_time(start_time),
+                    hint = seconds_to_time(start_time) .. "(" .. remove_query(event.source) .. ")",
+                    actions = {
+                        {
+                            name = 'block_source',
+                            icon = 'block',
+                            label = '屏蔽对应弹幕源'
+                        },
+                        {
+                            name = 'adjust_delay',
+                            icon = 'more_time',
+                            label = '调整弹幕源延迟'
+                        },
+                    },
                     value = { "seek", start_time, "absolute" },
                     active = time_pos >= start_time and time_pos <= end_time,
                 })
@@ -330,7 +343,9 @@ function open_content_menu(pos)
         type = "menu_content",
         title = "弹幕内容",
         footnote = "使用 / 打开搜索",
-        items = items
+        items = items,
+        item_actions_place = "outside",
+        callback = {mp.get_script_name(), 'handle-danmaku-content-action'},
     }
     local json_props = utils.format_json(menu_props)
 
@@ -428,7 +443,7 @@ function danmaku_delay_setup(source_url)
 
     local sources = {}
     for url, source in pairs(DANMAKU.sources) do
-        if source.fname and not source.blocked then
+        if source.data and not source.blocked then
             local delay = 0
             if source.delay_segments then
                 for _, seg in ipairs(source.delay_segments) do
@@ -731,10 +746,6 @@ mp.register_script_message('setup-danmaku-source', function(json)
     if event.type == 'activate' then
 
         if event.action == "delete" then
-            local rm = DANMAKU.sources[event.value]["fname"]
-            if rm and file_exists(rm) and DANMAKU.sources[event.value]["from"] ~= "user_local" then
-                os.remove(rm)
-            end
             DANMAKU.sources[event.value] = nil
             remove_source_from_history(event.value)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_source")
@@ -798,6 +809,34 @@ mp.register_script_message("setup-source-delay", function(query, text)
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
             danmaku_delay_setup(query)
             load_danmaku(true, true)
+        end
+    end
+end)
+
+mp.register_script_message('handle-danmaku-content-action', function(json)
+    local event = utils.parse_json(json)
+    if not event or event.type ~= 'activate' then return end
+
+    if event.action then
+        local d = COMMENTS[event.index]
+        if not d or not d.source then return end
+
+        if event.action == "block_source" then
+            DANMAKU.sources[d.source]["blocked"] = true
+            add_source_to_history(d.source, DANMAKU.sources[d.source])
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_content")
+            load_danmaku(true)
+        elseif event.action == "adjust_delay" then
+            mp.commandv("script-message", "open_source_delay_menu", d.source)
+        end
+    else
+        if event.value then
+            if type(event.value) == "table" then
+                mp.commandv(unpack(event.value))
+            else
+                mp.command(event.value)
+            end
+            mp.commandv("script-message-to", "uosc", "close-menu", "menu_content")
         end
     end
 end)
