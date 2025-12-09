@@ -292,7 +292,6 @@ function parse_danmaku_file(danmaku_input)
             for _, d in ipairs(parsed) do
                 local matched, pattern = is_blacklisted(d.text, black_patterns)
                 if not matched then
-                    d.text = ch_convert_cached(d.text)
                     table.insert(danmakus, d)
                 else
                     -- msg.debug("命中黑名单: " .. pattern)
@@ -582,7 +581,7 @@ function convert_danmaku_to_ass_events()
         end
 
         if style and effect then
-            text = effect .. color_text .. text
+            text = effect .. color_text .. ch_convert_cached(text)
             local event = {
                 start_time = ev.start_time,
                 end_time = ev.end_time,
