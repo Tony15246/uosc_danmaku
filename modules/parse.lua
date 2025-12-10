@@ -532,7 +532,7 @@ function convert_danmaku_to_ass_events()
         local d = ev.danmaku
         local appear_time = ev.start_time
         local danmaku_type = d.type
-        local clean_text = decode_html_entities(d.text)
+        local clean_text = ch_convert_cached(decode_html_entities(d.text))
         local text = ass_escape(clean_text)
                     :gsub("x(%d+)$", "{\\b1\\i1}x%1")
 
@@ -581,7 +581,7 @@ function convert_danmaku_to_ass_events()
         end
 
         if style and effect then
-            text = effect .. color_text .. ch_convert_cached(text)
+            text = effect .. color_text .. text
             local event = {
                 start_time = ev.start_time,
                 end_time = ev.end_time,
