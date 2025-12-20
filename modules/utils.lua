@@ -649,7 +649,7 @@ function call_cmd_async(args, callback)
         name = 'subprocess',
         capture_stderr = true,
         capture_stdout = true,
-        playback_only = false,
+        playback_only = true,
         args = args,
     }, function(success, result, error)
         if not success or not result or result.status ~= 0 then
