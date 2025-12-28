@@ -4,6 +4,7 @@ local unpack = unpack or table.unpack
 
 input_loaded, input = pcall(require, "mp.input")
 uosc_available = false
+latest_menu_anime = {}
 
 -- 打开番剧数据匹配菜单
 function get_animes(query)
@@ -70,7 +71,7 @@ function get_animes(query)
     end
 
     if uosc_available then
-        update_menu_uosc(menu_type, menu_title, items, footnote, menu_cmd, query)
+        latest_menu_anime = update_menu_uosc(menu_type, menu_title, items, footnote, menu_cmd, query)
     elseif input_loaded then
         show_message("", 0)
         mp.add_timeout(0.1, function()
@@ -125,6 +126,13 @@ function get_episodes(animeTitle, bangumiId)
         return
     end
 
+    table.insert(items, {
+        title = "← 返回搜索结果",
+        value = { "script-message-to", "uosc", "open-menu", latest_menu_anime },
+        keep_open = false,
+        selectable = true,
+    })
+
     for _, episode in ipairs(response.bangumi.episodes) do
         table.insert(items, {
             title = episode.episodeTitle,
@@ -172,6 +180,8 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
     }
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+
+    return json_props
 end
 
 function open_menu_select(menu_items, is_time)
