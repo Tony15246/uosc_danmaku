@@ -75,6 +75,7 @@ function get_animes(query)
     elseif input_loaded then
         show_message("", 0)
         mp.add_timeout(0.1, function()
+            latest_menu_anime = utils.format_json(items)
             open_menu_select(items)
         end)
     end
@@ -128,7 +129,7 @@ function get_episodes(animeTitle, bangumiId)
 
     table.insert(items, {
         title = "← 返回搜索结果",
-        value = { "script-message-to", "uosc", "open-menu", latest_menu_anime },
+        value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
         keep_open = false,
         selectable = true,
     })
@@ -262,7 +263,7 @@ end
 -- 打开弹幕源添加管理菜单
 function open_add_menu_get()
     local menu_log, deal_value = {}, {}
-    
+
     -- 重建菜单内容函数
     local function rebuild_menu_log(select_num)
         deal_value = {}
@@ -270,57 +271,57 @@ function open_add_menu_get()
             { text = "【既有弹幕源】", style = "{\\c&H00CCFF&\\b1}" },
             { text = "----------------------------", style = "{\\c&H888888&}" }
         }
-        
+
         local serial = 0
         for url, source in pairs(DANMAKU.sources) do
             if source.data then
                 serial = serial + 1
                 local action, text
-                
+
                 if source.from == "api_server" then
                     action = source.blocked and "unblock" or "block"
-                    text = string.format("  [%02d] %s [来源：弹幕服务器%s]  ", serial, url, 
+                    text = string.format("  [%02d] %s [来源：弹幕服务器%s]  ", serial, url,
                         source.blocked and "（已屏蔽）" or "（未屏蔽）")
                 else
                     action = "delete"
                     text = string.format("  [%02d] %s [来源：用户添加]  ", serial, url)
                 end
-                
-                local style = (tonumber(select_num) == serial) and 
+
+                local style = (tonumber(select_num) == serial) and
                     "{\\c&HFFDE7F&\\b1}" or (action == "unblock" and "{\\c&H4C4CC3&\\b0}" or "{\\c&HCCCCCC&\\b0}")
-                
+
                 deal_value[serial] = {value = url, action = action}
                 table.insert(menu_log, {text = text, style = style})
             end
         end
-        
-        if serial == 0 then 
-            table.insert(menu_log, { text = "        无", style = "" }) 
+
+        if serial == 0 then
+            table.insert(menu_log, { text = "        无", style = "" })
         end
     end
-    
+
     -- 显示菜单
     local function show_menu(extra_lines, select_num)
         rebuild_menu_log(select_num)
-        
+
         local display = {}
         for _, item in ipairs(menu_log) do table.insert(display, item) end
         table.insert(display, { text = "----------------------------", style = "{\\c&H888888&}" })
-        
+
         if extra_lines then
             if #extra_lines < 2 then table.insert(display, { text = "\n", style = "" }) end
             for _, line in ipairs(extra_lines) do table.insert(display, line) end
         else
             table.insert(display, { text = "\n", style = "" })
-            table.insert(display, { 
-                text = "提示: 输入【选项数字】可屏蔽或删除既有弹幕源", 
-                style = "{\\c&H999999&}" 
+            table.insert(display, {
+                text = "提示: 输入【选项数字】可屏蔽或删除既有弹幕源",
+                style = "{\\c&H999999&}"
             })
         end
-        
+
         input.set_log(display)
     end
-    
+
     -- 获取操作提示
     local function get_hint(action)
         local hints = {
@@ -330,23 +331,23 @@ function open_add_menu_get()
         }
         return hints[action] or "按回车执行，获取输入源地址url的弹幕"
     end
-    
+
     input.get({
         keep_open = true,
         prompt = "请在此输入源地址url: ",
         opened = function() show_menu() end,
         edited = function(text)
             text = text:gsub("^%s*(.-)%s*$", "%1")
-            
+
             if text == "" then
                 show_menu()
                 return
             end
-            
+
             local num = tonumber(text)
             local event = num and deal_value[num]
             local hint = get_hint(event and event.action)
-            
+
             show_menu({
                 { text = string.format("已输入: %s", text), style = "{\\c&HCCCCCC&}" },
                 { text = hint, style = "{\\c&H999999&}" }
@@ -356,10 +357,10 @@ function open_add_menu_get()
             mp.osd_message("菜单已关闭   ")
             text = text:gsub("^%s*(.-)%s*$", "%1")
             if text == "" then return end
-            
+
             local num = tonumber(text)
             local event = num and deal_value[num]
-            
+
             if event then
                 local args = string.format('{"type":"activate","value":"%s","action":"%s"}',
                     string.gsub(event.value, '\\', '\\\\'), event.action)
@@ -368,7 +369,7 @@ function open_add_menu_get()
                 input.terminate()
                 mp.commandv("script-message-to", mp.get_script_name(), "add-source-event", text)
             end
-            
+
             mp.add_timeout(0.1, show_menu)
         end
     })
@@ -802,6 +803,17 @@ mp.register_script_message("open_content_danmaku_menu", function()
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
     end
     open_content_menu()
+end)
+
+mp.register_script_message("open-latest-menu-anime", function ()
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "open-menu", latest_menu_anime)
+    elseif input_loaded then
+        show_message("", 0)
+        mp.add_timeout(0.1, function()
+            open_menu_select(utils.parse_json(latest_menu_anime))
+        end)
+    end
 end)
 
 mp.register_script_message("setup-danmaku-style", function(query, text)
