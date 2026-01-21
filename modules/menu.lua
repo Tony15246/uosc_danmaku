@@ -146,6 +146,7 @@ function get_episodes(animeTitle, bangumiId)
     end
 
     if uosc_available then
+        footnote = mp.get_property("filename")
         update_menu_uosc(menu_type, menu_title, items, footnote)
     elseif input_loaded then
         mp.add_timeout(0.1, function()
@@ -164,6 +165,7 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
             keep_open = true,
             selectable = false,
             align = "center",
+            icon = "spinner",
         })
     else
         items = menu_item
@@ -354,7 +356,6 @@ function open_add_menu_get()
             }, text)
         end,
         submit = function(text)
-            mp.osd_message("菜单已关闭   ")
             text = text:gsub("^%s*(.-)%s*$", "%1")
             if text == "" then return end
 
@@ -490,12 +491,134 @@ local menu_items_config = {
 local ordered_keys = {"bold", "fontsize", "outline", "shadow", "scrolltime", "opacity", "displayarea"}
 
 -- 设置弹幕样式菜单
-function add_danmaku_setup(actived, status)
-    if not uosc_available then
-        show_message("无uosc UI框架，不支持使用该功能", 2)
-        return
+function open_style_menu_get(query, indicator)
+    mp.commandv('script-message-to', 'console', 'disable')
+    local menu_log = {}
+
+    local select_num = 0
+    local select_query = nil
+    if query then
+        if tonumber(query) ~= nil then
+            select_num = tonumber(query)
+        else
+            for i, v in ipairs(ordered_keys) do
+                if v == query then
+                    select_num = i
+                end
+            end
+        end
+        select_query = ordered_keys[select_num]
     end
 
+    local function build_menu(source)
+        menu_log = {
+            { text = "【弹幕样式菜单】", style = "{\\c&H00CCFF&\\b1}" },
+            { text = ("-"):rep(33), style = "{\\c&H888888&}" }
+        }
+
+        local serial = 0
+        for _, key in ipairs(ordered_keys) do
+            serial = serial + 1
+            local config = menu_items_config[key]
+            local text = string.format("  [%02d] %s   [目前：%s] ", serial, config.title, config.hint)
+            text = config.hint ~= config.original and text .. "⟳" or text
+            local style = serial == select_num and "{\\c&HFFDE7F&}" or "{\\c&H999999&}"
+            local item_config = { text = text, style = style }
+            table.insert(menu_log, item_config)
+        end
+
+        table.insert(menu_log, { text = ("-"):rep(33), style = "{\\c&H888888&}" })
+        if select_num == 0 then
+            table.insert(menu_log, {
+                text = "注: 样式更改仅在本次播放生效",
+                style = "{\\c&HFFDE7F&}"
+            })
+            table.insert(menu_log, {
+                text = "提示: 输入【w】可上移选项，【s】可下移选项",
+                style = "{\\c&H999999&}"
+            })
+        else
+            local input_text = source and source or ""
+            local config = menu_items_config[select_query]
+            local suffix = ""
+            if config and config.hint ~= config.original then
+                suffix = "（输入\\r恢复默认配置）"
+            end
+            input_text = string.format("已输入%s: %s", suffix, input_text)
+
+            local scope = config and config.footnote or ""
+            local hint_text = select_query == "bold" and "提示: 输入【y】切换状态" or "提示: " .. scope
+            local hint_style = "{\\c&H999999&}"
+            if source and source:lower() == "\\r" then
+                hint_text = string.format("提示: 回车将恢复默认配置 < %s >", config.original)
+            end
+            if indicator == "refresh" or indicator == "updata" then
+                indicator = ""
+                hint_text = "提示: 样式更改成功"
+                hint_style = "{\\c&HFFDE7F&}"
+                mp.add_timeout(1.5, build_menu)
+            elseif indicator == "error" then
+                indicator = ""
+                hint_text = "提示: 输入非数字字符或范围出错"
+                hint_style = "{\\c&H4C4CC3&}"
+                mp.add_timeout(1.5, build_menu)
+            end
+
+            table.insert(menu_log, { text = input_text, style = "{\\c&HCCCCCC&}" })
+            table.insert(menu_log, { text = hint_text, style = hint_style })
+        end
+        input.set_log(menu_log)
+    end
+
+    input.get({
+        keep_open = true,
+        prompt = "请在此输入操作（w/s|上移/下移）: ",
+        opened = function() build_menu() end,
+        edited = function(text)
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+
+            if text == "" then
+                build_menu()
+                return
+            end
+
+            if text:lower() == "w" or text:lower() == "s" then
+                input.terminate()
+                select_num = text:lower() == "w" and select_num - 1 or select_num + 1
+                select_num = (select_num > #ordered_keys) and 1 or (select_num <= 0 and #ordered_keys or select_num)
+                mp.add_timeout(0.01, function()
+                    open_style_menu_get(select_num)
+                end)
+                return
+            end
+
+            build_menu(text)
+        end,
+        submit = function(text)
+            if select_query == nil then return end
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+            if text == "" then return end
+
+            if text:lower() == "\\r" then
+                input.terminate()
+                local args = string.format('{"type":"activate","action":"%s","index":%d}', select_query, select_num)
+                mp.commandv("script-message-to", mp.get_script_name(), "setup-danmaku-style", args)
+            else
+                if menu_items_config[select_query]["scope"] ~= nil then
+                    input.terminate()
+                    mp.commandv("script-message-to", mp.get_script_name(), "setup-danmaku-style", select_query, text)
+                elseif text:lower() == "y" and select_query == "bold" then
+                    input.terminate()
+                    local args = string.format('{"type":"activate","index":%d}', select_num)
+                    mp.commandv("script-message-to", mp.get_script_name(), "setup-danmaku-style", args)
+                end
+            end
+            return
+        end
+    })
+end
+
+function open_style_menu_uosc(actived, status)
     local items = {}
     for _, key in ipairs(ordered_keys) do
         local config = menu_items_config[key]
@@ -536,7 +659,7 @@ function add_danmaku_setup(actived, status)
         elseif status == "error" then
             menu_props.title = "输入非数字字符或范围出错"
             -- 创建一个定时器，在1秒后触发回调函数，删除搜索栏错误信息
-            mp.add_timeout(1.0, function() add_danmaku_setup(actived, "updata") end)
+            mp.add_timeout(1.0, function() open_style_menu_uosc(actived, "updata") end)
         end
         menu_props.search_style = "palette"
         menu_props.search_debounce = "submit"
@@ -546,6 +669,18 @@ function add_danmaku_setup(actived, status)
 
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", actions, json_props)
+end
+
+function open_style_menu(actived, status)
+    if uosc_available then
+        open_style_menu_uosc(actived, status)
+    elseif input_loaded then
+        mp.add_timeout(0.01, function()
+            open_style_menu_get(actived, status)
+        end)
+    else
+        show_message("无支持可用的 UI框架，不支持使用该功能", 3)
+    end
 end
 
 -- 设置弹幕源延迟菜单
@@ -600,7 +735,7 @@ function open_add_total_menu_uosc()
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
         { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
-        { title = "弹幕样式", action = "open_setup_danmaku_menu" },
+        { title = "弹幕样式", action = "open_danmaku_style_menu" },
         { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
 
@@ -641,6 +776,7 @@ function open_add_total_menu_select()
     local total_menu_items_config = {
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
+        { title = "弹幕样式", action = "open_danmaku_style_menu" },
         { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
     for i, config in ipairs(total_menu_items_config) do
@@ -699,7 +835,7 @@ mp.commandv(
     utils.format_json({
         icon = "palette",
         tooltip = "弹幕样式",
-        command = "script-message open_setup_danmaku_menu",
+        command = "script-message open_danmaku_style_menu",
     })
 )
 
@@ -792,12 +928,13 @@ mp.register_script_message("add-source-event", function(query)
     add_danmaku_source(query, true)
 end)
 
-mp.register_script_message("open_setup_danmaku_menu", function()
+mp.register_script_message("open_danmaku_style_menu", function()
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
     end
-    add_danmaku_setup()
+    open_style_menu()
 end)
+
 mp.register_script_message("open_content_danmaku_menu", function()
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "menu_total")
@@ -827,13 +964,13 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                     menu_items_config.bold.hint = options.bold and "true" or "false"
                 end
                 -- "updata" 模式会保留输入框文字
-                add_danmaku_setup(ordered_keys[event.index], "updata")
+                open_style_menu(ordered_keys[event.index], "updata")
                 return
             else
                 -- msg.info("event.action：" .. event.action)
                 options[event.action] = menu_items_config[event.action]["original"]
                 menu_items_config[event.action]["hint"] = options[event.action]
-                add_danmaku_setup(event.action, "updata")
+                open_style_menu(event.action, "updata")
                 if event.action == "fontsize" or event.action == "scrolltime" then
                     load_danmaku(true)
                 end
@@ -857,14 +994,14 @@ mp.register_script_message("setup-danmaku-style", function(query, text)
                 options[query] = tostring(num)
                 menu_items_config[query]["hint"] = options[query]
                 -- "refresh" 模式会清除输入框文字
-                add_danmaku_setup(query, "refresh")
+                open_style_menu(query, "refresh")
                 if query == "fontsize" or query == "scrolltime" then
                     load_danmaku(true, true)
                 end
                 return
             end
         end
-        add_danmaku_setup(query, "error")
+        open_style_menu(query, "error")
     end
 end)
 
