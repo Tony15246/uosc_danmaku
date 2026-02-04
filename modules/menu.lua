@@ -697,7 +697,7 @@ function open_delay_menu_get(source, status)
 
     local function build_menu(query, text)
         menu_log = {
-            { text = "【弹幕样式菜单】", style = "{\\c&H00CCFF&\\b1}" },
+            { text = "【弹幕源延迟菜单】", style = "{\\c&H00CCFF&\\b1}" },
             { text = ("-"):rep(33), style = "{\\c&H888888&}" }
         }
 
