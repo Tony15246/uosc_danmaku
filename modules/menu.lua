@@ -522,7 +522,7 @@ function open_style_menu_get(query, indicator)
             local config = menu_items_config[key]
             local text = string.format("  [%02d] %s   [目前：%s] ", serial, config.title, config.hint)
             text = config.hint ~= config.original and text .. "⟳" or text
-            local style = serial == select_num and "{\\c&HFFDE7F&}" or "{\\c&H999999&}"
+            local style = serial == select_num and "{\\c&HFFDE7F&}" or "{\\c&HCCCCCC&}"
             local item_config = { text = text, style = style }
             table.insert(menu_log, item_config)
         end
@@ -684,7 +684,116 @@ function open_style_menu(actived, status)
 end
 
 -- 设置弹幕源延迟菜单
-function danmaku_delay_setup(source_url)
+function open_delay_menu_get(source, status)
+    mp.commandv('script-message-to', 'console', 'disable')
+    local menu_log = {}
+
+    local serial = 0
+    local select_num = 0
+    if source and tonumber(source) ~= nil then
+        select_num = tonumber(source)
+    end
+    local select_url = nil
+
+    local function build_menu(query, text)
+        menu_log = {
+            { text = "【弹幕样式菜单】", style = "{\\c&H00CCFF&\\b1}" },
+            { text = ("-"):rep(33), style = "{\\c&H888888&}" }
+        }
+
+        serial = 0
+        for url, src in pairs(DANMAKU.sources) do
+            if src.data and not src.blocked then
+                local delay = 0
+                serial = serial + 1
+                select_num = (url == source) and serial or select_num
+                if src.delay_segments then
+                    for _, seg in ipairs(src.delay_segments) do
+                        if seg.start == 0 then
+                            delay = seg.delay or 0
+                            break
+                        end
+                    end
+                end
+                local hint = "当前弹幕源延迟: " .. string.format("%.1f", delay + 1e-10) .. "秒"
+                local text = string.format("  [%02d] %s   [%s] ", serial, url, hint)
+                local style = (serial == select_num) and "{\\c&HFFDE7F&}" or "{\\c&HCCCCCC&}"
+                table.insert(menu_log, { text = text, style = style })
+                select_url = serial == select_num and url or select_url
+            end
+        end
+        if serial == 0 then
+            table.insert(menu_log, { text = "        无", style = "" })
+        end
+
+        table.insert(menu_log, { text = ("-"):rep(33), style = "{\\c&H888888&}" })
+        if select_num == 0 then
+            table.insert(menu_log, { text = "\n", style = "" })
+            table.insert(menu_log, {
+                text = "提示: 输入【w】可上移选项，【s】可下移选项",
+                style = "{\\c&H999999&}"
+            })
+        else
+            local input_text = "已输入：" .. (text ~= nil and text or "")
+
+            local hint_text = "提示：请输入数字，单位（秒）/ 或者按照形如\"14m15s\"的格式输入分钟数加秒数"
+            local hint_style = "{\\c&H999999&}"
+            if status == "refresh" then
+                status = ""
+                hint_text = "提示: 样式更改成功"
+                hint_style = "{\\c&HFFDE7F&}"
+                mp.add_timeout(1.5, build_menu)
+            elseif status == "error" then
+                status = ""
+                hint_text = "提示: 输入非数字字符或范围出错"
+                hint_style = "{\\c&H4C4CC3&}"
+                mp.add_timeout(1.5, build_menu)
+            end
+
+--            table.insert(menu_log, { text = input_text, style = "{\\c&HCCCCCC&}" })
+            table.insert(menu_log, { text = input_text, style = "{\\c&HCCCCCC&}" })
+            table.insert(menu_log, { text = hint_text, style = hint_style })
+        end
+        input.set_log(menu_log)
+    end
+
+    input.get({
+        keep_open = true,
+        prompt = "请在此输入操作（w/s|上移/下移）: ",
+        opened = function() build_menu() end,
+        edited = function(text)
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+
+            if text == "" then
+                build_menu()
+                return
+            end
+
+            if text:lower() == "w" or text:lower() == "s" then
+                input.terminate()
+                select_num = text:lower() == "w" and select_num - 1 or select_num + 1
+                select_num = (select_num > serial) and 1 or (select_num <= 0 and serial or select_num)
+                mp.add_timeout(0.01, function()
+                    open_delay_menu_get(select_num)
+                end)
+                return
+            end
+
+            build_menu(select_num, text)
+        end,
+        submit = function(text)
+            if select_url == nil then return end
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+            if text == "" then return end
+
+            input.terminate()
+            mp.commandv("script-message-to", mp.get_script_name(), "setup-source-delay", select_url, text)
+            return
+        end
+    })
+end
+
+function open_delay_menu_uosc(source_url, status)
     if not uosc_available then
         show_message("无uosc UI框架，不支持使用该功能", 2)
         return
@@ -717,7 +826,13 @@ function danmaku_delay_setup(source_url)
         callback = {mp.get_script_name(), 'setup-source-delay'},
     }
     if source_url ~= nil then
-        menu_props.title = "请输入数字，单位（秒）/ 或者按照形如\"14m15s\"的格式输入分钟数加秒数"
+        if status == "error" then
+            menu_props.title = "输入非数字字符或范围出错"
+            -- 创建一个定时器，在1秒后触发回调函数，删除搜索栏错误信息
+            mp.add_timeout(1.0, function() open_delay_menu_uosc(source_url) end)
+        else
+            menu_props.title = "请输入数字，单位（秒）/ 或者按照形如\"14m15s\"的格式输入分钟数加秒数"
+        end
         menu_props.search_style = "palette"
         menu_props.search_debounce = "submit"
         menu_props.on_search = { "script-message-to", mp.get_script_name(), "setup-source-delay", source_url }
@@ -727,6 +842,17 @@ function danmaku_delay_setup(source_url)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
+function open_delay_menu(source, query)
+    if uosc_available then
+        open_delay_menu_uosc(source, query)
+    elseif input_loaded then
+        mp.add_timeout(0.01, function()
+            open_delay_menu_get(source, query)
+        end)
+    else
+        show_message("无支持可用的 UI框架，不支持使用该功能", 3)
+    end
+end
 
 -- 总集合弹幕菜单
 function open_add_total_menu_uosc()
@@ -738,7 +864,6 @@ function open_add_total_menu_uosc()
         { title = "弹幕样式", action = "open_danmaku_style_menu" },
         { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
-
 
     if DANMAKU.anime and DANMAKU.episode then
         local episode = DANMAKU.episode:gsub("%s.-$","")
@@ -776,6 +901,7 @@ function open_add_total_menu_select()
     local total_menu_items_config = {
         { title = "弹幕搜索", action = "open_search_danmaku_menu" },
         { title = "从源添加弹幕", action = "open_add_source_menu" },
+        { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
         { title = "弹幕样式", action = "open_danmaku_style_menu" },
         { title = "弹幕内容", action = "open_content_danmaku_menu" },
     }
@@ -1040,7 +1166,7 @@ mp.register_script_message("setup-source-delay", function(query, text)
     if event ~= nil then
         -- item点击
         if event.type == "activate" then
-            danmaku_delay_setup(event.value)
+            open_delay_menu(event.value)
         end
     else
         -- 数值输入
@@ -1060,7 +1186,7 @@ mp.register_script_message("setup-source-delay", function(query, text)
             DANMAKU.sources[query]["delay_segments"] = delay_segments
             add_source_to_history(query, DANMAKU.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
-            danmaku_delay_setup(query)
+            open_delay_menu(query, "refresh")
             load_danmaku(true, true)
         elseif newText:match("^%-?%d+m%d+s$") then
             local minutes, seconds = string.match(newText, "^(%-?%d+)m(%d+)s$")
@@ -1071,8 +1197,10 @@ mp.register_script_message("setup-source-delay", function(query, text)
             DANMAKU.sources[query]["delay_segments"] = delay_segments
             add_source_to_history(query, DANMAKU.sources[query])
             mp.commandv("script-message-to", "uosc", "close-menu", "menu_delay")
-            danmaku_delay_setup(query)
+            open_delay_menu(query, "refresh")
             load_danmaku(true, true)
+        else
+            open_delay_menu(query, "error")
         end
     end
 end)
