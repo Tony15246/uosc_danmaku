@@ -855,15 +855,16 @@ function open_delay_menu(source, query)
 end
 
 -- 总集合弹幕菜单
+local total_menu_items_config = {
+    { title = "弹幕搜索", action = "open_search_danmaku_menu" },
+    { title = "从源添加弹幕", action = "open_add_source_menu" },
+    { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
+    { title = "弹幕样式", action = "open_danmaku_style_menu" },
+    { title = "弹幕内容", action = "open_content_danmaku_menu" },
+}
+
 function open_add_total_menu_uosc()
     local items = {}
-    local total_menu_items_config = {
-        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
-        { title = "从源添加弹幕", action = "open_add_source_menu" },
-        { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
-        { title = "弹幕样式", action = "open_danmaku_style_menu" },
-        { title = "弹幕内容", action = "open_content_danmaku_menu" },
-    }
 
     if DANMAKU.anime and DANMAKU.episode then
         local episode = DANMAKU.episode:gsub("%s.-$","")
@@ -898,13 +899,6 @@ end
 
 function open_add_total_menu_select()
     local item_titles, item_values = {}, {}
-    local total_menu_items_config = {
-        { title = "弹幕搜索", action = "open_search_danmaku_menu" },
-        { title = "从源添加弹幕", action = "open_add_source_menu" },
-        { title = "弹幕源延迟设置", action = "open_source_delay_menu" },
-        { title = "弹幕样式", action = "open_danmaku_style_menu" },
-        { title = "弹幕内容", action = "open_content_danmaku_menu" },
-    }
     for i, config in ipairs(total_menu_items_config) do
         item_titles[i] = config.title
         item_values[i] = { "script-message-to", mp.get_script_name(), config.action }
