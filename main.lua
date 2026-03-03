@@ -644,30 +644,33 @@ function load_danmaku_for_bahamut(path)
         end
 
         local comments_json = read_file(danmaku_json)
+        os.remove(danmaku_json)
         local comments = utils.parse_json(comments_json)
         if not comments then
             return
         end
 
+        local output_table = {}
+        for _, comment in ipairs(comments) do
+            local color = hex_to_int_color(comment["color"])
+            local mode = get_type_from_position(comment["position"])
+            local time = tonumber(comment["time"]) / 10
+            local c_param = string.format("%s,%s,%s,25,,,", time, color, mode)
+            table.insert(output_table, {
+                c = c_param,
+                m = comment["text"]
+            })
+        end
+
+        local final_json_str = utils.format_json(output_table)
+
         temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".json"
         local json_filename = utils.join_path(DANMAKU_PATH, temp_file)
         DANMAKU.count = DANMAKU.count + 1
+
         local json_file = io.open(json_filename, "w")
-
         if json_file then
-            json_file:write("[\n")
-            for _, comment in ipairs(comments) do
-                local m = comment["text"]
-                local color = hex_to_int_color(comment["color"])
-                local mode = get_type_from_position(comment["position"])
-                local time = tonumber(comment["time"]) / 10
-                local c = time .. "," .. color .. "," .. mode .. ",25,,,"
-
-                -- Write the JSON object as a single line, no spaces or extra formatting
-                local json_entry = string.format('{"c":"%s","m":"%s"},\n', c, m)
-                json_file:write(json_entry)
-            end
-            json_file:write("]")
+            json_file:write(final_json_str)
             json_file:close()
         end
 
