@@ -61,9 +61,24 @@ function render()
     end
 
     local ass_events = {}
+    local adjusted_pos = pos - delay
+    local max_display = math.max(options.scrolltime, options.fixtime)
 
-    for _, event in ipairs(COMMENTS) do
-        if pos >= event.start_time + delay and pos <= event.end_time + delay then
+    -- 跳过已结束的弹幕
+    local lo, hi = 1, #COMMENTS
+    while lo <= hi do
+        local mid = math.floor((lo + hi) / 2)
+        if COMMENTS[mid].start_time < adjusted_pos - max_display then
+            lo = mid + 1
+        else
+            hi = mid - 1
+        end
+    end
+
+    for i = lo, #COMMENTS do
+        local event = COMMENTS[i]
+        if event.start_time > adjusted_pos then break end  -- 后续弹幕提前退出
+        if event.end_time >= adjusted_pos then
             local text = realtime_position_text(event, pos, height, delay)
             if text then
                 text = text:gsub("&#%d+;","")
