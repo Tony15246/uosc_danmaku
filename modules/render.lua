@@ -7,8 +7,7 @@ local osd_width, osd_height, pause = 0, 0, true
 local time_pos_observer_active = false
 local overlay = mp.create_osd_overlay('ass-events')
 
-local function realtime_position_text(event, pos, height, delay)
-    local displayarea = tonumber(height * options.displayarea)
+local function realtime_position_text(event, pos, displayarea)
     if not event.move then
         local _, current_y = unpack(event.pos)
         if not current_y or tonumber(current_y) > displayarea then return end
@@ -22,7 +21,7 @@ local function realtime_position_text(event, pos, height, delay)
     local x1, y1, x2, y2 = unpack(event.move)
     -- 计算移动的时间范围
     local duration = event.end_time - event.start_time  --mean: options.scrolltime
-    local progress = (pos - event.start_time - delay) / duration  -- 移动进度 [0, 1]
+    local progress = (pos - event.start_time) / duration  -- 移动进度 [0, 1]
 
     -- 计算当前坐标
     local current_x = tonumber(x1 + (x2 - x1) * progress)
@@ -56,11 +55,10 @@ function render(pos_arg)
         return
     end
 
-    local delay = get_delay_for_time(DELAYS, pos)
-
     local fontname = options.fontname
     local fontsize = options.fontsize
-    local alpha = string.format("%02X", (1 - tonumber(options.opacity)) * 255)
+    local opacity = tonumber(options.opacity)
+    local alpha = string.format("%02X", (1 - (opacity or 0)) * 255)
 
     local width, height = 1920, 1080
     local ratio = osd_width / osd_height
@@ -70,38 +68,37 @@ function render(pos_arg)
     end
 
     local ass_events = {}
-    local adjusted_pos = pos - delay
     local max_display = math.max(options.scrolltime, options.fixtime)
+    local window_start = pos - max_display
 
     -- 跳过已结束的弹幕
-    local lo, hi = 1, #COMMENTS
-    while lo <= hi do
-        local mid = math.floor((lo + hi) / 2)
-        if COMMENTS[mid].start_time < adjusted_pos - max_display then
-            lo = mid + 1
-        else
-            hi = mid - 1
-        end
-    end
+    local lo = binary_search(COMMENTS, window_start, function(item) return item.start_time end)
+
+    local re_entity = "&#%d+;"
+    local re_fs = "\\fs(%d+)"
+    local ass_prefix = string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%s\\bord%s\\shad%s\\b%s\\q2}",
+        fontname, fontsize, alpha, options.outline, options.shadow, options.bold and "1" or "0")
 
     for i = lo, #COMMENTS do
         local event = COMMENTS[i]
-        if event.start_time > adjusted_pos then break end  -- 后续弹幕提前退出
-        if event.end_time >= adjusted_pos then
-            local text = realtime_position_text(event, pos, height, delay)
+        if not event then break end
+
+        if event.start_time > pos then break end  -- 后续弹幕提前退出
+        if event.end_time >= pos then
+            local text = realtime_position_text(event, pos, height * options.displayarea)
             if text then
-                text = text:gsub("&#%d+;","")
+                text = text:gsub(re_entity, "")
             end
 
-            if text and text:match("\\fs%d+") then
-                text = text:gsub("\\fs(%d+)", function(size)
-                    return string.format("\\fs%d", size * 1.5)
+            if text and text:match(re_fs) then
+                text = text:gsub(re_fs, function(size)
+                    local n = tonumber(size) or 0
+                    return string.format("\\fs%d", math.floor(n * 1.5))
                 end)
             end
 
             -- 构建 ASS 字符串
-            local ass_text = text and string.format("{\\rDefault\\fn%s\\fs%d\\c&HFFFFFF&\\alpha&H%s\\bord%s\\shad%s\\b%s\\q2}%s",
-                fontname, fontsize, alpha, options.outline, options.shadow, options.bold and "1" or "0", text)
+            local ass_text = text and (ass_prefix .. text)
 
             table.insert(ass_events, ass_text)
         end

@@ -319,6 +319,67 @@ function file_exists(path)
     return false
 end
 
+function binary_search(tbl, target, key)
+    if not tbl or #tbl == 0 then return 1 end
+    key = key or function(x) return x end
+    local lo, hi = 1, #tbl
+    local res = #tbl + 1
+    while lo <= hi do
+        local mid = math.floor((lo + hi) / 2)
+        local v = tbl[mid]
+        local val = key(v)
+        if val >= target then
+            res = mid
+            hi = mid - 1
+        else
+            lo = mid + 1
+        end
+    end
+    return res
+end
+
+function new_min_heap()
+    local h = {}
+    local function swap(i, j)
+        h[i], h[j] = h[j], h[i]
+    end
+    local function up(i)
+        while i > 1 do
+            local p = math.floor(i/2)
+            if h[p].time <= h[i].time then break end
+            swap(p, i)
+            i = p
+        end
+    end
+    local function down(i)
+        local n = #h
+        while true do
+            local l = i * 2
+            local r = l + 1
+            local smallest = i
+            if l <= n and h[l].time < h[smallest].time then smallest = l end
+            if r <= n and h[r].time < h[smallest].time then smallest = r end
+            if smallest == i then break end
+            swap(i, smallest)
+            i = smallest
+        end
+    end
+    local function push(node)
+        h[#h + 1] = node
+        up(#h)
+    end
+    local function pop()
+        if #h == 0 then return nil end
+        local root = h[1]
+        if #h == 1 then h[1] = nil; return root end
+        h[1] = h[#h]
+        h[#h] = nil
+        down(1)
+        return root
+    end
+    return { push = push, pop = pop, size = function() return #h end }
+end
+
 function is_writable(path)
     local file = io.open(path, "w")
     if file then
