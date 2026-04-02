@@ -45,39 +45,21 @@ end
 
 -- 回退使用额外的弹幕获取方式
 function get_danmaku_fallback(query)
-    local url = options.fallback_server .. "/?url=" .. query
+    local url = options.fallback_server .. "/?ac=dm&url=" .. query
     msg.verbose("尝试获取弹幕：" .. url)
-    local temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".xml"
-    local danmaku_xml = utils.join_path(DANMAKU_PATH, temp_file)
-    DANMAKU.count = DANMAKU.count + 1
-    local arg = {
-        "curl",
-        "-L",
-        "-s",
-        "--compressed",
-        "--user-agent",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
-        "--output",
-        danmaku_xml,
-        url,
-    }
 
-    if options.proxy ~= "" then
-        table.insert(arg, '-x')
-        table.insert(arg, options.proxy)
-    end
+    local args = make_danmaku_request_args("GET", url)
+    if not args then return end
 
-    call_cmd_async(arg, function(error)
-        async_running = false
-        if error then
-            show_message("HTTP 请求失败，打开控制台查看详情", 5)
-            msg.error(error)
+    fetch_danmaku_data(args, function(data)
+        if not data or not data["comments"] or data["count"] <= 1 then
+            msg.info("备用服务器无数据或返回格式不正确")
+            show_message("备用服务器无数据或返回格式不正确", 3)
             return
         end
-        if file_exists(danmaku_xml) then
-            save_danmaku_downloaded(query, danmaku_xml)
-            load_danmaku(true)
-        end
+
+        save_danmaku_data(data["comments"], query, "user_custom")
+        load_danmaku(true)
     end)
 end
 
@@ -128,6 +110,45 @@ function make_danmaku_request_args(method, url, headers, body)
     table.insert(args, url)
 
     return args
+end
+
+local function normalize_danmaku_response(d)
+    if not d then return d end
+    -- 已经是 comments/count 格式则直接返回
+    if d.comments or d.count then return d end
+
+    if d.danmuku and type(d.danmuku) == "table" then
+        local out = {}
+        for _, item in ipairs(d.danmuku) do
+            -- item 预期为数组，索引: 1=time, 2=pos(right/top/bottom), 3=color(hex), 5=content
+            local time = tonumber(item[1]) or 0
+            local pos = item[2] or "right"
+            local color = item[3] or ""
+            local content = item[5] or item[4] or ""
+
+            local mode = 1
+            if pos == "right" then
+                mode = 1
+            elseif pos == "top" then
+                mode = 4
+            elseif pos == "bottom" then
+                mode = 5
+            end
+
+            local colorDec = 16777215
+            if type(color) == "number" then
+                colorDec = color
+            elseif type(color) == "string" then
+                colorDec = hex_to_int_color(color)
+            end
+
+            local p = string.format("%.2f,%d,%d", time, mode, colorDec)
+            table.insert(out, { p = p, m = content })
+        end
+        return { comments = out, count = tonumber(d.danum) or #out }
+    end
+
+    return d
 end
 
 -- 尝试通过解析文件名匹配剧集
@@ -317,6 +338,7 @@ function fetch_danmaku_data(args, callback)
             return
         end
         local data = utils.parse_json(json)
+        data = normalize_danmaku_response(data)
         callback(data)
     end)
 end
@@ -346,12 +368,9 @@ end
 
 -- 处理弹幕数据
 function handle_danmaku_data(query, data, from_menu)
-    local comments = data["comments"]
-    local count = data["count"]
-
     -- 如果没有数据，进行重试
-    if count == 0 then
-        show_message("服务器无缓存数据，再次尝试请求", 30)
+    if not data or not data["comments"] or data["count"] <= 1 then
+        show_message("服务器无缓存数据，再次尝试请求", 10)
         msg.verbose("服务器无缓存数据，再次尝试请求")
         -- 等待 2 秒后重试
         local start = os.time()
@@ -367,7 +386,7 @@ function handle_danmaku_data(query, data, from_menu)
         end
 
         fetch_danmaku_data(args, function(retry_data)
-            if not retry_data or not retry_data["comments"] or retry_data["count"] == 0 then
+            if not retry_data or not retry_data["comments"] or retry_data["count"] <= 1 then
                 get_danmaku_fallback(query)
                 return
             end
@@ -375,7 +394,7 @@ function handle_danmaku_data(query, data, from_menu)
             load_danmaku(from_menu)
         end)
     else
-        save_danmaku_data(comments, query, "user_custom")
+        save_danmaku_data(data["comments"], query, "user_custom")
         load_danmaku(from_menu)
     end
 end
@@ -654,11 +673,6 @@ function add_danmaku_source_online(query, from_menu)
     end
 
     fetch_danmaku_data(args, function(data)
-        if not data or not data["comments"] then
-            show_message("此源弹幕无法加载", 3)
-            msg.verbose("此源弹幕无法加载")
-            return
-        end
         handle_danmaku_data(query, data, from_menu)
     end)
 end

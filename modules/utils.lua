@@ -211,6 +211,31 @@ function hex_to_char(x)
     return string.char(tonumber(x, 16))
 end
 
+function hex_to_int_color(hex_color)
+    -- 移除颜色代码中的'#'字符
+    hex_color = hex_color:sub(2)  -- 只保留颜色代码部分
+
+    -- 提取R, G, B的十六进制值并转为整数
+    local r = tonumber(hex_color:sub(1, 2), 16)
+    local g = tonumber(hex_color:sub(3, 4), 16)
+    local b = tonumber(hex_color:sub(5, 6), 16)
+
+    -- 计算32位整数值
+    local color_int = (r * 256 * 256) + (g * 256) + b
+
+    return color_int
+end
+
+local function get_type_from_position(position)
+    if position == 0 then
+        return 1
+    end
+    if position == 1 then
+        return 4
+    end
+    return 5
+end
+
 -- url编码转换
 function url_encode(str)
     -- 将非安全字符转换为百分号编码

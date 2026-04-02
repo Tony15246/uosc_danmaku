@@ -142,21 +142,6 @@ local function extract_between_colons(input_string)
     end
 end
 
-local function hex_to_int_color(hex_color)
-    -- 移除颜色代码中的'#'字符
-    hex_color = hex_color:sub(2)  -- 只保留颜色代码部分
-
-    -- 提取R, G, B的十六进制值并转为整数
-    local r = tonumber(hex_color:sub(1, 2), 16)
-    local g = tonumber(hex_color:sub(3, 4), 16)
-    local b = tonumber(hex_color:sub(5, 6), 16)
-
-    -- 计算32位整数值
-    local color_int = (r * 256 * 256) + (g * 256) + b
-
-    return color_int
-end
-
 local function get_type_from_position(position)
     if position == 0 then
         return 1
@@ -619,6 +604,11 @@ function load_danmaku_for_bilibili(path)
             url,
         }
 
+        if options.cookie_file and options.cookie_file ~= "" then
+            table.insert(arg, '-b')
+            table.insert(arg, mp.command_native({"expand-path", options.cookie_file}))
+        end
+
         call_cmd_async(arg, function(error)
             async_running = false
             if error then
@@ -670,6 +660,11 @@ function load_danmaku_for_bahamut(path)
     if options.proxy ~= "" then
         table.insert(arg, '-x')
         table.insert(arg, options.proxy)
+    end
+
+    if options.cookie_file and options.cookie_file ~= "" then
+        table.insert(arg, '-b')
+        table.insert(arg, mp.command_native({"expand-path", options.cookie_file}))
     end
 
     call_cmd_async(arg, function(error)
