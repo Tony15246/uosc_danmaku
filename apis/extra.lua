@@ -12,9 +12,18 @@ local function load_extra_danmaku(url, episode, number, class, id, site, title, 
     local play_url = nil
     if url:match("^.-%.html") then
         play_url = url:match("^(.-%.html).*")
+    elseif url:match("^https?://v%.youku%.com/") and url:match("[?&]vid=") then
+        -- 转换 youku 的短链接形式 video?vid=... 到真实播放页 v_show/id_*.html
+        local vid = url:match("[?&]vid=([^&]+)")
+        if vid then
+            play_url = "https://v.youku.com/v_show/id_" .. vid .. ".html"
+        else
+            play_url = url:gsub("%?bsource=360ogvys$",""):gsub("&.*$","")
+        end
     else
-        play_url = url:gsub("%?bsource=360ogvys$","")
+        play_url = url:gsub("%?bsource=360ogvys$",""):gsub("&.*$","")
     end
+
     ENABLED = true
     DANMAKU.anime = title .. " (" .. year .. ")"
     DANMAKU.episode = "第" .. episode .. "话"

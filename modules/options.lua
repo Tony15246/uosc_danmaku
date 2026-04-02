@@ -4,9 +4,9 @@ local opt = require("mp.options")
 options = {
     -- 指定弹幕服务器地址，自定义服务需兼容 dandanplay 的 api
     api_server = "https://api.dandanplay.net",
-    -- 指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕
-    -- 服务器可以自托管：https://github.com/lyz05/danmaku
-    fallback_server = "https://fc.lyz05.cn",
+    -- 指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕'
+    -- 可用： https://api.danmu.icu，https://dmku.hls.one
+    fallback_server = "https://api.danmu.icu",
     -- 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)
     -- 可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取
     -- 注意：自定义此参数时还需要对获取到的 API Key 进行 base64 编码
@@ -18,6 +18,8 @@ options = {
     save_danmaku = false,
     user_agent = "mpv_danmaku/1.0",
     proxy = "",
+    -- 可选：向 HTTP 请求传递 cookie.txt 文件路径
+    cookie_file = "",
     -- 使用 fps 视频滤镜，大幅提升弹幕平滑度。默认禁用
     vf_fps = false,
     -- 设置要使用的 fps 滤镜参数
