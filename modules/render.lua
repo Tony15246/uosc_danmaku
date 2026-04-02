@@ -3,9 +3,8 @@ local msg = require('mp.msg')
 local utils = require("mp.utils")
 local unpack = unpack or table.unpack
 
-local INTERVAL = options.vf_fps and 0.01 or 0.001
 local osd_width, osd_height, pause = 0, 0, true
-
+local time_pos_observer_active = false
 local overlay = mp.create_osd_overlay('ass-events')
 
 local function realtime_position_text(event, pos, height, delay)
@@ -39,12 +38,22 @@ local function realtime_position_text(event, pos, height, delay)
     end
 end
 
-function render()
+function render(pos_arg)
     if COMMENTS == nil then return end
 
-    local pos, err = mp.get_property_number('time-pos')
-    if err ~= nil then
-        return msg.error(err)
+    local pos, err
+    if pos_arg == nil then
+        pos, err = mp.get_property_number('time-pos')
+        if err ~= nil then
+            return msg.error(err)
+        end
+    else
+        pos = pos_arg
+    end
+
+    if not pos then
+        overlay:remove()
+        return
     end
 
     local delay = get_delay_for_time(DELAYS, pos)
@@ -104,7 +113,27 @@ function render()
     overlay:update()
 end
 
-local timer = mp.add_periodic_timer(INTERVAL, render, true)
+local function time_pos_callback(_, time_pos)
+    if time_pos then
+        render(time_pos)
+    else
+        overlay:remove()
+    end
+end
+
+local function start_time_observer()
+    if not time_pos_observer_active then
+        mp.observe_property('time-pos', 'number', time_pos_callback)
+        time_pos_observer_active = true
+    end
+end
+
+local function stop_time_observer()
+    if time_pos_observer_active then
+        mp.unobserve_property(time_pos_callback)
+        time_pos_observer_active = false
+    end
+end
 
 function render_danmaku(from_menu, no_osd)
     if ENABLED and (from_menu or get_danmaku_visibility()) then
@@ -135,7 +164,7 @@ function show_danmaku_func()
     set_danmaku_visibility(true)
     render()
     if not pause then
-        timer:resume()
+        start_time_observer()
     end
     if options.vf_fps then
         local display_fps = mp.get_property_number('display-fps')
@@ -150,7 +179,7 @@ function show_danmaku_func()
 end
 
 function hide_danmaku_func()
-    timer:kill()
+    stop_time_observer()
     mp.set_property_bool(HAS_DANMAKU, false)
     set_danmaku_visibility(false)
     overlay:remove()
@@ -184,33 +213,15 @@ end
 
 mp.observe_property('osd-width', 'number', function(_, value) osd_width = value or osd_width end)
 mp.observe_property('osd-height', 'number', function(_, value) osd_height = value or osd_height end)
-mp.observe_property('display-fps', 'number', function(_, value)
-    if value ~= nil then
-        local interval = 1 / value / 10
-        if interval > INTERVAL then
-            timer:kill()
-            timer = mp.add_periodic_timer(interval, render, true)
-            if ENABLED then
-                timer:resume()
-            end
-        else
-            timer:kill()
-            timer = mp.add_periodic_timer(INTERVAL, render, true)
-            if ENABLED then
-                timer:resume()
-            end
-        end
-    end
-end)
 mp.observe_property('pause', 'bool', function(_, value)
     if value ~= nil then
         pause = value
     end
     if ENABLED then
         if pause then
-            timer:kill()
+            stop_time_observer()
         elseif COMMENTS ~= nil then
-            timer:resume()
+            start_time_observer()
         end
     end
 end)
@@ -226,7 +237,7 @@ end)
 
 mp.add_hook("on_unload", 50, function()
     COMMENTS, DELAY = nil, 0
-    timer:kill()
+    stop_time_observer()
     overlay:remove()
     mp.set_property_native(DELAY_PROPERTY, 0)
     if filter_state("danmaku") then
