@@ -754,7 +754,7 @@ fallback_server
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
-fallback_server= https://api.danmu.icu
+fallback_server=https://api.danmu.icu
 ```
 
 </details>
