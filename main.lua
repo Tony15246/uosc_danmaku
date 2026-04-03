@@ -338,7 +338,7 @@ local function clear_source()
     msg.verbose("已重置当前视频所有弹幕源更改")
 end
 
-function write_history(episodeid)
+function write_history(episodeid, api_server)
     local history = {}
     local path = mp.get_property("path")
     local dir = get_parent_directory(path)
@@ -378,6 +378,9 @@ function write_history(episodeid)
             history[dir].episodeId = episodeid
         elseif DANMAKU.extra then
             history[dir].extra = DANMAKU.extra
+        end
+        if api_server then
+            history[dir].api_server = api_server
         end
         write_json_file(HISTORY_PATH, history)
     end
@@ -427,6 +430,11 @@ function add_source_to_history(add_url, add_source)
     local record = history[path]["sources"][add_url]
     record.from = add_source.from or "user_custom"
     record.blocked = add_source.blocked or false
+    if record.from == "api_server" then
+        record.api_server = add_source.api_server or options.api_server
+    else
+        record.api_server = nil
+    end
 
    local delay_segments = shallow_copy(add_source.delay_segments or {})
     if #delay_segments > 0 then
@@ -481,6 +489,7 @@ function read_danmaku_source_record(path)
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
+                api_server = data.api_server,
             }
         end
     else
@@ -510,6 +519,7 @@ function read_danmaku_source_record(path)
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
+                api_server = record.api_server,
             }
 
             upgraded_sources[source] = shallow_copy(DANMAKU.sources[source])

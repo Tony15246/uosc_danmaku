@@ -24,23 +24,24 @@ end
 function set_episode_id(input, from_menu)
     from_menu = from_menu or false
     DANMAKU.source = "dandanplay"
+    local api_server = options.api_server
     for url, source in pairs(DANMAKU.sources) do
         if source.from == "api_server" then
             if not source.from_history then
                 DANMAKU.sources[url] = nil
             else
                 DANMAKU.sources[url]["data"] = nil
+                api_server = source.api_server or options.api_server
             end
         end
     end
     local episodeId = tonumber(input)
-    write_history(episodeId)
+
+    local main_url = api_server  .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+    add_source_to_history(main_url, { from = "api_server", api_server = api_server })
+    write_history(episodeId, api_server)
     set_danmaku_button()
-    if options.load_more_danmaku and options.api_server:find("api%.dandanplay%.") then
-        fetch_danmaku_all(episodeId, from_menu)
-    else
-        fetch_danmaku(episodeId, from_menu)
-    end
+    fetch_danmaku(episodeId, from_menu, api_server)
 end
 
 -- 回退使用额外的弹幕获取方式
@@ -238,11 +239,15 @@ local function match_anime()
                 target_title = title .. " 第" .. number_to_chinese(season_num) .. "季"
             end
             for _, anime in ipairs(animes) do
-                if anime.animeTitle:match("第一[季部]") and tonumber(season_num) == 1 then
+                local animeTitle = tostring(anime.animeTitle or "")
+                animeTitle = animeTitle:gsub("^%s*(.-)%s*$", "%1")
+                            :gsub("%s*%(.-%)%s*$", "")
+                            :gsub("%s*【.-】.*$", "")
+                if animeTitle:match("第一[季部]") and tonumber(season_num) == 1 then
                     target_title = title .. " 第一季"
                 end
-                local score = jaro_winkler(target_title, anime.animeTitle)
-                msg.debug(("候选: %s -> 相似度 %.3f"):format(anime.animeTitle, score))
+                local score = jaro_winkler(target_title, animeTitle)
+                msg.debug(("候选: %s -> 相似度 %.3f"):format(animeTitle, score))
                 if score > best_score then
                     best_score = score
                     best_match = anime
@@ -315,7 +320,7 @@ local function match_file(file_path, file_name, callback)
             return
         end
         local data = utils.parse_json(json)
-        if not data or not data.isMatched or #data.matches > 1 then
+        if not data or not data.isMatched then
             callback("没有匹配的剧集")
             return
         end
@@ -399,82 +404,6 @@ function handle_danmaku_data(query, data, from_menu)
     end
 end
 
--- 处理第三方弹幕数据
-function handle_related_danmaku(index, relateds, related, shift, callback)
-    local url = options.api_server .. "/api/v2/extcomment?url=" .. url_encode(related["url"])
-    show_message(string.format("正在从第三方库装填弹幕 [%d/%d]", index, #relateds), 30)
-    msg.verbose("正在从第三方库装填弹幕：" .. url)
-
-    local args = make_danmaku_request_args("GET", url)
-
-    if args == nil then
-        return
-    end
-
-    fetch_danmaku_data(args, function(data)
-        local comments = {}
-        if data and data["comments"] then
-            if data["count"] == 0 then
-                -- 如果没有数据，稍等 2 秒重试
-                local start = os.time()
-                while os.time() - start < 2 do
-                    -- 空循环，等待 2 秒
-                end
-                fetch_danmaku_data(args, function(data)
-                    for _, comment in ipairs(data["comments"]) do
-                        comment["shift"] = shift
-                        table.insert(comments, comment)
-                    end
-                    callback(comments)
-                end)
-            else
-                for _, comment in ipairs(data["comments"]) do
-                    comment["shift"] = shift
-                    table.insert(comments, comment)
-                end
-                callback(comments)
-            end
-        else
-            show_message("无数据", 3)
-            msg.info("无数据")
-            callback(comments)
-        end
-    end)
-end
-
--- 处理dandan库的弹幕数据
-function handle_main_danmaku(url, from_menu)
-    show_message("正在从弹弹Play库装填弹幕", 30)
-    msg.verbose("尝试获取弹幕：" .. url)
-    local args = make_danmaku_request_args("GET", url)
-
-    if args == nil then
-        return
-    end
-
-    fetch_danmaku_data(args, function(data)
-        if not data or not data["comments"] then
-            show_message("无数据", 3)
-            msg.info("无数据")
-            return
-        end
-
-        local comments = data["comments"]
-        local count = data["count"]
-
-        if count == 0 then
-            if DANMAKU.sources[url] == nil then
-                DANMAKU.sources[url] = {from = "api_server"}
-            end
-            load_danmaku(from_menu)
-            return
-        end
-
-        save_danmaku_data(comments, url, "api_server")
-        load_danmaku(from_menu)
-    end)
-end
-
 -- 处理获取到的数据
 function handle_fetched_danmaku(data, url, from_menu)
     if data and data["comments"] then
@@ -494,51 +423,10 @@ function handle_fetched_danmaku(data, url, from_menu)
     end
 end
 
--- 过滤被排除的平台
-function filter_excluded_platforms(relateds)
-    -- 解析排除的平台列表
-    local excluded_list = {}
-    local excluded_json = options.excluded_platforms
-    if excluded_json and excluded_json ~= "" and excluded_json ~= "[]" then
-        local success, parsed = pcall(utils.parse_json, excluded_json)
-        if success and parsed and type(parsed) == "table" then
-            excluded_list = parsed
-        end
-    end
-
-    -- 如果没有排除列表，直接返回原列表
-    if #excluded_list == 0 then
-        return relateds
-    end
-
-    -- 过滤弹幕源
-    local filtered = {}
-    for _, related in ipairs(relateds) do
-        local url = related["url"]
-        local should_exclude = false
-
-        -- 检查URL是否包含任何被排除的平台关键词
-        for _, platform in ipairs(excluded_list) do
-            if url:find(platform, 1, true) then
-                should_exclude = true
-                msg.info(string.format("已排除平台 [%s] 的弹幕源: %s", platform, url))
-                break
-            end
-        end
-
-        if not should_exclude then
-            table.insert(filtered, related)
-        end
-    end
-
-    msg.info(string.format("原始弹幕源: %d 个, 过滤后: %d 个", #relateds, #filtered))
-    return filtered
-end
-
 -- 匹配弹幕库 comment, 仅匹配dandan本身弹幕库
 -- 通过danmaku api（url）+id获取弹幕
-function fetch_danmaku(episodeId, from_menu)
-    local url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
+function fetch_danmaku(episodeId, from_menu, api_server)
+    local url = (api_server or options.api_server) .. "/api/v2/comment/" .. episodeId .. "?withRelated=true&chConvert=0"
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. url)
     local args = make_danmaku_request_args("GET", url)
@@ -549,58 +437,6 @@ function fetch_danmaku(episodeId, from_menu)
 
     fetch_danmaku_data(args, function(data)
         handle_fetched_danmaku(data, url, from_menu)
-    end)
-end
-
--- 主函数：获取所有相关弹幕
-function fetch_danmaku_all(episodeId, from_menu)
-    local url = options.api_server .. "/api/v2/related/" .. episodeId
-    show_message("弹幕加载中...", 30)
-    msg.verbose("尝试获取弹幕：" .. url)
-    local args = make_danmaku_request_args("GET", url)
-
-    if args == nil then
-        return
-    end
-
-    fetch_danmaku_data(args, function(data)
-        if not data or not data["relateds"] then
-            show_message("无数据", 3)
-            msg.info("无数据")
-            return
-        end
-
-        -- 处理所有的相关弹幕，过滤掉被排除的平台
-        local relateds = data["relateds"]
-        local filtered_relateds = filter_excluded_platforms(relateds)
-        local function process_related(index)
-            if index > #filtered_relateds then
-                -- 所有相关弹幕加载完成后，开始加载主库弹幕
-                url = options.api_server .. "/api/v2/comment/" .. episodeId .. "?withRelated=false&chConvert=0"
-                handle_main_danmaku(url, from_menu)
-                return
-            end
-
-            local related = filtered_relateds[index]
-            local shift = related["shift"]
-
-            -- 处理当前的相关弹幕
-            handle_related_danmaku(index, filtered_relateds, related, shift, function(comments)
-                if #comments == 0 then
-                    if DANMAKU.sources[related["url"]] == nil then
-                        DANMAKU.sources[related["url"]] = {from = "api_server"}
-                    end
-                else
-                    save_danmaku_data(comments, related["url"], "api_server")
-                end
-
-                -- 继续处理下一个相关弹幕
-                process_related(index + 1)
-            end)
-        end
-
-        -- 从第一个相关库开始请求
-        process_related(1)
     end)
 end
 
