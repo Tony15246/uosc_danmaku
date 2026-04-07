@@ -1,4 +1,4 @@
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 mp.commandv('script-message', 'uosc_danmaku-version', VERSION)
 
@@ -431,7 +431,7 @@ function add_source_to_history(add_url, add_source)
     record.from = add_source.from or "user_custom"
     record.blocked = add_source.blocked or false
     if record.from == "api_server" then
-        record.api_server = add_source.api_server or options.api_server
+        record.api_server = add_source.api_server
     else
         record.api_server = nil
     end
@@ -620,7 +620,6 @@ function load_danmaku_for_bilibili(path)
         end
 
         call_cmd_async(arg, function(error)
-            async_running = false
             if error then
                 show_message("HTTP 请求失败，打开控制台查看详情", 5)
                 msg.error(error)
@@ -678,7 +677,6 @@ function load_danmaku_for_bahamut(path)
     end
 
     call_cmd_async(arg, function(error)
-        async_running = false
         if error then
             show_message("HTTP 请求失败，打开控制台查看详情", 5)
             msg.error(error)
@@ -881,7 +879,7 @@ mp.register_event("file-loaded", function()
         return
     end
 
-    if ENABLED and COMMENTS == nil and not async_running then
+    if ENABLED and COMMENTS == nil and not is_async_running() then
         init(path)
     end
 end)

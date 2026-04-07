@@ -3,6 +3,8 @@ local opt = require("mp.options")
 -- 选项
 options = {
     -- 指定弹幕服务器地址，自定义服务需兼容 dandanplay 的 api
+    -- 可指定多个用逗号分隔的有序 api_server 列表
+    -- 支持每项使用 '|' 或 '#' 分隔备注，例如: "https://a.example.com|备用A" 或 "https://b.example.com#备用B"
     api_server = "https://api.dandanplay.net",
     -- 指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕
     -- 可用： https://api.danmu.icu，https://dmku.hls.one
