@@ -430,11 +430,6 @@ function add_source_to_history(add_url, add_source)
     local record = history[path]["sources"][add_url]
     record.from = add_source.from or "user_custom"
     record.blocked = add_source.blocked or false
-    if record.from == "api_server" then
-        record.api_server = add_source.api_server
-    else
-        record.api_server = nil
-    end
 
    local delay_segments = shallow_copy(add_source.delay_segments or {})
     if #delay_segments > 0 then
@@ -460,6 +455,7 @@ function read_danmaku_source_record(path)
 
     local history = utils.parse_json(history_json) or {}
     local record = history[path]
+
     if not record or not record.sources then return end
 
     local sources = record.sources
@@ -489,7 +485,6 @@ function read_danmaku_source_record(path)
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
-                api_server = data.api_server,
             }
         end
     else
@@ -774,6 +769,7 @@ function auto_load_danmaku(path, dir, filename, number)
                 local history_id = history_dir.episodeId
                 local history_fname = history_dir.fname
                 local history_extra = history_dir.extra
+                local history_api_server = history_dir.api_server
                 local playing_number = nil
 
                 if history_fname then
@@ -792,6 +788,7 @@ function auto_load_danmaku(path, dir, filename, number)
                 if playing_number ~= nil then
                     local x = playing_number - history_number --获取集数差值
                     DANMAKU.episode = episode_number and string.format("第%s话", episode_number + x) or history_dir.episodeTitle
+                    DANMAKU.api_server = history_api_server or nil
                     show_message("自动加载上次匹配的弹幕", 3)
                     msg.verbose("自动加载上次匹配的弹幕")
                     if history_id then

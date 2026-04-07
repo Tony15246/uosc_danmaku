@@ -10,6 +10,33 @@ local function ass_escape(text)
                :gsub("\n", "\\N")
 end
 
+-- 构建 per-source 的延迟查询函数
+local function make_delay_lookup(source)
+    local segments = nil
+    local prefix = nil
+    if source and source.delay_segments and #source.delay_segments > 0 then
+        segments = {}
+        for i, v in ipairs(source.delay_segments) do segments[i] = v end
+        table.sort(segments, function(a, b) return (a.start or 0) < (b.start or 0) end)
+        prefix = {}
+        local s = 0
+        for i, v in ipairs(segments) do
+            s = s + (v.delay or 0)
+            prefix[i] = s
+        end
+    end
+
+    return function(t)
+        local segs = segments or {}
+        local pre = prefix or {}
+        if #segs == 0 then return 0 end
+        local idx = binary_search(segs, t, function(s) return (s and s.start) or 0 end)
+        local target = idx - 1
+        if target < 1 then return 0 end
+        return pre[target] or 0
+    end
+end
+
 local function xml_unescape(str)
     return str:gsub("&quot;", "\"")
               :gsub("&apos;", "'")
@@ -469,10 +496,22 @@ end
 -- 将弹幕转换为 XML 格式
 function convert_danmaku_to_xml(danmaku_out)
     local danmakus = {}
-    for _, source in pairs(DANMAKU.sources) do
+    for url, source in pairs(DANMAKU.sources) do
         if not source.blocked and source.data then
+            local get_cached_delay = make_delay_lookup(source)
+
             for _, d in ipairs(source.data) do
-                table.insert(danmakus, d)
+                local base_time = d.orig_time or d.time
+                local adjusted_time = base_time + get_cached_delay(base_time)
+                table.insert(danmakus, {
+                    orig_time = d.orig_time,
+                    time = adjusted_time,
+                    type = d.type,
+                    size = d.size,
+                    color = d.color,
+                    text = d.text,
+                    source = url,
+                })
             end
         end
     end
@@ -521,29 +560,7 @@ function convert_danmaku_to_ass_events(force)
     local per_source_lists = {}
     for url, source in pairs(DANMAKU.sources) do
         if not source.blocked and source.data then
-            local segments = nil
-            local prefix = nil
-            if source.delay_segments and #source.delay_segments > 0 then
-                segments = {}
-                for i, v in ipairs(source.delay_segments) do segments[i] = v end
-                table.sort(segments, function(a, b) return (a.start or 0) < (b.start or 0) end)
-                prefix = {}
-                local s = 0
-                for i, v in ipairs(segments) do
-                    s = s + (v.delay or 0)
-                    prefix[i] = s
-                end
-            end
-
-            local function get_cached_delay(t)
-                local segs = segments or {}
-                local pre = prefix or {}
-                if #segs == 0 then return 0 end
-                local idx = binary_search(segs, t, function(s) return (s and s.start) or 0 end)
-                local target = idx - 1
-                if target < 1 then return 0 end
-                return pre[target] or 0
-            end
+            local get_cached_delay = make_delay_lookup(source)
 
             local list = {}
             for _, d in ipairs(source.data) do
