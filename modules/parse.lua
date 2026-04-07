@@ -728,6 +728,7 @@ function convert_danmaku_to_ass_events(force)
                 clean_text = clean_text,
                 pos = pos,
                 move = move,
+                layer = (style == "R2L") and 0 or 1,
                 source = d.source,
             }
             table.insert(ass_events, event)
