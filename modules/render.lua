@@ -5,7 +5,8 @@ local unpack = unpack or table.unpack
 
 local osd_width, osd_height, pause = 0, 0, true
 local time_pos_observer_active = false
-local overlay = mp.create_osd_overlay('ass-events')
+local overlay_low = mp.create_osd_overlay('ass-events')
+local overlay_high = mp.create_osd_overlay('ass-events')
 
 local function realtime_position_text(event, pos, displayarea)
     if not event.move then
@@ -51,7 +52,8 @@ function render(pos_arg)
     end
 
     if not pos then
-        overlay:remove()
+        overlay_low:remove()
+        overlay_high:remove()
         return
     end
 
@@ -67,7 +69,8 @@ function render(pos_arg)
         fontsize = options.fontsize - ratio * 2
     end
 
-    local ass_events = {}
+    local ass_events_low = {}
+    local ass_events_high = {}
     local max_display = math.max(options.scrolltime, options.fixtime)
     local window_start = pos - max_display
 
@@ -99,22 +102,36 @@ function render(pos_arg)
 
             -- 构建 ASS 字符串
             local ass_text = text and (ass_prefix .. text)
-
-            table.insert(ass_events, ass_text)
+            if ass_text then
+                if event.layer == nil or tonumber(event.layer) == 0 then
+                    table.insert(ass_events_low, ass_text)
+                else
+                    table.insert(ass_events_high, ass_text)
+                end
+            end
         end
     end
 
-    overlay.res_x = width
-    overlay.res_y = height
-    overlay.data = table.concat(ass_events, '\n')
-    overlay:update()
+    -- 写入低层（滚动）和高层（顶/底）overlay，并设置 z 值以控制堆叠
+    overlay_low.res_x = width
+    overlay_low.res_y = height
+    overlay_low.z = 0
+    overlay_low.data = table.concat(ass_events_low, '\n')
+    overlay_low:update()
+
+    overlay_high.res_x = width
+    overlay_high.res_y = height
+    overlay_high.z = 1
+    overlay_high.data = table.concat(ass_events_high, '\n')
+    overlay_high:update()
 end
 
 local function time_pos_callback(_, time_pos)
     if time_pos then
         render(time_pos)
     else
-        overlay:remove()
+        overlay_low:remove()
+        overlay_high:remove()
     end
 end
 
@@ -179,7 +196,8 @@ function hide_danmaku_func()
     stop_time_observer()
     mp.set_property_bool(HAS_DANMAKU, false)
     set_danmaku_visibility(false)
-    overlay:remove()
+    overlay_low:remove()
+    overlay_high:remove()
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")
     end
@@ -235,7 +253,8 @@ end)
 mp.add_hook("on_unload", 50, function()
     COMMENTS, DELAY = nil, 0
     stop_time_observer()
-    overlay:remove()
+    overlay_low:remove()
+    overlay_high:remove()
     mp.set_property_native(DELAY_PROPERTY, 0)
     if filter_state("danmaku") then
         mp.commandv("vf", "remove", "@danmaku")

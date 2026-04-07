@@ -713,7 +713,9 @@ api_server
 
 #### 功能说明
 
-允许自定义弹幕 API 的服务地址
+允许自定义弹幕 API 的服务地址，可指定多个用逗号分隔的有序 api_server 列表
+
+支持每项使用 '|' 或 '#' 分隔备注，例如: "https://a.example.com|备用A" 或 "https://b.example.com#备用B"
 
 > **⚠️NOTE！**
 > 
