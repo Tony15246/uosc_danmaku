@@ -514,7 +514,6 @@ function read_danmaku_source_record(path)
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
-                api_server = record.api_server,
             }
 
             upgraded_sources[source] = shallow_copy(DANMAKU.sources[source])
