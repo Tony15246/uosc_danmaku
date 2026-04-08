@@ -181,62 +181,103 @@ local function merge_duplicate_danmaku(danmakus, threshold)
     local groups = {}
 
     for _, d in ipairs(danmakus) do
-        local tkey = tostring(d.type or "")
-        local ckey = tostring(d.color or "")
+        local tkey = options.merge_without_style and "any" or tostring(d.type or "")
         local text = d.text or ""
 
-        groups[tkey] = groups[tkey] or {}
-        groups[tkey][ckey] = groups[tkey][ckey] or {}
-        groups[tkey][ckey][text] = groups[tkey][ckey][text] or {}
-        table.insert(groups[tkey][ckey][text], d)
+        groups[text] = groups[text] or {}
+        groups[text][tkey] = groups[text][tkey] or {}
+        table.insert(groups[text][tkey], d)
+    end
+
+    local final_groups = {}
+
+    -- 颜色合并
+    for _, type_groups in pairs(groups) do
+        for _, list in pairs(type_groups) do
+            if options.merge_without_style then
+                table.insert(final_groups, list)
+            else
+                local color_groups = {}
+                -- 利用弹幕同色大量重复的特征，缓存 颜色值 -> color_groups 索引
+                local exact_color_cache = {}
+
+                for _, d in ipairs(list) do
+                    local c = d.color or 16777215
+                    local g_idx = exact_color_cache[c]
+
+                    if g_idx then
+                        -- 命中缓存，直接插入
+                        table.insert(color_groups[g_idx], d)
+                    else
+                        -- 未命中的颜色值，计算它是否落入已有代表颜色的 15 容差范围内
+                        local found = false
+                        for i, cg in ipairs(color_groups) do
+                            if color_dist(cg[1].color or 16777215, c) <= 15 then
+                                table.insert(cg, d)
+                                -- 将该颜色值缓存为这个代表颜色的索引，后续遇到完全相同的颜色值可以直接命中
+                                exact_color_cache[c] = i
+                                found = true
+                                break
+                            end
+                        end
+
+                        -- 超出容差范围的全新颜色代表，开辟新组
+                        if not found then
+                            table.insert(color_groups, {d})
+                            exact_color_cache[c] = #color_groups
+                        end
+                    end
+                end
+                
+                for _, cg in ipairs(color_groups) do
+                    table.insert(final_groups, cg)
+                end
+            end
+        end
     end
 
     local merged = {}
     local abs = math.abs
 
-    for _, bytype in pairs(groups) do
-        for _, bycolor in pairs(bytype) do
-            for _, group in pairs(bycolor) do
-                table.sort(group, function(a, b) return a.time < b.time end)
+    for _, group in ipairs(final_groups) do
+        table.sort(group, function(a, b) return a.time < b.time end)
 
-                local i = 1
-                while i <= #group do
-                    local base = group[i]
-                    local times = { base.time }
-                    local count = 1
-                    local j = i + 1
+        local i = 1
+        while i <= #group do
+            local base = group[i]
+            local times = { base.time }
+            local count = 1
+            local j = i + 1
 
-                    while j <= #group and abs(group[j].time - base.time) <= threshold do
-                        times[#times+1] = group[j].time
-                        count = count + 1
-                        j = j + 1
-                    end
+            while j <= #group and abs(group[j].time - base.time) <= threshold do
+                times[#times+1] = group[j].time
+                count = count + 1
+                j = j + 1
+            end
 
-                    local same_time = true
-                    for k = 2, #times do
-                        if times[k] ~= times[1] then
-                            same_time = false
-                            break
-                        end
-                    end
-
-                    local danmaku = {
-                        time = base.time,
-                        type = base.type,
-                        size = base.size,
-                        color = base.color,
-                        text = base.text,
-                        source = base.source,
-                        orig_time = base.orig_time,
-                    }
-                    if count > 2 or not same_time then
-                        danmaku.text = danmaku.text .. string.format("x%d", count)
-                    end
-
-                    table.insert(merged, danmaku)
-                    i = j
+            local same_time = true
+            for k = 2, #times do
+                if times[k] ~= times[1] then
+                    same_time = false
+                    break
                 end
             end
+
+            local danmaku = {
+                time = base.time,
+                type = base.type,
+                size = base.size,
+                color = base.color,
+                text = base.text,
+                source = base.source,
+                orig_time = base.orig_time,
+            }
+            if count > 2 or not same_time then
+                danmaku.text = danmaku.text .. string.format("x%d", count)
+            end
+
+            table.insert(merged, danmaku)
+            i = j
         end
     end
 

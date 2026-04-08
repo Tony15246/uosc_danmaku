@@ -615,6 +615,35 @@ merge_tolerance=1
 
 <details>
 <summary>
+merge_without_style
+
+> 决定在合并重复弹幕时是否忽略类型和颜色差异
+
+</summary>
+
+### merge_without_style
+
+#### 功能说明
+
+配合 `merge_tolerance` 使用。默认值: `no`（关闭）
+
+当开启此选项时，即使属于不同位置类型（如顶部、底部、滚动）或不同颜色（无论色差多大），只要弹幕文本内容相同并且在 `merge_tolerance` 指定的时间容差范围内，就会被强制合并成一条弹幕。
+关闭时，仅当弹幕内容相同、位置类型相同、且颜色肉眼不可区分（色差极小）时，才会进行弹幕合并。
+
+#### 使用方法
+
+想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
+
+```
+merge_without_style=yes
+```
+
+</details>
+
+---
+
+<details>
+<summary>
 max_screen_danmaku
 
 > 限制屏幕中同时显示的弹幕数量

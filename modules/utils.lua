@@ -226,6 +226,16 @@ function hex_to_int_color(hex_color)
     return color_int
 end
 
+function color_dist(c1, c2)
+    local r1 = math.floor(c1 / 65536) % 256
+    local g1 = math.floor(c1 / 256) % 256
+    local b1 = c1 % 256
+    local r2 = math.floor(c2 / 65536) % 256
+    local g2 = math.floor(c2 / 256) % 256
+    local b2 = c2 % 256
+    return math.sqrt((r1-r2)^2 + (g1-g2)^2 + (b1-b2)^2)
+end
+
 -- url编码转换
 function url_encode(str)
     -- 将非安全字符转换为百分号编码
