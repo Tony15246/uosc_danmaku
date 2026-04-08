@@ -121,8 +121,14 @@ local function make_handle_response(ctx)
         end
         local display_items = {}
         if ctx.remaining.n > 0 then
+            local progress_msg = ctx.message or ""
+            if ctx.total_servers and ctx.total_servers > 1 and ctx.remaining and ctx.remaining.n then
+                local completed = math.max(0, (ctx.total_servers - ctx.remaining.n) + 1)
+                progress_msg = tostring(progress_msg):gsub("%.+$", "")
+                progress_msg = progress_msg .. string.format("（%d/%d）...", completed, ctx.total_servers)
+            end
             table.insert(display_items, {
-                title = ctx.message,
+                title = progress_msg,
                 value = "",
                 italic = true,
                 keep_open = true,
@@ -177,6 +183,7 @@ function get_animes(query)
     local seen = {}
     local first_opened = false
     local remaining = #servers
+    local total_servers = remaining
     local server_items = {}
     local server_order = servers
     local total_count = 0
@@ -187,12 +194,22 @@ function get_animes(query)
     local menu_title = "在此处输入番剧名称"
     local footnote = "使用enter或ctrl+enter进行搜索"
     local menu_cmd = { "script-message-to", mp.get_script_name(), "search-anime-event" }
+
+    local function strip_trailing_dots(s)
+        if not s then return "" end
+        return tostring(s):gsub("%.+$", "")
+    end
+
+    local initial_message = message
+    if total_servers and total_servers > 1 then
+        initial_message = strip_trailing_dots(message) .. string.format("（%d/%d）...", 0, total_servers)
+    end
     if uosc_available then
         active_request_type = menu_type
-        update_menu_uosc(menu_type, menu_title, message, footnote, menu_cmd, query,
+        update_menu_uosc(menu_type, menu_title, initial_message, footnote, menu_cmd, query,
             { "script-message-to", mp.get_script_name(), "cancel-active-request", menu_type })
     else
-        show_message(message, 30)
+        show_message(initial_message, 30)
     end
 
     msg.verbose("尝试获取番剧数据，servers: " .. table.concat(servers, ", ") .. " query: " .. query)
@@ -206,6 +223,7 @@ function get_animes(query)
         first_opened = { val = first_opened },
         remaining = { n = remaining },
         message = message,
+        total_servers = total_servers,
         menu_type = menu_type,
         menu_title = menu_title,
         footnote = footnote,
