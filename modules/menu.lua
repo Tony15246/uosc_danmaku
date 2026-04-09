@@ -206,7 +206,7 @@ function get_animes(query)
     end
     if uosc_available then
         active_request_type = menu_type
-        update_menu_uosc(menu_type, menu_title, initial_message, footnote, menu_cmd, query,
+        update_menu_uosc(menu_type, menu_title, initial_message, footnote, menu_cmd, query, "spinner",
             { "script-message-to", mp.get_script_name(), "cancel-active-request", menu_type })
     else
         show_message(initial_message, 30)
@@ -275,7 +275,7 @@ function get_episodes(animeTitle, bangumiId, api_server)
 
     if uosc_available then
         active_request_type = menu_type
-        update_menu_uosc(menu_type, menu_title, message, footnote, nil, nil,
+        update_menu_uosc(menu_type, menu_title, message, footnote, nil, nil, "spinner",
             { "script-message-to", mp.get_script_name(), "cancel-active-request", menu_type })
     else
         show_message(message, 30)
@@ -350,7 +350,7 @@ function get_episodes(animeTitle, bangumiId, api_server)
     active_request_type = menu_type
 end
 
-function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd, query, on_close)
+function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd, query, message_icon, on_close)
     local items = {}
     if type(menu_item) == "string" then
         table.insert(items, {
@@ -360,7 +360,7 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
             keep_open = true,
             selectable = false,
             align = "center",
-            icon = "spinner",
+            icon = message_icon or "",
         })
     else
         items = menu_item
