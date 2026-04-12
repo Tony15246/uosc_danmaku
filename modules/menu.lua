@@ -1254,6 +1254,10 @@ function open_add_total_menu()
     end
 end
 
+function toggle_danmaku_switch(value)
+    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", value)
+    mp.set_property_bool(DANMAKU_SWITCH_ON, value == "on")
+end
 
 mp.commandv(
     "script-message-to",
@@ -1342,7 +1346,7 @@ mp.register_script_message("set", function(prop, value)
         hide_danmaku_func()
     end
 
-    mp.commandv("script-message-to", "uosc", "set", "show_danmaku", value)
+    toggle_danmaku_switch(value)
 end)
 
 -- 注册函数给 uosc 按钮使用
