@@ -1018,6 +1018,9 @@ blacklist_path=
 - `user-data/uosc_danmaku/has-danmaku`
     从`user-data/uosc_danmaku/has-danmaku`属性中可以获取到表示当前是否有弹幕在显示的布尔值，具体用法可以参考[此pr](https://github.com/Tony15246/uosc_danmaku/pull/276)
 
+- `user-data/uosc_danmaku/danmaku-switch-on`
+    从`user-data/uosc_danmaku/danmaku-switch-on`属性中可以获取到表示当前弹幕开关状态的布尔值，具体用法可以参考[此issue](https://github.com/Tony15246/uosc_danmaku/issues/362)
+
 ## 常见问题
 
 ### 来自弹弹play的弹幕源问题如何从根源进行调整解决
