@@ -94,7 +94,11 @@ end
 
 function set_danmaku_button()
     if get_danmaku_visibility() then
-        toggle_danmaku_switch("on")
+        if type(toggle_danmaku_switch) == "function" then
+            toggle_danmaku_switch("on")
+        else
+            mp.set_property_bool(DANMAKU_SWITCH_ON, true)
+        end
     end
 end
 
@@ -120,6 +124,137 @@ local function get_cid()
         end
     end
     return cid, danmaku_id
+end
+
+local function get_bilibili_urls(path)
+    return {
+        path or "",
+        mp.get_property("stream-open-filename", ''),
+    }
+end
+
+local function get_bilibili_bvid_and_page(path)
+    local bvid, page = nil, nil
+    for _, url in ipairs(get_bilibili_urls(path)) do
+        if not bvid then
+            bvid = url:match("[/%%]video[/%%](BV[%w]+)")
+                or url:match("[?&]bvid=(BV[%w]+)")
+                or url:match("(BV[%w]+)")
+        end
+        if not page then
+            page = tonumber(url:match("[?&]p=(%d+)"))
+        end
+    end
+    return bvid, page or 1
+end
+
+local function get_bilibili_pagelist_args(bvid)
+    local url = "https://api.bilibili.com/x/player/pagelist?bvid=" .. url_encode(bvid) .. "&jsonp=jsonp"
+    local arg = {
+        "curl",
+        "-L",
+        "-s",
+        "--compressed",
+        "--user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+        "-H",
+        "Referer: https://www.bilibili.com/video/" .. bvid,
+        url,
+    }
+
+    if options.cookie_file and options.cookie_file ~= "" then
+        table.insert(arg, '-b')
+        table.insert(arg, mp.command_native({"expand-path", options.cookie_file}))
+    end
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
+    return arg
+end
+
+local function resolve_bilibili_cid(path, callback)
+    local bvid, page = get_bilibili_bvid_and_page(path)
+    if not bvid then
+        callback(nil)
+        return
+    end
+
+    call_cmd_async(get_bilibili_pagelist_args(bvid), function(error, json)
+        if error then
+            msg.warn("Failed to request bilibili pagelist: " .. tostring(error))
+            callback(nil)
+            return
+        end
+
+        local data = utils.parse_json(json)
+        local pages = data and data["data"]
+        if type(pages) ~= "table" then
+            callback(nil)
+            return
+        end
+
+        local page_info = pages[page] or pages[1]
+        local cid = page_info and page_info["cid"]
+        callback(cid and tostring(cid) or nil)
+    end)
+end
+
+local function download_bilibili_danmaku(path, cid, from_menu)
+    local url = "https://comment.bilibili.com/" .. cid .. ".xml"
+    local temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".xml"
+    local danmaku_xml = utils.join_path(DANMAKU_PATH, temp_file)
+    DANMAKU.count = DANMAKU.count + 1
+    local arg = {
+        "curl",
+        "-L",
+        "-s",
+        "--compressed",
+        "--user-agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+        "--output",
+        danmaku_xml,
+        url,
+    }
+
+    if options.cookie_file and options.cookie_file ~= "" then
+        table.insert(arg, '-b')
+        table.insert(arg, mp.command_native({"expand-path", options.cookie_file}))
+    end
+
+    if options.proxy ~= "" then
+        table.insert(arg, '-x')
+        table.insert(arg, options.proxy)
+    end
+
+    call_cmd_async(arg, function(error)
+        if error then
+            show_message("HTTP request failed, see console for details", 5)
+            msg.error(error)
+            return
+        end
+        if file_exists(danmaku_xml) then
+            save_danmaku_downloaded(path, danmaku_xml)
+            load_danmaku(from_menu == nil and true or from_menu)
+        end
+    end)
+end
+
+function add_bilibili_danmaku_source_online(path, from_menu)
+    if not get_bilibili_bvid_and_page(path) then
+        return false
+    end
+
+    resolve_bilibili_cid(path, function(resolved_cid)
+        if resolved_cid then
+            download_bilibili_danmaku(path, resolved_cid, from_menu)
+        else
+            get_danmaku_fallback(path)
+        end
+    end)
+    return true
 end
 
 local function extract_between_colons(input_string)
@@ -571,13 +706,8 @@ function load_danmaku_for_bilibili(path)
                 "bilivideo%.c[nom]+.*/resource/(%d+)%D+.*",
                 "bilivideo%.c[nom]+.*/(%d+)-%d+-%d+%..*%?",
             }
-            local urls = {
-                path,
-                mp.get_property("stream-open-filename", ''),
-            }
-
             for _, pattern in ipairs(patterns) do
-                for _, url in ipairs(urls) do
+                for _, url in ipairs(get_bilibili_urls(path)) do
                     if url:find(pattern) then
                         cid = url:match(pattern)
                         break
@@ -586,46 +716,21 @@ function load_danmaku_for_bilibili(path)
             end
         end
     end
-    if cid == nil and path:match("/video/BV.-") then
-        if path:match("video/BV.-/.*") then
-            path = path:gsub("/[^/]+$", "")
-        end
-        add_danmaku_source_online(path, true)
+    if cid == nil and get_bilibili_bvid_and_page(path) then
+        resolve_bilibili_cid(path, function(resolved_cid)
+            if resolved_cid then
+                download_bilibili_danmaku(path, resolved_cid, true)
+            else
+                if path and path:match("video/BV.-/.*") then
+                    path = path:gsub("/[^/]+$", "")
+                end
+                add_danmaku_source_online(path, true)
+            end
+        end)
         return
     end
     if cid ~= nil then
-        local url = "https://comment.bilibili.com/" .. cid .. ".xml"
-        local temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".xml"
-        local danmaku_xml = utils.join_path(DANMAKU_PATH, temp_file)
-        DANMAKU.count = DANMAKU.count + 1
-        local arg = {
-            "curl",
-            "-L",
-            "-s",
-            "--compressed",
-            "--user-agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
-            "--output",
-            danmaku_xml,
-            url,
-        }
-
-        if options.cookie_file and options.cookie_file ~= "" then
-            table.insert(arg, '-b')
-            table.insert(arg, mp.command_native({"expand-path", options.cookie_file}))
-        end
-
-        call_cmd_async(arg, function(error)
-            if error then
-                show_message("HTTP 请求失败，打开控制台查看详情", 5)
-                msg.error(error)
-                return
-            end
-            if file_exists(danmaku_xml) then
-                save_danmaku_downloaded(path, danmaku_xml)
-                load_danmaku(true)
-            end
-        end)
+        download_bilibili_danmaku(path, cid, true)
     end
 end
 

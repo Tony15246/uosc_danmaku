@@ -496,6 +496,11 @@ function add_danmaku_source_online(query, from_menu)
     show_message("弹幕加载中...", 30)
     msg.verbose("尝试获取弹幕：" .. query)
 
+    if type(add_bilibili_danmaku_source_online) == "function"
+    and add_bilibili_danmaku_source_online(query, from_menu) then
+        return
+    end
+
     local servers = get_api_server_list(options.api_server)
 
     -- 过滤掉指向 dandanplay.net 的服务器

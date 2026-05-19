@@ -213,7 +213,13 @@ end
 
 function hex_to_int_color(hex_color)
     -- 移除颜色代码中的'#'字符
-    hex_color = hex_color:sub(2)  -- 只保留颜色代码部分
+    if type(hex_color) ~= "string" then
+        return 16777215
+    end
+    hex_color = hex_color:gsub("^#", "")
+    if not hex_color:match("^%x%x%x%x%x%x$") then
+        return 16777215
+    end
 
     -- 提取R, G, B的十六进制值并转为整数
     local r = tonumber(hex_color:sub(1, 2), 16)
