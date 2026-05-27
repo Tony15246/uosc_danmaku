@@ -63,6 +63,16 @@ function get_danmaku_fallback(query)
     if not args then return end
 
     fetch_danmaku_data(args, function(data)
+        if data ~= nil and data["xml"] ~= nil then
+            if DANMAKU.sources[query] ~= nil then
+                DANMAKU.sources[query]["data"] = data["xml"]
+            else
+                DANMAKU.sources[query] = {from = "user_custom", data = data["xml"]}
+            end
+            load_danmaku(true)
+            return
+        end
+
         if not data or not data["comments"] or data["count"] <= 1 then
             msg.info("备用服务器无数据或返回格式不正确")
             show_message("备用服务器无数据或返回格式不正确", 3)
@@ -100,6 +110,8 @@ function make_danmaku_request_args(method, url, headers, body)
         table.insert(args, '-H')
         table.insert(args, 'Content-Type: application/json')
     end
+
+    table.insert(args, '--compressed')
 
     if url:find("api%.dandanplay%.") then
         local time = os.time()
@@ -370,7 +382,15 @@ function fetch_danmaku_data(args, callback)
             return
         end
         local data = utils.parse_json(json)
-        data = normalize_danmaku_response(data)
+        if data ~= nil then
+            data = normalize_danmaku_response(data)
+        else
+            local danmaku = parse_xml_danmaku(json)
+            if #danmaku > 0 then
+                data = {}
+                data["xml"] = danmaku
+            end
+        end
         callback(data)
     end)
 end
