@@ -32,6 +32,8 @@ HAS_DANMAKU = string.format("user-data/%s/has-danmaku", mp.get_script_name())
 mp.set_property_bool(HAS_DANMAKU, false)
 DANMAKU_SWITCH_ON = string.format("user-data/%s/danmaku-switch-on", mp.get_script_name())
 mp.set_property_bool(DANMAKU_SWITCH_ON, false)
+DANMAKU_COUNT = string.format("user-data/%s/danmaku-count", mp.get_script_name())
+mp.set_property_native(DANMAKU_COUNT, 0)
 KEY = table_to_zero_indexed({
     0x00,0x01,0x02,0x03,0x04,
     0x05,0x06,0x07,0x08,0x09,
@@ -107,6 +109,7 @@ function show_loaded(init)
     else
         show_message("弹幕加载成功，共计" .. #COMMENTS .. "条弹幕", 3)
     end
+    mp.set_property_native(DANMAKU_COUNT, #COMMENTS)
 end
 
 local function get_cid()
