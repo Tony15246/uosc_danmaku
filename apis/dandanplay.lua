@@ -56,6 +56,15 @@ end
 
 -- 回退使用额外的弹幕获取方式
 function get_danmaku_fallback(query)
+    if query:find('bilibili.com') or query:find('bilivideo.c[nom]+') then
+        load_danmaku_for_bilibili(query)
+        return
+    end
+
+    if query:find('bahamut.akamaized.net') then
+        load_danmaku_for_bahamut(query)
+        return
+    end
     local url = options.fallback_server .. "/?ac=dm&url=" .. query
     msg.verbose("尝试获取弹幕：" .. url)
 
