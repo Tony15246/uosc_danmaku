@@ -1084,6 +1084,8 @@ blacklist_path=
 - 弹幕格式解析转换：[DanmakuConvert](https://github.com/timerring/DanmakuConvert)
 - 简繁转换：[OpenCC](https://github.com/BYVoid/OpenCC)
 - lua原生md5计算实现：https://github.com/rkscv/danmaku
+- lua原生zip解压缩实现：[lua-inflate](https://github.com/TohruMKDM/lua-inflate)
+- 爱优腾及芒果TV的弹幕解析参考：https://github.com/lyz05/danmaku
 - b站在线播放弹幕获取实现参考：[MPV-Play-BiliBili-Comments](https://github.com/itKelis/MPV-Play-BiliBili-Comments)
 - 巴哈姆特在线播放弹幕获取实现参考：[MPV-Play-BAHA-Comments](https://github.com/s594569321/MPV-Play-BAHA-Comments)
 

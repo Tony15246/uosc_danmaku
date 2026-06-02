@@ -3,6 +3,7 @@ local msg = require 'mp.msg'
 
 local Source = {
     ["b 站"] = "bilibili1",
+    ["芒果TV"] = "imgo",
     ["腾讯"] = "qq",
     ["爱奇艺"] = "qiyi",
     ["优酷"] = "youku",

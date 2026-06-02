@@ -23,6 +23,10 @@ require('apis/extra')
 
 require("sites/bilibili")
 require("sites/bahamut")
+require("sites/iqiyi")
+require("sites/mgtv")
+require("sites/tencentvideo")
+require("sites/youku")
 
 DANMAKU_PATH = os.getenv("TEMP") or "/tmp/"
 HISTORY_PATH = mp.command_native({"expand-path", options.history_path})
