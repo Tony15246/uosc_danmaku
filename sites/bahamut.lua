@@ -34,10 +34,11 @@ local function get_type_from_position(position)
 end
 
 -- 为 bahamut 网站的视频播放加载弹幕
-function load_danmaku_for_bahamut(path)
+function load_danmaku_for_bahamut(path, callback)
     local path = path:gsub('%%(%x%x)', hex_to_char)
     local sn = resolve_bahamut_sn(path)
     if sn == nil then
+        callback(false)
         return
     end
     local url = "https://ani.gamer.com.tw/ajax/danmuGet.php"
@@ -80,9 +81,11 @@ function load_danmaku_for_bahamut(path)
         if error then
             show_message("HTTP 请求失败，打开控制台查看详情", 5)
             msg.error(error)
+            callback(false)
             return
         end
         if not file_exists(danmaku_json) then
+            callback(false)
             return
         end
 
@@ -90,6 +93,7 @@ function load_danmaku_for_bahamut(path)
         os.remove(danmaku_json)
         local comments = utils.parse_json(comments_json)
         if not comments then
+            callback(false)
             return
         end
 
@@ -106,22 +110,8 @@ function load_danmaku_for_bahamut(path)
         end
 
         local final_json_str = utils.format_json(output_table)
-
-        temp_file = "danmaku-" .. PID .. DANMAKU.count .. ".json"
-        local json_filename = utils.join_path(DANMAKU_PATH, temp_file)
-        DANMAKU.count = DANMAKU.count + 1
-
-        local json_file = io.open(json_filename, "w")
-        if json_file then
-            json_file:write(final_json_str)
-            json_file:close()
-        end
-
-        if file_exists(json_filename) then
-            save_danmaku_downloaded(
-                "https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn,
-                json_filename)
-            load_danmaku(true)
-        end
+        save_danmaku_json("https://ani.gamer.com.tw/animeVideo.php?sn=" .. sn, final_json_str)
+        load_danmaku(true)
+        callback(true)
     end)
 end

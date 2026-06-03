@@ -358,7 +358,7 @@ function parse_xml_danmaku(xml_string)
 end
 
 -- 解析 JSON 弹幕
-local function parse_json_danmaku(json_string)
+function parse_json_danmaku(json_string)
     local danmakus = {}
     if json_string:sub(1, 3) == "\239\187\191" then
         json_string = json_string:sub(4)
