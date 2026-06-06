@@ -75,6 +75,7 @@ end
 
 -- 为 腾讯视频 加载弹幕
 function load_danmaku_for_tencent(path, callback)
+    callback = callback or function() end
     local url = normalize_url(path)
     if not url or url == '' then
         url = mp.get_property('stream-open-filename', '')

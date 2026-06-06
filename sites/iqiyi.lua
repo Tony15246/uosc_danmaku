@@ -218,7 +218,7 @@ local function process_iqiyi_with_tvid(tvid, url, callback)
     get_video_info(tvid, function(videoInfo)
         if not videoInfo then
             show_message('获取爱奇艺视频信息失败', 3)
-            if callback then callback(false) end
+            callback(false)
             return
         end
 
@@ -262,7 +262,7 @@ local function process_iqiyi_with_tvid(tvid, url, callback)
         local function final_cb()
             local ok = #output_table > 0
             save_output_and_load(output_table, url)
-            if callback then callback(ok) end
+            callback(ok)
         end
 
         parallel_requests(servers, build_args_fn, per_response_cb, final_cb, {concurrency = 6, per_request_timeout = 15})
@@ -271,6 +271,7 @@ end
 
 -- 为爱奇艺加载弹幕
 function load_danmaku_for_iqiyi(path, callback)
+    callback = callback or function() end
     local url = path or mp.get_property('stream-open-filename', '')
     if not url or url == '' then
         msg.error('无有效 URL')
@@ -281,7 +282,7 @@ function load_danmaku_for_iqiyi(path, callback)
     get_tvid_from_url(url, function(tvid)
         if not tvid then
             show_message('获取爱奇艺 tvid 失败', 3)
-            if callback then callback(false) end
+            callback(false)
             return
         end
         process_iqiyi_with_tvid(tvid, url, callback)

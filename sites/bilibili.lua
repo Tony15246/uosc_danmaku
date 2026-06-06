@@ -200,6 +200,7 @@ end
 
 -- 为 bilibli 网站的视频播放加载弹幕
 function load_danmaku_for_bilibili(path, callback)
+    callback = callback or function() end
     local cid, danmaku_id = get_cid()
     if danmaku_id ~= nil then
         mp.commandv('sub-remove', danmaku_id)
