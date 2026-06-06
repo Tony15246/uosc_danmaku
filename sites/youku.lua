@@ -289,6 +289,7 @@ local function start_youku_requests(source_url, vid, duration, cna, tk, callback
 end
 
 function load_danmaku_for_youku(path, callback)
+    callback = callback or function() end
     local url = path or mp.get_property('stream-open-filename', '')
     if not url or url == '' then
         msg.error('无有效 URL')

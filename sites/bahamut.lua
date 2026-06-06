@@ -35,6 +35,7 @@ end
 
 -- 为 bahamut 网站的视频播放加载弹幕
 function load_danmaku_for_bahamut(path, callback)
+    callback = callback or function() end
     local path = path:gsub('%%(%x%x)', hex_to_char)
     local sn = resolve_bahamut_sn(path)
     if sn == nil then

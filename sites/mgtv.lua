@@ -81,6 +81,7 @@ end
 
 -- 为 芒果TV 加载弹幕
 function load_danmaku_for_mgtv(path, callback)
+    callback = callback or function() end
     local url = path or mp.get_property('stream-open-filename', '')
     if not url or url == '' then
         msg.error('mgtv: 无效的 url')
