@@ -254,10 +254,12 @@ local function set_danmaku_delay(dly, time, specific_source)
         end
     end
 
-    if dly == 0 then
-        DELAY = 0
-    else
-        DELAY = DELAY + dly
+    if not specific_source then
+        if dly == 0 then
+            DELAY = 0
+        else
+            DELAY = DELAY + dly
+        end
     end
 
     if ENABLED and COMMENTS ~= nil then
@@ -277,8 +279,14 @@ local function set_danmaku_delay(dly, time, specific_source)
         rebuild_convert_timer = nil
     end)
 
-    show_message('设置弹幕延迟: ' .. string.format("%.1f", DELAY + 1e-10) .. ' s')
-    mp.set_property_native(DELAY_PROPERTY, DELAY)
+    if specific_source then
+        local source = DANMAKU.sources[specific_source]
+        local source_delay = get_delay_for_time(source and source.delay_segments, time or 0)
+        show_message('设置弹幕源延迟: ' .. string.format("%.1f", source_delay + 1e-10) .. ' s')
+    else
+        show_message('设置弹幕延迟: ' .. string.format("%.1f", DELAY + 1e-10) .. ' s')
+        mp.set_property_native(DELAY_PROPERTY, DELAY)
+    end
 end
 
 local function clear_source()
