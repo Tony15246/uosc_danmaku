@@ -697,6 +697,34 @@ max_screen_danmaku=60
 
 <details>
 <summary>
+max_danmaku_rate
+
+> 限制每10秒钟新出现的弹幕数量
+
+</summary>
+
+### max_danmaku_rate
+
+#### 功能说明
+
+当该值大于0时，脚本会在解析弹幕时，从每10秒的新弹幕中随机保留一部分，最多不超过设定值。
+
+当 `max_screen_danmaku` 大于0时，该配置项不生效。
+
+#### 使用方法
+
+在 `script-opts` 目录下创建 `uosc_danmaku.conf` 并添加如下内容：
+
+```
+max_danmaku_rate=20
+```
+
+</details>
+
+---
+
+<details>
+<summary>
 vf_fps
 
 > 开关使用fps视频滤镜提升弹幕平滑度（帧数）
