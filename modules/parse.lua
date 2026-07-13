@@ -326,7 +326,7 @@ local function limit_danmaku(danmakus, limit)
     return result
 end
 
--- 限制每秒弹幕条数
+-- 限制每 10 秒弹幕条数
 local function limit_danmaku_by_rate(danmakus, max_rate)
     if not max_rate or max_rate <= 0 then
         return danmakus
@@ -338,9 +338,8 @@ local function limit_danmaku_by_rate(danmakus, max_rate)
     local result = {}
 
     while l <= n do
-        local current_second = math.floor(danmakus[l].start_time)
-        r = l
-        while r <= n and danmakus[r].start_time < current_second+1 do
+        local current_group = math.floor(danmakus[l].start_time / 10) * 10
+        while r <= n and danmakus[r].start_time < current_group+10 do
             r = r + 1
         end
 
