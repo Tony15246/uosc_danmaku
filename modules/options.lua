@@ -59,6 +59,8 @@ options = {
     outline = 1.0,
     -- 限制屏幕中同时显示的最大弹幕数量，0 表示不限制
     max_screen_danmaku = 0,
+    -- 限制每秒新出现的弹幕数量，0 表示不限制, 只在 max_screen_danmaku 为 0 时生效
+    max_danmaku_rate = 0,
     --指定弹幕屏蔽词文件路径(black.txt)，支持绝对路径和相对路径。文件内容以换行分隔
     --支持 lua 的正则表达式写法
     blacklist_path = "",

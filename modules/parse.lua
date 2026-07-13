@@ -326,6 +326,37 @@ local function limit_danmaku(danmakus, limit)
     return result
 end
 
+-- 限制每秒弹幕条数
+local function limit_danmaku_by_rate(danmakus, max_rate)
+    if not max_rate or max_rate <= 0 then
+        return danmakus
+    end
+
+    local l = 1
+    local r = 1
+    local n = #danmakus
+    local result = {}
+
+    while l <= n do
+        local current_second = math.floor(danmakus[l].start_time)
+        r = l
+        while r <= n and danmakus[r].start_time < current_second+1 do
+            r = r + 1
+        end
+
+        local need = max_rate
+        for i = l, r-1 do
+            if need == 0 then break end
+            if math.random(r - i) <= need then
+                table.insert(result, danmakus[i])
+                need = need - 1
+            end
+        end
+        l = r
+    end
+    return result
+end
+
 -- 解析 XML 弹幕
 function parse_xml_danmaku(xml_string)
     local danmakus = {}
@@ -705,6 +736,8 @@ function convert_danmaku_to_ass_events(force)
 
     if options.max_screen_danmaku > 0 then
         pre_events = limit_danmaku(pre_events, options.max_screen_danmaku)
+    elseif options.max_danmaku_rate > 0 then
+        pre_events = limit_danmaku_by_rate(pre_events, options.max_danmaku_rate)
     end
 
     local ass_events = {}
