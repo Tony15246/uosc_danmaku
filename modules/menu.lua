@@ -295,10 +295,25 @@ function get_episodes(animeTitle, bangumiId, api_server)
             return
         end
 
+        table.insert(items, {
+            title = "← 返回搜索结果",
+            value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
+            keep_open = false,
+            selectable = true,
+        })
+
         if err then
             local message = "获取数据失败"
             if uosc_available then
-                update_menu_uosc(menu_type, menu_title, message, footnote)
+                table.insert(items, {
+                    title = message,
+                    value = "",
+                    italic = true,
+                    keep_open = true,
+                    selectable = false,
+                    align = "center",
+                })
+                update_menu_uosc(menu_type, menu_title, items, footnote)
             else
                 show_message(message, 3)
             end
@@ -310,20 +325,21 @@ function get_episodes(animeTitle, bangumiId, api_server)
         if not response or not response.bangumi or not response.bangumi.episodes then
             local message = "无结果"
             if uosc_available then
-                update_menu_uosc(menu_type, menu_title, message, footnote)
+                table.insert(items, {
+                    title = message,
+                    value = "",
+                    italic = true,
+                    keep_open = true,
+                    selectable = false,
+                    align = "center",
+                })
+                update_menu_uosc(menu_type, menu_title, items, footnote)
             else
                 show_message(message, 3)
             end
             msg.info("无结果")
             return
         end
-
-        table.insert(items, {
-            title = "← 返回搜索结果",
-            value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
-            keep_open = false,
-            selectable = true,
-        })
 
         for _, episode in ipairs(response.bangumi.episodes) do
             table.insert(items, {
