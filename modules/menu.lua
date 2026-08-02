@@ -76,7 +76,9 @@ local function make_handle_response(ctx)
                 latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, final_items, ctx.footnote, ctx.menu_cmd, ctx.query)
             else
                 latest_menu_anime = utils.format_json(final_items)
-                if input_loaded then
+                if not ctx.first_opened.val and input_loaded then
+                    ctx.first_opened.val = true
+                    show_message("", 0)
                     input.terminate()
                     mp.add_timeout(0.1, function()
                         open_menu_select(final_items)
@@ -119,14 +121,15 @@ local function make_handle_response(ctx)
                 ctx.total_count = (ctx.total_count or 0) + 1
             end
         end
+        local progress_msg = ctx.message or ""
+        if ctx.remaining.n > 0 and ctx.total_servers and ctx.total_servers > 1 then
+            local completed = math.max(0, (ctx.total_servers - ctx.remaining.n) + 1)
+            progress_msg = tostring(progress_msg):gsub("%.+$", "")
+            progress_msg = progress_msg .. string.format("（%d/%d）...", completed, ctx.total_servers)
+        end
+
         local display_items = {}
         if ctx.remaining.n > 0 then
-            local progress_msg = ctx.message or ""
-            if ctx.total_servers and ctx.total_servers > 1 and ctx.remaining and ctx.remaining.n then
-                local completed = math.max(0, (ctx.total_servers - ctx.remaining.n) + 1)
-                progress_msg = tostring(progress_msg):gsub("%.+$", "")
-                progress_msg = progress_msg .. string.format("（%d/%d）...", completed, ctx.total_servers)
-            end
             table.insert(display_items, {
                 title = progress_msg,
                 value = "",
@@ -148,14 +151,10 @@ local function make_handle_response(ctx)
             latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, display_items, ctx.footnote, ctx.menu_cmd, ctx.query,
                 { "script-message-to", mp.get_script_name(), "cancel-active-request", ctx.menu_type })
         else
-            if not ctx.first_opened.val and input_loaded and (ctx.total_count or 0) > 0 then
-                ctx.first_opened.val = true
-                show_message("", 0)
-                input.terminate()
-                mp.add_timeout(0.1, function()
-                    latest_menu_anime = utils.format_json(display_items)
-                    open_menu_select(display_items)
-                end)
+            -- 非 uosc：mp.input 选择菜单无法原地刷新，加载期间只更新 OSD 进度提示，
+            -- 待最终结果就绪后再由 do_final_update 一次性打开菜单，避免重复打开导致菜单闪现即关
+            if input_loaded and ctx.remaining.n > 0 then
+                show_message(progress_msg, 30)
             end
         end
 
@@ -416,7 +415,6 @@ function open_menu_select(menu_items, is_time)
         end,
         closed = function()
             show_message("", 0)
-            input.terminate()
             perform_cancel_active_request()
         end,
     })
