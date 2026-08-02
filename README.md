@@ -6,6 +6,9 @@
 > Release1.2.0及Release1.2.0之前的发行版，都由于弹弹play接口使用政策改版，部分功能无法使用。如果发现插件功能异常，比如搜索弹幕总是显示无结果，请拉取或下载主分支最新源代码；或下载[最新发行版](https://github.com/Tony15246/uosc_danmaku/releases/latest)
 
 > [!NOTE]
+> 插件默认通过项目维护的 API 代理 `https://danmaku-api.152468.xyz` 访问弹弹play开放弹幕网络。普通用户无需注册账号，也无需配置或持有弹弹play的 AppId/AppSecret。代理包含缓存和访问频率限制，请勿用于批量抓取。
+
+> [!NOTE]
 > 已添加对mpv内部 `mp.input`的支持，在uosc不可用时通过键绑定调用此方式渲染菜单
 > 
 > 欲启用此支持mpv最低版本要求：0.39.0
@@ -769,20 +772,24 @@ api_server
 
 #### 功能说明
 
-允许自定义弹幕 API 的服务地址，可指定多个用逗号分隔的有序 api_server 列表
+允许自定义弹幕 API 的服务地址。默认使用项目维护的 `https://danmaku-api.152468.xyz`，由代理完成弹弹play API 鉴权，插件用户无需配置密钥。
+
+可指定多个用逗号分隔的有序 api_server 列表。
 
 支持每项使用 '|' 或 '#' 分隔备注，例如: "https://a.example.com|备用A" 或 "https://b.example.com#备用B"
 
 > **⚠️NOTE！**
 > 
 > 请确保自定义服务的 API 与弹弹play 的兼容，已知兼容：[misaka_danmu_server](https://github.com/l429609201/misaka_danmu_server)，[danmu_api](https://github.com/huangxd-/danmu_api)
+>
+> 通过默认 API 代理访问弹弹play时，无需配置弹弹play的 AppId/AppSecret；如需使用个人申请的弹弹play AppId/AppSecret 凭据，可以自行部署服务端代理，并将 `api_server` 指向该代理。
 
 #### 使用方法
 
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
-api_server=https://api.dandanplay.net
+api_server=https://danmaku-api.152468.xyz
 ```
 
 </details>
@@ -871,7 +878,7 @@ user_agent
 
 > **⚠️NOTE！**
 > 
-> User-Agent格式必须符合弹弹play的标准，否则无法成功请求。具体格式要求见[弹弹play官方文档](https://github.com/kaedei/dandanplay-libraryindex/blob/master/api/OpenPlatform.md#5user-agent)
+> 使用默认 API 代理时无需为弹弹play鉴权而修改 User-Agent。直接接入弹弹play官方 API 或其他自定义服务时，请遵循对应服务的 User-Agent 要求。
 > 
 > 若想提高URL播放的哈希匹配成功率，可以将此项设为 `mpv`或浏览器的User-Agent
 
