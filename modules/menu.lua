@@ -296,7 +296,7 @@ function get_episodes(animeTitle, bangumiId, api_server)
         end
 
         table.insert(items, {
-            title = "← 返回搜索结果",
+            title = "↩️ 返回搜索结果",
             value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
             keep_open = false,
             selectable = true,
