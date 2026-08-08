@@ -315,7 +315,7 @@ function get_details(class, id, site, title, year, number, episodenum)
         end
 
         table.insert(items, {
-            title = "← 返回搜索结果",
+            title = "↩️ 返回搜索结果",
             value = { "script-message-to", "uosc", "open-menu", latest_menu_anime },
             keep_open = false,
             selectable = true,
