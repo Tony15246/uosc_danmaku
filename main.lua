@@ -108,6 +108,11 @@ function set_danmaku_button()
 end
 
 function show_loaded(init)
+    if not COMMENTS then
+        show_message("comments无数据", 3)
+        msg.error("comments无数据")
+        return
+    end
     if DANMAKU.anime and DANMAKU.episode then
         show_message("匹配内容：" .. DANMAKU.anime .. "-" .. DANMAKU.episode .. "\\N弹幕加载成功，共计" .. #COMMENTS .. "条弹幕", 3)
         if init then
@@ -774,3 +779,4 @@ mp.register_script_message("open_source_delay_menu", open_delay_menu)
 mp.register_script_message("open_search_danmaku_menu", open_input_menu)
 mp.register_script_message("open_add_source_menu", open_add_menu)
 mp.register_script_message("open_add_total_menu", open_add_total_menu)
+mp.register_script_message("show_danmaku_count", show_loaded)
