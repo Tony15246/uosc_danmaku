@@ -251,7 +251,7 @@ mp.register_event('playback-restart', function(event)
 end)
 
 mp.add_hook("on_unload", 50, function()
-    COMMENTS, DELAY = nil, 0
+    FALLBACK_TRIGGER, COMMENTS, DELAY = false, nil, 0
     stop_time_observer()
     overlay_low:remove()
     overlay_high:remove()
