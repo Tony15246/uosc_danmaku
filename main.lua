@@ -32,7 +32,7 @@ DANMAKU_PATH = os.getenv("TEMP") or "/tmp/"
 HISTORY_PATH = mp.command_native({"expand-path", options.history_path})
 PID = utils.getpid()
 DANMAKU = {sources = {}, count = 1}
-ENABLED, COMMENTS, DELAY = false, nil, 0
+ENABLED, FALLBACK_TRIGGER, COMMENTS, DELAY = false, false, nil, 0
 DELAY_PROPERTY = string.format("user-data/%s/danmaku-delay", mp.get_script_name())
 mp.set_property_native(DELAY_PROPERTY, 0)
 HAS_DANMAKU = string.format("user-data/%s/has-danmaku", mp.get_script_name())
@@ -729,6 +729,7 @@ mp.add_key_binding(options.show_danmaku_keyboard_key, "show_danmaku_keyboard", f
     mp.commandv("script-message", "show_danmaku_keyboard")
 end)
 
+-------------- 事件注册 --------------
 mp.register_script_message("danmaku-delay", function(...)
     local commands = {...}
     local delay_str, time_str = commands[1], commands[2]
@@ -764,6 +765,14 @@ mp.register_script_message("show_danmaku_keyboard", function()
         show_message("关闭弹幕", 2)
         toggle_danmaku_switch("off")
         hide_danmaku_func()
+    end
+end)
+
+mp.register_script_message("auto_load_fallback", function()
+    if not fallback_triggered and options.auto_fallback_search and COMMENTS == nil then
+        fallback_triggered = true
+        msg.info("自动加载弹幕失败，自动弹出搜索框")
+        mp.commandv("script-message", "open_search_danmaku_menu")
     end
 end)
 
