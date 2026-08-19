@@ -507,6 +507,9 @@ function handle_fetched_danmaku(data, url, from_menu)
     else
         show_message("无数据", 3)
         msg.info("无数据")
+        if not from_menu then
+            mp.commandv("script-message", "auto_load_fallback")
+        end
     end
 end
 
