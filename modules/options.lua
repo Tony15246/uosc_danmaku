@@ -13,9 +13,15 @@ options = {
     -- 可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取
     -- 注意：自定义此参数时还需要对获取到的 API Key 进行 base64 编码
     tmdb_api_key = "NmJmYjIxOTZkNzIyN2UyMTIzMGM3Y2YzZjQ4MDNkZGM=",
+    -- 自动加载弹幕开关
     auto_load = false,
+    -- 自动加载播放文件同目录下同名的 xml 格式的弹幕文件
     autoload_local_danmaku = false,
+    -- 自动加载可能支持的 url 视频文件实现弹幕关联记忆和继承，配合播放列表食用效果最佳
     autoload_for_url = false,
+    -- 当自动弹幕加载失败时，自动弹出搜索框让用户手动搜索
+    auto_fallback_search = false,
+    -- 播放结束时自动保存弹幕为xml文件
     save_danmaku = false,
     -- 指定弹幕保存目录。为空时保存到视频同目录；目录需要用户提前创建
     save_danmaku_path = "",
