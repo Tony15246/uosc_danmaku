@@ -167,9 +167,30 @@ local function make_handle_response(ctx)
 end
 
 -- 打开番剧数据匹配菜单
-function get_animes(query)
+function get_animes(query, filter_note)
     local encoded_query = url_encode(query)
-    local server_metas = get_api_server_list(options.api_server, true)
+    local all_metas = get_api_server_list(options.api_server, true)
+    local server_hint = ""
+    local server_metas = {}
+    if filter_note and filter_note ~= "" then
+        local matched = {}
+        for _, m in ipairs(all_metas) do
+            if m.note and m.note == filter_note then
+                table.insert(matched, m)
+            end
+        end
+        if #matched > 0 then
+            server_metas = { matched[1] }  -- 只取第一个匹配的
+            server_note = "服务器【" .. filter_note .. "】"
+        else
+            show_message("未找到备注为【" .. filter_note .. "】的服务器，将使用全部服务器", 3)
+            msg.info("未找到备注为【" .. filter_note .. "】的服务器，将使用全部服务器")
+            server_metas = all_metas
+        end
+    else
+        server_metas = all_metas
+    end
+
     local servers = {}
     local server_notes = {}
     for _, m in ipairs(server_metas) do
@@ -189,7 +210,7 @@ function get_animes(query)
     local total_count = 0
     request_cancelled = false
 
-    local message = "加载数据中..."
+    local message = server_hint .. "加载数据中..."
     local menu_type = "menu_anime"
     local menu_title = "在此处输入番剧名称"
     local footnote = "使用enter或ctrl+enter进行搜索"
@@ -1365,10 +1386,19 @@ mp.register_script_message("search-anime-event", function(query)
     local name, class = query:match("^(.-)%s*|%s*(.-)%s*$")
     if name and class then
         query_extra(name, class)
-    else
-        get_animes(query)
+        return
     end
+    local filter_note = nil
+    local search_name = query
+    local at_pos = query:find("@[^@]*$")
+    if at_pos then
+        search_name = query:sub(1, at_pos-1):gsub("%s+$", "")
+        filter_note = query:sub(at_pos+1):gsub("^%s*(.-)%s*$", "%1")
+        if filter_note == "" then filter_note = nil end
+    end
+    get_animes(search_name, filter_note)
 end)
+
 mp.register_script_message("search-episodes-event", function(animeTitle, bangumiId, api_server)
     perform_cancel_active_request()
     if uosc_available then
