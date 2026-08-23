@@ -259,7 +259,8 @@ local function match_anime()
     local anime_type = "tvseries"
     local title, season_num, episode_num = parse_title()
     if not episode_num then
-        msg.info("无法解析剧集信息")
+        mp.commandv("script-message", "auto_load_fallback")
+        msg.error("无法解析剧集信息")
         return
     end
 
@@ -337,6 +338,7 @@ local function match_anime()
 
     local function final_cb()
         if not matched then
+            mp.commandv("script-message", "auto_load_fallback")
             msg.info("没有找到合适的匹配结果")
         end
     end
@@ -413,7 +415,8 @@ local function match_file(file_path, file_name, callback)
 
     local function final_cb()
         if not matched then
-            callback("没有匹配的剧集")
+            mp.commandv("script-message", "auto_load_fallback")
+            callback("没有找到hash匹配的剧集")
         end
     end
 
@@ -493,7 +496,10 @@ function handle_fetched_danmaku(data, url, from_menu)
                 DANMAKU.sources[url] = {from = "api_server"}
             end
             show_message("该集弹幕内容为空，结束加载", 3)
-            msg.verbose("该集弹幕内容为空，结束加载")
+            msg.info("该集弹幕内容为空，结束加载")
+            if not from_menu then
+                mp.commandv("script-message", "auto_load_fallback")
+            end
             return
         end
         save_danmaku_data(data["comments"], url, "api_server")
@@ -501,6 +507,9 @@ function handle_fetched_danmaku(data, url, from_menu)
     else
         show_message("无数据", 3)
         msg.info("无数据")
+        if not from_menu then
+            mp.commandv("script-message", "auto_load_fallback")
+        end
     end
 end
 
