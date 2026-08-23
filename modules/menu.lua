@@ -606,26 +606,28 @@ function open_add_menu_uosc()
     local sources = {}
     for url, source in pairs(DANMAKU.sources) do
         if source.data then
+            local count = #source.data  -- 弹幕条数
+            local count_text = string.format("（%d条）弹幕", count)
             local item = {title = utf8_sub(url, 1, 100), value = url, keep_open = true,}
             if source.from == "api_server" then
                 if source.blocked then
                     item.hint = "来源：弹幕服务器（已屏蔽）"
-                    item.actions = {{icon = "check", name = "unblock", label = "解除屏蔽"},}
+                    item.actions = {{icon = "check", name = "unblock", label = "解除屏蔽" .. count_text},}
                 else
                     item.hint = "来源：弹幕服务器（未屏蔽）"
-                    item.actions = {{icon = "not_interested", name = "block", label = "屏蔽"},}
+                    item.actions = {{icon = "not_interested", name = "block", label = "屏蔽" .. count_text},}
                 end
             else
                 item.hint = "来源：用户添加"
                 if source.blocked then
                     item.actions = {
-                        {icon = "check", name = "unblock", label = "解除屏蔽"},
-                        {icon = "delete", name = "delete", label = "删除"},
+                        {icon = "check", name = "unblock", label = "解除屏蔽" .. count_text},
+                        {icon = "delete", name = "delete", label = "删除" .. count_text},
                     }
                 else
                     item.actions = {
-                        {icon = "not_interested", name = "block", label = "屏蔽"},
-                        {icon = "delete", name = "delete", label = "删除"},
+                        {icon = "not_interested", name = "block", label = "屏蔽" .. count_text},
+                        {icon = "delete", name = "delete", label = "删除" .. count_text},
                     }
                 end
             end
