@@ -316,10 +316,25 @@ function get_episodes(animeTitle, bangumiId, api_server)
             return
         end
 
+        table.insert(items, {
+            title = "↩️ 返回搜索结果",
+            value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
+            keep_open = false,
+            selectable = true,
+        })
+
         if err then
             local message = "获取数据失败"
             if uosc_available then
-                update_menu_uosc(menu_type, menu_title, message, footnote)
+                table.insert(items, {
+                    title = message,
+                    value = "",
+                    italic = true,
+                    keep_open = true,
+                    selectable = false,
+                    align = "center",
+                })
+                update_menu_uosc(menu_type, menu_title, items, footnote)
             else
                 show_message(message, 3)
             end
@@ -331,20 +346,21 @@ function get_episodes(animeTitle, bangumiId, api_server)
         if not response or not response.bangumi or not response.bangumi.episodes then
             local message = "无结果"
             if uosc_available then
-                update_menu_uosc(menu_type, menu_title, message, footnote)
+                table.insert(items, {
+                    title = message,
+                    value = "",
+                    italic = true,
+                    keep_open = true,
+                    selectable = false,
+                    align = "center",
+                })
+                update_menu_uosc(menu_type, menu_title, items, footnote)
             else
                 show_message(message, 3)
             end
-            msg.info("无结果")
+            msg.info(message)
             return
         end
-
-        table.insert(items, {
-            title = "← 返回搜索结果",
-            value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
-            keep_open = false,
-            selectable = true,
-        })
 
         for _, episode in ipairs(response.bangumi.episodes) do
             table.insert(items, {
@@ -355,6 +371,22 @@ function get_episodes(animeTitle, bangumiId, api_server)
                 keep_open = false,
                 selectable = true,
             })
+        end
+
+        -- ====== 新增：更新 latest_menu_anime ======
+        if latest_menu_anime and latest_menu_anime ~= "" then
+            local menu_table = utils.parse_json(latest_menu_anime)
+            if menu_table and type(menu_table.items) == "table" then
+                for i, back_item in ipairs(menu_table.items) do
+                    if type(back_item.value) == "table" and
+                    back_item.value[5] == bangumiId and back_item.value[6] == api_server then
+                        menu_table.items[i].footnote = mp.get_property("filename")
+                        menu_table.items[i].items = { unpack(items, 2) }
+                        break
+                    end
+                end
+                latest_menu_anime = utils.format_json(menu_table)
+            end
         end
 
         if uosc_available then
