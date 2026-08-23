@@ -276,4 +276,5 @@ mp.add_hook("on_unload", 50, function()
 
     DANMAKU = {sources = {}, count = 1}
     mp.set_property_native(DANMAKU_COUNT, 0)
+    mp.set_property_bool(HAS_DANMAKU, false)
 end)
