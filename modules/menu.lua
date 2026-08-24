@@ -280,7 +280,7 @@ function get_animes(query, filter_note)
                 end)
             end
         end
-    end, { concurrency = 5, per_request_timeout = 30 })
+    end, { concurrency = 5, per_request_timeout = 60 })
     active_request_cancel = cancel_fn
     active_request_type = menu_type
 end
