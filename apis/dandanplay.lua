@@ -135,6 +135,7 @@ end
 function make_danmaku_request_args(method, url, headers, body)
     local args = {
         "curl",
+        "--ssl-no-revoke",
         "-L",
         "-X",
         method,
@@ -343,7 +344,7 @@ local function match_anime()
         end
     end
 
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 15 })
+    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
 end
 
 -- 执行哈希匹配获取弹幕
@@ -420,7 +421,7 @@ local function match_file(file_path, file_name, callback)
         end
     end
 
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 15 })
+    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
 end
 
 -- 异步获取弹幕数据
@@ -642,7 +643,7 @@ function add_danmaku_source_online(query, from_menu)
         end
     end
 
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 3, per_request_timeout = 30 })
+    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 3, per_request_timeout = 60 })
 end
 
 -- 将弹幕转换为 Lua table
