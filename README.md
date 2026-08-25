@@ -800,9 +800,11 @@ api_server
 
 允许自定义弹幕 API 的服务地址。默认使用项目维护的 `https://danmaku-api.152468.xyz`，由代理完成弹弹play API 鉴权，插件用户无需配置密钥。
 
-可指定多个用逗号分隔的有序 api_server 列表。
+可指定多个用逗号分隔的有序 api_server 列表（`有序`是指搜索结果将依据相同剧集 ID，在 api_server 中的顺序向前合并成一项）。
 
 支持每项使用 '|' 或 '#' 分隔备注，例如: "https://a.example.com|备用A" 或 "https://b.example.com#备用B"
+
+多 api_server 时搜索剧集，可以使用 ”剧集名称@server备注“ 的形式指定备注匹配 api_server 单一检索
 
 > **⚠️NOTE！**
 > 
@@ -834,18 +836,20 @@ fallback_server
 
 #### 功能说明
 
-自定义 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在弹弹play无法解析视频源对应弹幕的情况下才会使用此处设置的服务器进行解析。可用： https://api.danmu.icu，https://dmku.hls.one
+自定义 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕，只有在配置的所有 **`api_server`** 以及插件内置的 `站点专用解析器` 都无法解析视频源对应弹幕的情况下，才会使用此处设置的服务器进行解析。可用：https://dmku.hls.one
 
 > **⚠️NOTE！**
-> 
-> 不设置此选项的情况下默认使用 ` https://api.danmu.icu`作为兜底服务器
+>
+> 插件已在 `sites` 目录下内置了各大常规视频网站的弹幕站点专用解析器（[#377](https://github.com/Tony15246/uosc_danmaku/pull/377) [#380](https://github.com/Tony15246/uosc_danmaku/pull/380)），仅当专用解析器都无法解析获取站点弹幕时才会使用兜底服务器
+>
+> 不设置此选项的情况下默认使用 ` https://dmku.hls.one`作为兜底服务器
 
 #### 使用方法
 
 想要使用此选项，请在mpv配置文件夹下的 `script-opts`中创建 `uosc_danmaku.conf`文件并自定义如下内容：
 
 ```
-fallback_server=https://api.danmu.icu
+fallback_server=https://dmku.hls.one
 ```
 
 </details>
