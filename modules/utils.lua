@@ -4,6 +4,11 @@ local unpack = unpack or table.unpack
 -- from http://lua-users.org/wiki/LuaUnicode
 local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
 
+function positive_integer(value, fallback)
+    value = math.floor(tonumber(value) or fallback)
+    return math.max(1, value)
+end
+
 -- return a substring based on utf8 characters
 -- like string.sub, but negative index is not supported
 function utf8_sub(s, i, j)

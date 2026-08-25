@@ -101,7 +101,13 @@ function render(pos_arg)
             end
 
             -- 构建 ASS 字符串
-            local ass_text = text and (ass_prefix .. text)
+            local event_font_prefix = ""
+            if event.font_size then
+                local configured_size = tonumber(options.fontsize) or fontsize
+                local adjusted_size = math.max(1, math.floor(event.font_size + fontsize - configured_size))
+                event_font_prefix = string.format("{\\fs%d}", adjusted_size)
+            end
+            local ass_text = text and (ass_prefix .. event_font_prefix .. text)
             if ass_text then
                 if event.layer == nil or tonumber(event.layer) == 0 then
                     table.insert(ass_events_low, ass_text)

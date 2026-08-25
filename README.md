@@ -700,6 +700,60 @@ merge_without_style=yes
 
 <details>
 <summary>
+merge_fontsize_growth
+
+> 设置合并弹幕字号随合并数量增长的速度
+
+</summary>
+
+### merge_fontsize_growth
+
+#### 功能说明
+
+配合 `merge_tolerance` 使用，默认值为 `8`，必须为正整数。设基础字号为 `fontsize`、合并数量为 `n`，实际字号为：
+
+```
+min(merge_fontsize_max, fontsize + round(merge_fontsize_growth * ln(n)))
+```
+
+取整前的对数函数严格递增且严格凹，因此合并数量较小时放大明显，随后每多合并一条弹幕带来的字号增量逐渐减小。取整后的整数字号单调不减，并受 `merge_fontsize_max` 限制。字号较大的弹幕会按实际高度占用连续的 y 轴区间；屏幕可显示区域内找不到无碰撞位置时，该条弹幕会被丢弃。
+
+#### 使用方法
+
+```
+merge_fontsize_growth=8
+```
+
+</details>
+
+---
+
+<details>
+<summary>
+merge_fontsize_max
+
+> 限制合并弹幕的最大字号
+
+</summary>
+
+### merge_fontsize_max
+
+#### 功能说明
+
+配合 `merge_fontsize_growth` 使用，默认值为 `100`。无论合并数量多大，最终字号都不会超过该值；如果该值小于基础字号 `fontsize`，则使用基础字号。
+
+#### 使用方法
+
+```
+merge_fontsize_max=100
+```
+
+</details>
+
+---
+
+<details>
+<summary>
 max_screen_danmaku
 
 > 限制屏幕中同时显示的弹幕数量
