@@ -7,8 +7,8 @@ options = {
     -- 支持每项使用 '|' 或 '#' 分隔备注，例如: "https://a.example.com|备用A" 或 "https://b.example.com#备用B"
     api_server = "https://danmaku-api.152468.xyz",
     -- 指定 b 站和爱腾优的弹幕获取的兜底服务器地址，主要用于获取非动画弹幕
-    -- 可用： https://api.danmu.icu，https://dmku.hls.one
-    fallback_server = "https://api.danmu.icu",
+    -- 可用： https://dmku.hls.one
+    fallback_server = "https://dmku.hls.one",
     -- 设置 tmdb 的 API Key，用于获取非动画条目的中文信息(当搜索内容非中文时)
     -- 可以在 https://www.themoviedb.org 注册后去个人账号设置界面获取
     -- 注意：自定义此参数时还需要对获取到的 API Key 进行 base64 编码
@@ -27,7 +27,9 @@ options = {
     save_danmaku_path = "",
     -- 指定 save_danmaku_path 的应用范围：local / url / all
     save_danmaku_path_mode = "local",
+    -- 向 HTTP 请求时使用的 User Agent
     user_agent = "mpv_danmaku/1.0",
+    -- 可选：向 HTTP 请求时使用的代理，默认禁用
     proxy = "",
     -- 可选：向 HTTP 请求传递 cookie.txt 文件路径
     cookie_file = "",
@@ -41,6 +43,7 @@ options = {
     merge_without_style = false,
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
+    -- 自定义插件快捷键，若 mpv.conf 里设置 input-default-bindings=no 将禁用以下两个选项
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",
     -- 中文简繁转换。0-不转换，1-转换为简体，2-转换为繁体
