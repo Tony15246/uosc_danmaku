@@ -41,6 +41,10 @@ options = {
     merge_tolerance = -1,
     -- 合并重复弹幕时是否强制合并类型和颜色不同的弹幕。默认值: false，表示仅合并类型和颜色相同的弹幕
     merge_without_style = false,
+    -- 合并弹幕字号的对数增长系数，必须为正整数
+    merge_fontsize_growth = 8,
+    -- 合并弹幕允许使用的最大字号
+    merge_fontsize_max = 100,
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
     -- 自定义插件快捷键，若 mpv.conf 里设置 input-default-bindings=no 将禁用以下两个选项
