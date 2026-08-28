@@ -285,7 +285,7 @@ function get_animes(query, filter_note)
     active_request_type = menu_type
 end
 
-function get_episodes(animeTitle, bangumiId, api_server)
+function get_episodes(animeTitle, bangumiId, api_server, compareTitles)
     local url = api_server .. "/api/v2/bangumi/" .. bangumiId
     local items = {}
 
@@ -317,10 +317,11 @@ function get_episodes(animeTitle, bangumiId, api_server)
         end
 
         table.insert(items, {
-            title = "↩️ 返回搜索结果",
-            value = { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
+            title = compareTitles and "↩️ 返回总集合弹幕菜单" or "↩️ 返回搜索结果",
+            value = compareTitles and { "script-message-to", mp.get_script_name(), "open_add_total_menu" }
+                or  { "script-message-to", mp.get_script_name(), "open-latest-menu-anime", latest_menu_anime },
             keep_open = false,
-            selectable = true,
+            selectable = true
         })
 
         if err then
@@ -373,8 +374,13 @@ function get_episodes(animeTitle, bangumiId, api_server)
             })
         end
 
+        -- ====== 新增：存储 DANMAKU.episodeList ======
+        if compareTitles and compareTitles == response.bangumi.animeTitle then
+            DANMAKU.episodeList = items
+        end
+
         -- ====== 新增：更新 latest_menu_anime ======
-        if latest_menu_anime and latest_menu_anime ~= "" then
+        if latest_menu_anime and type(latest_menu_anime) == "string" and latest_menu_anime ~= "" then
             local menu_table = utils.parse_json(latest_menu_anime)
             if menu_table and type(menu_table.items) == "table" then
                 for i, back_item in ipairs(menu_table.items) do
@@ -1260,13 +1266,17 @@ function open_add_total_menu_uosc()
     if DANMAKU.anime and DANMAKU.episode then
         local episode = DANMAKU.episode:gsub("%s.-$","")
         episode = episode:match("^(第.*[话回集]+)%s*") or episode
-        items[#items + 1] = {
+        table.insert(items, {
             title = string.format("已关联弹幕：%s-%s", DANMAKU.anime, episode),
             bold = true,
             italic = true,
-            keep_open = true,
-            selectable = false,
-        }
+            keep_open = false,
+            selectable = true,
+            actions = {
+                { icon = "menu_open", name = "view_episodes", label = "根据当前匹配的剧集Id,重新获取剧集信息" }
+            },
+            value = ""
+        })
     end
 
     for _, config in ipairs(total_menu_items_config) do
@@ -1283,6 +1293,8 @@ function open_add_total_menu_uosc()
         title = "弹幕设置",
         search_style = "disabled",
         items = items,
+        item_actions_place = "outside",
+        callback = { mp.get_script_name(), 'handle-total-menu-action' }, 
     }
     local json_props = utils.format_json(menu_props)
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
@@ -1590,6 +1602,24 @@ mp.register_script_message("setup-source-delay", function(query, text)
         else
             open_delay_menu(query, "error")
         end
+    end
+end)
+
+mp.register_script_message("handle-total-menu-action", function(json)
+    local event = utils.parse_json(json)
+    if not event or event.type ~= 'activate' then return end
+
+    if event.action == 'view_episodes' then
+        if DANMAKU.episodeList ~= nil then
+            local footnote = mp.get_property("filename")
+            update_menu_uosc("menu_episodes", "剧集信息", DANMAKU.episodeList, footnote)
+        elseif DANMAKU.anime and DANMAKU.episode and DANMAKU.api_server then
+            local bangumiId = math.floor(DANMAKU.episodeId / 10000)
+            get_episodes(DANMAKU.anime, bangumiId, DANMAKU.api_server, DANMAKU.anime)
+        end
+    elseif type(event.value) == 'table' then
+        -- 菜单项点击跳转
+        mp.commandv(unpack(event.value))
     end
 end)
 
