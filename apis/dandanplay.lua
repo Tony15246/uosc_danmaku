@@ -49,6 +49,7 @@ function set_episode_id(input, from_menu, api_server)
     DANMAKU.api_server = selected_server
 
     local episodeId = tonumber(input)
+    DANMAKU.episodeId = episodeId
     write_history(episodeId, selected_server)
     set_danmaku_button()
     fetch_danmaku(episodeId, from_menu, selected_server)
