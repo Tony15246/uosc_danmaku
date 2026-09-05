@@ -3,6 +3,46 @@ local utils = require("mp.utils")
 local unpack = unpack or table.unpack
 
 input_loaded, input = pcall(require, "mp.input")
+
+-- mpv 的 input.lua 分发器收到 closed 后会自我注销，且旧菜单被替换产生的 closed
+-- 事件会路由到新菜单的回调上，其 input.terminate() 会误杀新菜单、submit 随之丢失。
+-- 此封装在每次打开菜单后接管 input-event 分发，用"待打开/存活"两个队列归属事件：
+-- opened 将请求队首转入存活队首；closed 匹配存活队首，但若仍有待打开请求
+-- （说明旧菜单是被新菜单替换的），则跳过其 closed 回调。事件不再触发自我注销。
+local input_requested_cbs, input_live_cbs = {}, {}
+
+local function arm_input_dispatcher()
+    mp.register_script_message("input-event", function(type, args)
+        local params = utils.parse_json(args or "") or {}
+        local cb
+        if type == "opened" then
+            cb = table.remove(input_requested_cbs, 1)
+            if cb then
+                table.insert(input_live_cbs, cb)
+            end
+        elseif type == "closed" then
+            cb = table.remove(input_live_cbs, 1)
+            if #input_requested_cbs > 0 then
+                return
+            end
+        else
+            cb = input_live_cbs[#input_live_cbs] or input_requested_cbs[#input_requested_cbs]
+        end
+        if cb and cb[type] then
+            local suggestions, completion_start_position = cb[type](unpack(params))
+            if type == "complete" and suggestions then
+                mp.commandv("script-message-to", "console", "complete",
+                            utils.format_json(suggestions), completion_start_position)
+            end
+        end
+    end)
+end
+
+local function input_open(cb)
+    table.insert(input_requested_cbs, cb)
+    input.get(cb)
+    arm_input_dispatcher()
+end
 uosc_available = false
 latest_menu_anime = {}
 local active_request_cancel = nil
@@ -454,7 +494,7 @@ function open_menu_select(menu_items, is_time)
         item_values[i] = v.value
     end
     mp.commandv('script-message-to', 'console', 'disable')
-    input.select({
+    input_open({
         prompt = is_time and '筛选:' or '选择:',
         items = item_titles,
         submit = function(id)
@@ -479,7 +519,7 @@ end
 function open_input_menu_get()
     mp.commandv('script-message-to', 'console', 'disable')
     local title = parse_title()
-    input.get({
+    input_open({
         prompt = '番剧名称:',
         default_text = title,
         cursor_position = title and #title + 1,
@@ -613,7 +653,7 @@ function open_add_menu_get()
         return hints[action] or "按回车执行，获取输入源地址url的弹幕"
     end
 
-    input.get({
+    input_open({
         keep_open = true,
         prompt = "请在此输入源地址url: ",
         opened = function() show_menu() end,
@@ -874,7 +914,7 @@ function open_style_menu_get(query, indicator)
         input.set_log(menu_log)
     end
 
-    input.get({
+    input_open({
         keep_open = true,
         prompt = "请在此输入操作（w/s|上移/下移）: ",
         opened = function() build_menu() end,
@@ -1011,7 +1051,7 @@ function open_delay_from_time_get(source, time, status)
         input.set_log(menu_log)
     end
 
-    input.get({
+    input_open({
         keep_open = true,
         prompt = "请输入要设置的延迟（秒或 XmYs）: ",
         opened = function() build_menu() end,
@@ -1097,7 +1137,7 @@ function open_delay_menu_get(source, status)
             if src.data and not src.blocked then
                 local delay = 0
                 serial = serial + 1
-                select_num = (url == source) and serial or select_num
+                select_num = (serial == tonumber(source)) and serial or select_num
                 if src.delay_segments then
                     for _, seg in ipairs(src.delay_segments) do
                         if seg.start == 0 then
@@ -1148,7 +1188,7 @@ function open_delay_menu_get(source, status)
         input.set_log(menu_log)
     end
 
-    input.get({
+    input_open({
         keep_open = true,
         prompt = "请在此输入操作（w/s|上移/下移）: ",
         opened = function() build_menu() end,
@@ -1296,7 +1336,7 @@ function open_add_total_menu_select()
     end
 
     mp.commandv('script-message-to', 'console', 'disable')
-    input.select({
+    input_open({
         prompt = '选择:',
         items = item_titles,
         submit = function(id)
