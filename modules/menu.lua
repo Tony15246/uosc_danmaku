@@ -1137,7 +1137,7 @@ function open_delay_menu_get(source, status)
             if src.data and not src.blocked then
                 local delay = 0
                 serial = serial + 1
-                select_num = (url == source) and serial or select_num
+                select_num = (serial == tonumber(source)) and serial or select_num
                 if src.delay_segments then
                     for _, seg in ipairs(src.delay_segments) do
                         if seg.start == 0 then
