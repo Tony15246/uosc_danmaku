@@ -4,14 +4,11 @@ local unpack = unpack or table.unpack
 
 input_loaded, input = pcall(require, "mp.input")
 
--- mpv 的 input.lua 分发器收到 closed 后会自我注销，且旧菜单被替换产生的 closed
--- 事件会路由到新菜单的回调上，其 input.terminate() 会误杀新菜单、submit 随之丢失。
--- 此封装在每次打开菜单后接管 input-event 分发，用"待打开/存活"两个队列归属事件：
--- opened 将请求队首转入存活队首；closed 匹配存活队首，但若仍有待打开请求
--- （说明旧菜单是被新菜单替换的），则跳过其 closed 回调。事件不再触发自我注销。
 local input_requested_cbs, input_live_cbs = {}, {}
 
-local function arm_input_dispatcher()
+local function input_open(cb)
+    table.insert(input_requested_cbs, cb)
+    input.get(cb)
     mp.register_script_message("input-event", function(type, args)
         local params = utils.parse_json(args or "") or {}
         local cb
@@ -36,12 +33,6 @@ local function arm_input_dispatcher()
             end
         end
     end)
-end
-
-local function input_open(cb)
-    table.insert(input_requested_cbs, cb)
-    input.get(cb)
-    arm_input_dispatcher()
 end
 uosc_available = false
 latest_menu_anime = {}
