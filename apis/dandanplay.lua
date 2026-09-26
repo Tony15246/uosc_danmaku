@@ -222,7 +222,6 @@ local function normalize_danmaku_response(d)
     return d
 end
 
--- 尝试通过解析文件名匹配剧集
 local function match_episode(animeTitle, bangumiId, episode_num, api_server)
     local url = api_server .. "/api/v2/bangumi/" .. bangumiId
     local args = make_danmaku_request_args("GET", url)
@@ -256,6 +255,7 @@ local function match_episode(animeTitle, bangumiId, episode_num, api_server)
     end)
 end
 
+-- 尝试通过解析文件名匹配剧集
 local function match_anime()
     local anime_type = "tvseries"
     local title, season_num, episode_num = parse_title()
@@ -314,8 +314,8 @@ local function match_anime()
             for _, anime in ipairs(local_candidates) do
                 local animeTitle = tostring(anime.animeTitle or "")
                 animeTitle = animeTitle:gsub("^%s*(.-)%s*$", "%1")
-                            :gsub("%s*%(.-%)%s*$", "")
-                            :gsub("%s*【.-】.*$", "")
+                    :gsub("%s*%(.-%)%s*$", "")
+                    :gsub("%s*【.-】.*$", "")
                 if animeTitle:match("第一[季部]") and tonumber(season_num) == 1 then
                     target_title = title .. " 第一季"
                 end
@@ -344,84 +344,275 @@ local function match_anime()
         end
     end
 
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
+    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb,
+        { concurrency = 5, per_request_timeout = 60 })
 end
 
--- 执行哈希匹配获取弹幕
-local function match_file(file_path, file_name, callback)
-    -- 计算文件哈希
-    local hash = nil
-    local file_info = utils.file_info(file_path)
-    if file_info and file_info.size >= 16 * 1024 * 1024 then
-        local file, error = io.open(normalize(file_path), 'rb')
-        if file and not error then
-            local m = MD5.new()
-            for _ = 1, 16 * 1024 do
-                local content = file:read(1024)
-                if not content then
-                    break
-                end
-                m:update(content)
+-- ══════════ 哈希 worker 通信层 ══════════
+local function get_plugin_root()
+    -- 本文件经 require 加载后与 main.lua 同一脚本身份，此 API 即插件根目录
+    local ok, dir = pcall(function() return mp.get_script_directory() end)
+    if ok and type(dir) == 'string' and dir ~= '' then
+        return dir
+    end
+    -- 兜底：API 不可用时从本文件自身路径上推（apis/ → 上一级）
+    local src = (debug.getinfo(1, 'S') or {}).source or ''
+    local file_dir = src:match('^@(.+)[/\\][^/\\]+$')
+    if file_dir then
+        return (file_dir:match('^(.+)[/\\][^/\\]+$')) or file_dir
+    end
+    return nil
+end
+local PLUGIN_ROOT  = get_plugin_root() 
+local MODULES_DIR  = PLUGIN_ROOT and utils.join_path(PLUGIN_ROOT, 'modules') or nil
+local WORKER_FILE  = MODULES_DIR and utils.join_path(MODULES_DIR, 'hash_worker.lua') or nil
+-- 与 main.lua 的 require("modules/md5") 指向同一文件，worker 侧独立加载
+local md5_lib_path = MODULES_DIR and utils.join_path(MODULES_DIR, 'md5.lua') or nil
+
+local worker = { state = 'idle', name = nil, boot_timer = nil }
+local hash_pending = {}
+local match_session = 0
+local req_seq = 0
+
+-- worker 启动握手（固定广播名）
+mp.register_script_message('uosc_danmaku_hash_ready', function(worker_name)
+    if worker.state == 'ready' or not worker_name then return end
+    if worker.boot_timer then worker.boot_timer:kill() worker.boot_timer = nil end
+    worker.name, worker.state = worker_name, 'ready'
+    msg.verbose('hash worker ready: ' .. worker_name)
+    for id, e in pairs(hash_pending) do           -- 补发排队中的请求
+        -- 数组形式传参：路径含空格/中文不会被分词
+        mp.commandv('script-message-to', worker.name, 'uosc_danmaku_hash_request',
+            id, e.path, md5_lib_path or '', mp.get_script_name())
+    end
+end)
+
+-- worker 结果回信（点对点；已超时/取消的请求，迟到结果按 id 丢弃）
+mp.register_script_message('uosc_danmaku_hash_result', function(id, hash, t0)
+    local e = id and hash_pending[id]
+    if not e then return end          -- 迟到/已取消：静默丢弃，不打扰日志
+    hash_pending[id] = nil
+    if e.timer then e.timer:kill() end
+    if t0 then
+        msg.info(('hash calculated: %s (took %.2fs)'):format(
+            hash ~= '' and hash or '<empty>', mp.get_time() - tonumber(t0)))
+    end
+    hash = (hash and hash ~= '') and hash or nil
+    for _, cb in ipairs(e.cbs) do cb(hash) end
+end)
+
+
+local function cancel_pending(id, reason)
+    local e = hash_pending[id]
+    if not e then return nil end
+    hash_pending[id] = nil
+    if e.timer then e.timer:kill() end
+    if worker.state == 'ready' then
+        mp.commandv('script-message-to', worker.name, 'uosc_danmaku_hash_cancel', id)
+    end
+    msg.verbose('hash request cancelled: ' .. tostring(reason))
+    return e
+end
+
+-- 请求计算哈希（异步；结果经 done(hash|nil) 返回，永不阻塞本线程）
+local function request_hash(path, done)
+    if worker.state == 'unavailable' then
+        done(nil)
+        return
+    end
+    msg.info("开始计算文件 hash 值...")
+
+    -- 同文件在途请求合并（Windows 路径大小写不敏感）
+    local path_key = PLATFORM == "windows" and path:lower() or path
+    for _, e in pairs(hash_pending) do
+        if e.path_key == path_key then
+            table.insert(e.cbs, done)
+            return
+        end
+    end
+
+    -- worker 哈希等待上限（秒）
+    local HASH_TIMEOUT = 15
+    -- worker 启动握手兜底（秒）
+    local BOOT_TIMEOUT = 2
+
+    req_seq = req_seq + 1
+    local id = tostring(req_seq)
+    local e = { cbs = { done }, path = path, path_key = path_key }
+    -- 哈希等待上限延迟
+    e.timer = mp.add_timeout(HASH_TIMEOUT, function()
+        local t = cancel_pending(id, 'timeout')
+        if t then
+            msg.warn('hash timeout after ' .. HASH_TIMEOUT .. 's')
+            -- → 假哈希 → 文件名匹配
+            for _, cb in ipairs(t.cbs) do cb(nil) end
+        end
+    end)
+    hash_pending[id] = e
+
+    -- 已常驻：直接发
+    if worker.state == 'ready' then
+        -- 数组形式传参：路径含空格/中文不会被分词
+        mp.commandv('script-message-to', worker.name, 'uosc_danmaku_hash_request',
+            id, e.path, md5_lib_path or '', mp.get_script_name())
+        return
+    end
+    -- 启动中：ready 后自动补发
+    if worker.state == 'booting' then return end
+
+    -- 首次真正需要哈希时才加载 worker
+    local winfo = WORKER_FILE and utils.file_info(WORKER_FILE)
+    if not (winfo and winfo.is_file) then
+        worker.state = 'unavailable'
+        hash_pending[id] = nil
+        if e.timer then e.timer:kill() end
+        msg.warn('未找到 hash_worker，哈希匹配降级为文件名匹配')
+        for _, cb in ipairs(e.cbs) do cb(nil) end
+        return
+    end
+    worker.state = 'booting'
+    local ok = pcall(mp.command_native, { 'load-script', WORKER_FILE })
+    if not ok then
+        worker.state = 'unavailable'
+        hash_pending[id] = nil
+        if e.timer then e.timer:kill() end
+        msg.warn('无法加载 hash_worker.lua，哈希匹配降级为文件名匹配')
+        for _, cb in ipairs(e.cbs) do cb(nil) end
+        return
+    end
+    worker.boot_timer = mp.add_timeout(BOOT_TIMEOUT, function()
+        if worker.state ~= 'booting' then return end
+        worker.state = 'unavailable'
+        msg.warn('hash_worker 启动超时，哈希匹配降级为文件名匹配')
+        for id2, e2 in pairs(hash_pending) do
+            hash_pending[id2] = nil
+            if e2.timer then e2.timer:kill() end
+            for _, cb in ipairs(e2.cbs) do cb(nil) end
+        end
+    end)
+end
+
+-- 尝试通过获取计算哈希匹配获取弹幕（哈希统一由 hash_worker.lua 异步计算）
+local function match_file(file_path, file_name, callback, session)
+    show_message("执行哈希匹配获取弹幕...", 15)
+
+    request_hash(normalize(file_path), function(hash)
+        if session ~= match_session then
+            -- 文件已切换，旧匹配链作废
+            return
+        end
+
+        -- 进行哈希匹配获取弹幕
+        msg.info("进行 hash 匹配获取弹幕...")
+        local title, season_num, episode_num = parse_title()
+        if title and episode_num then
+            if season_num then
+                file_name = title .. " S" .. season_num .. "E" .. episode_num
+            else
+                file_name = title .. " E" .. episode_num
             end
-            file:close()
-            hash = m:finish()
-        end
-    end
-
-    if hash then msg.info('hash:', hash) end
-
-    local title, season_num, episode_num = parse_title()
-    if title and episode_num then
-        if season_num then
-            file_name = title .. " S" .. season_num .. "E" .. episode_num
         else
-            file_name = title .. " E" .. episode_num
+            file_name = title
         end
+
+        local servers = get_api_server_list(options.api_server)
+
+        local matched = false
+        local cancel_fn = nil
+
+        local function build_args(server)
+            local url = server .. "/api/v2/match"
+            return make_danmaku_request_args("POST", url,
+                { ["Content-Type"] = "application/json" },
+                { fileName = file_name,
+                  fileHash = hash or "a1b2c3d4e5f67890abcd1234ef567890",
+                  matchMode = "hashAndFileName" })
+        end
+
+        local function per_response(server, err, out)
+            if matched then return end
+            if err then
+                msg.debug(("match failed for %s: %s"):format(server, tostring(err)))
+                return
+            end
+            local data = utils.parse_json(out)
+            if not data or not data.isMatched then
+                return
+            end
+            matched = true
+            DANMAKU.anime = data.matches[1].animeTitle
+            DANMAKU.episode = data.matches[1].episodeTitle
+
+            set_episode_id(data.matches[1].episodeId, nil, server)
+            if cancel_fn then pcall(cancel_fn) end
+            if callback then pcall(callback) end
+        end
+
+        local function final_cb()
+            if not matched then
+                mp.commandv("script-message", "auto_load_fallback")
+                callback("没有找到 hash 匹配的剧集")
+            end
+        end
+
+        cancel_fn = parallel_requests(servers, build_args, per_response, final_cb,
+            { concurrency = 5, per_request_timeout = 60 })
+    end)
+end
+
+-- 通过文件前 16M 的 hash 值进行弹幕匹配（失败则回退解析文件名获取弹幕）
+function get_danmaku_with_hash(file_name, file_path)
+    -- 会话计数：文件切换后旧匹配链作废；取消其他文件的在途哈希请求（同文件的保留，供合并）
+    match_session = match_session + 1
+    local session = match_session
+    local path_key = PLATFORM == "windows" and normalize(file_path):lower() or normalize(file_path)
+    for id, e in pairs(hash_pending) do
+        if e.path_key ~= path_key then cancel_pending(id, 'file changed') end
+    end
+
+    if is_protocol(file_path) then
+        set_danmaku_button()
+        local temp_file = "temp-" .. PID .. ".mp4"
+        local arg = {
+            "curl", "--connect-timeout", "10", "--max-time", "30",
+            "--range", "0-16777215", "--user-agent", options.user_agent,
+            "--output", utils.join_path(DANMAKU_PATH, temp_file), "-L", file_path,
+        }
+        if options.proxy ~= "" then
+            table.insert(arg, '-x')
+            table.insert(arg, options.proxy)
+        end
+        call_cmd_async(arg, function(error)
+            file_path = utils.join_path(DANMAKU_PATH, temp_file)
+            match_file(file_path, file_name, function(error)
+                if error then
+                    msg.error(error)
+                    msg.info("尝试通过解析文件名获取弹幕")
+                    match_anime()
+                end
+            end, session)
+        end)
     else
-        file_name = title
-    end
-
-    local servers = get_api_server_list(options.api_server)
-
-    local matched = false
-    local cancel_fn = nil
-
-    local function build_args(server)
-        local url = server .. "/api/v2/match"
-        return make_danmaku_request_args("POST", url, { ["Content-Type"] = "application/json" }, {
-            fileName = file_name,
-            fileHash = hash or "a1b2c3d4e5f67890abcd1234ef567890",
-            matchMode = "hashAndFileName"
-        })
-    end
-
-    local function per_response(server, err, out)
-        if matched then return end
-        if err then
-            msg.debug(("match failed for %s: %s"):format(server, tostring(err)))
+        local dir = get_parent_directory(file_path)
+        local excluded_path = utils.parse_json(options.excluded_path)
+        if PLATFORM == "windows" then
+            for i, path in pairs(excluded_path) do
+                excluded_path[i] = path:gsub("/", "\\")
+            end
+        end
+        if contains_any(excluded_path, dir) then
+            msg.info("尝试通过解析文件名获取弹幕")
+            match_anime()
             return
         end
-        local data = utils.parse_json(out)
-        if not data or not data.isMatched then
-            return
-        end
-        matched = true
-        DANMAKU.anime = data.matches[1].animeTitle
-        DANMAKU.episode = data.matches[1].episodeTitle
-
-        set_episode_id(data.matches[1].episodeId, nil, server)
-        if cancel_fn then pcall(cancel_fn) end
-        if callback then pcall(callback) end
+        match_file(file_path, file_name, function(error)
+            if error then
+                msg.error(error)
+                msg.info("尝试通过解析文件名获取弹幕")
+                match_anime()
+            end
+        end, session)
     end
-
-    local function final_cb()
-        if not matched then
-            mp.commandv("script-message", "auto_load_fallback")
-            callback("没有找到hash匹配的剧集")
-        end
-    end
-
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
 end
 
 -- 异步获取弹幕数据
@@ -663,9 +854,9 @@ function save_danmaku_to_list(comments)
             local color = tonumber(fields[3]) or 0xFFFFFF
             local size = 25
             local m_value = comment["m"]
-                            :gsub("[%z\1-\31]", "")
-                            :gsub("\\", "")
-                            :gsub("\"", "")
+                :gsub("[%z\1-\31]", "")
+                :gsub("\\", "")
+                :gsub("\"", "")
             table.insert(danmaku_list, {
                 time = time,
                 type = type,
@@ -675,70 +866,5 @@ function save_danmaku_to_list(comments)
             })
         end
     end
-
     return danmaku_list
-end
-
--- 通过文件前 16M 的 hash 值进行弹幕匹配
-function get_danmaku_with_hash(file_name, file_path)
-    if type(MD5) ~= "table" or not MD5.sum then
-        msg.warn("MD5 模块不支持 Lua 5.1，回退到文件名匹配")
-        match_anime()
-        return
-    end
-    if is_protocol(file_path) then
-        set_danmaku_button()
-        local temp_file = "temp-" .. PID .. ".mp4"
-        local arg = {
-            "curl",
-            "--connect-timeout",
-            "10",
-            "--max-time",
-            "30",
-            "--range",
-            "0-16777215",
-            "--user-agent",
-            options.user_agent,
-            "--output",
-            utils.join_path(DANMAKU_PATH, temp_file),
-            "-L",
-            file_path,
-        }
-
-        if options.proxy ~= "" then
-            table.insert(arg, '-x')
-            table.insert(arg, options.proxy)
-        end
-
-        call_cmd_async(arg, function(error)
-            file_path = utils.join_path(DANMAKU_PATH, temp_file)
-
-            match_file(file_path, file_name, function(error)
-                if error then
-                    msg.error(error)
-                    msg.info("尝试通过解析文件名获取弹幕")
-                    match_anime()
-                end
-            end)
-        end)
-    else
-        local dir = get_parent_directory(file_path)
-        local excluded_path = utils.parse_json(options.excluded_path)
-        if PLATFORM == "windows" then
-            for i, path in pairs(excluded_path) do
-                excluded_path[i] = path:gsub("/", "\\")
-            end
-        end
-        if contains_any(excluded_path, dir) then
-            match_anime()
-            return
-        end
-        match_file(file_path, file_name, function(error)
-            if error then
-                msg.error(error)
-                msg.info("尝试通过解析文件名获取弹幕")
-                match_anime()
-            end
-        end)
-    end
 end
