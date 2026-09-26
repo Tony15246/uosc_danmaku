@@ -574,9 +574,17 @@ function get_danmaku_with_hash(file_name, file_path)
         set_danmaku_button()
         local temp_file = "temp-" .. PID .. ".mp4"
         local arg = {
-            "curl", "--connect-timeout", "10", "--max-time", "30",
-            "--range", "0-16777215", "--user-agent", options.user_agent,
-            "--output", utils.join_path(DANMAKU_PATH, temp_file), "-L", file_path,
+            "curl",
+            "--connect-timeout",
+            "10",
+            "--max-time",
+            "30",
+            "--range",
+            "0-16777215",
+            "--user-agent",
+            options.user_agent,
+            "--output",
+            utils.join_path(DANMAKU_PATH, temp_file), "-L", file_path,
         }
         if options.proxy ~= "" then
             table.insert(arg, '-x')
@@ -854,9 +862,9 @@ function save_danmaku_to_list(comments)
             local color = tonumber(fields[3]) or 0xFFFFFF
             local size = 25
             local m_value = comment["m"]
-                :gsub("[%z\1-\31]", "")
-                :gsub("\\", "")
-                :gsub("\"", "")
+                            :gsub("[%z\1-\31]", "")
+                            :gsub("\\", "")
+                            :gsub("\"", "")
             table.insert(danmaku_list, {
                 time = time,
                 type = type,
