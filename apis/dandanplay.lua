@@ -584,7 +584,9 @@ function get_danmaku_with_hash(file_name, file_path)
             "--user-agent",
             options.user_agent,
             "--output",
-            utils.join_path(DANMAKU_PATH, temp_file), "-L", file_path,
+            utils.join_path(DANMAKU_PATH, temp_file),
+            "-L",
+            file_path,
         }
         if options.proxy ~= "" then
             table.insert(arg, '-x')
@@ -874,5 +876,6 @@ function save_danmaku_to_list(comments)
             })
         end
     end
+
     return danmaku_list
 end
