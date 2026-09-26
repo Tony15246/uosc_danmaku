@@ -1,6 +1,9 @@
 local msg = require('mp.msg')
 local utils = require("mp.utils")
 
+local HASH_LIMIT = 16 * 1024 * 1024
+local win_drive_type = nil
+
 local function extract_url(url)
     local path = url:match("^https?://[^/]+(/[^%?]*)")
     return path
@@ -347,81 +350,255 @@ local function match_anime()
     cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
 end
 
--- 执行哈希匹配获取弹幕
+-- 尝试通过获取计算哈希匹配获取弹幕
 local function match_file(file_path, file_name, callback)
-    -- 计算文件哈希
-    local hash = nil
-    local file_info = utils.file_info(file_path)
-    if file_info and file_info.size >= 16 * 1024 * 1024 then
-        local file, error = io.open(normalize(file_path), 'rb')
-        if file and not error then
-            local m = MD5.new()
-            for _ = 1, 16 * 1024 do
-                local content = file:read(1024)
-                if not content then
-                    break
-                end
-                m:update(content)
+    show_message("执行哈希匹配获取弹幕...", 15)
+    msg.info("开始计算文件 hash 值...")
+
+    -- 可超时 / 可终止的子进程封装
+    local function kill_async_handle(handle)
+        if not handle then return end
+        if handle.kill then pcall(handle.kill, handle)
+        elseif handle.abort then pcall(handle.abort, handle)
+        else pcall(mp.abort_async_command, handle) end
+    end
+
+    -- command_native_async + 外部定时器 → 超时 kill
+    local function run_with_timeout(def, timeout, on_done)
+        local finished, timer = false, nil
+        local handle = mp.command_native_async(def, function(ok, result, err)
+            if finished then return end
+            finished = true
+            if timer then pcall(timer.kill, timer) end
+            on_done(ok, result, err, false)
+        end)
+        if timeout and timeout > 0 then
+            timer = mp.add_timeout(timeout, function()
+                if finished then return end
+                finished = true
+                kill_async_handle(handle)
+                on_done(false, nil, 'timeout', true)
+            end)
+        end
+    end
+
+    -- 获取挂载盘文件 hash
+    local function get_mount_hash(path, done)
+        local t0 = mp.get_time()
+        local escaped = path:gsub("'", "''")
+        local hash_timeout = 60
+        local ps = ([[
+            $ErrorActionPreference='Stop'
+            $fs=[IO.File]::OpenRead('%s')
+            try {
+              $buf=New-Object byte[] %d
+              $off=0
+              while($off -lt %d){ $n=$fs.Read($buf,$off,%d-$off); if($n -le 0){break}; $off+=$n }
+            } finally { $fs.Close() }
+            -join ([Security.Cryptography.MD5]::Create().ComputeHash($buf,0,$off) | ForEach-Object { $_.ToString('x2') })
+            ]]):format(escaped, HASH_LIMIT, HASH_LIMIT, HASH_LIMIT)
+
+        run_with_timeout({
+            name = 'subprocess',
+            args = { 'powershell', '-NoProfile', '-NonInteractive',
+                     '-ExecutionPolicy', 'Bypass', '-Command', ps },
+            playback_only = false,
+            capture_stdout = true,
+            capture_stderr = true,
+        }, hash_timeout, function(ok, result, err, timed_out)
+            local hash
+            if ok and result and result.status == 0 then
+                hash = (result.stdout or ''):match(
+                    '^%s*(%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x)%s*$')
             end
-            file:close()
-            hash = m:finish()
-        end
+            if hash then
+                msg.info(('hash: %s (took %.2fs)')
+                    :format(hash, mp.get_time() - t0))
+                return done(hash)
+            end
+            msg.warn(('hash failed: %s'):format(
+                timed_out and ('timeout after ' .. tostring(hash_timeout) .. 's, killed')
+                or tostring(err or (result and result.status) or 'unknown')))
+            done(nil)
+        end)
     end
 
-    if hash then msg.info('hash:', hash) end
+    -- 本地硬盘文件计算 hash
+    local function get_local_hash()
+        local t0 = mp.get_time()
+        local hash
+        local file_info = utils.file_info(file_path)
+        if file_info and file_info.size >= HASH_LIMIT then
+            local file, err = io.open(normalize(file_path), 'rb')
+            if file and not err then
+                local m = MD5.new()
+                for _ = 1, 16 do
+                    local content = file:read(1024 * 1024)
+                    if not content then break end
+                    m:update(content)
+                end
+                file:close()
+                hash = m:finish()
+            end
+        end
+        if hash then
+            msg.info(('hash: %s (took %.2fs)'):format(hash, mp.get_time() - t0))
+        end
+        return hash
+    end
 
-    local title, season_num, episode_num = parse_title()
-    if title and episode_num then
-        if season_num then
-            file_name = title .. " S" .. season_num .. "E" .. episode_num
+    -- 判断获取文件哈希
+    local function compute_hash(done)
+        local function get_win_drive_type()
+            if win_drive_type == nil then
+                win_drive_type = false
+                if PLATFORM == "windows" then
+                    pcall(function()
+                        local ffi = require('ffi')
+                        ffi.cdef 'int GetDriveTypeW(const wchar_t *lpRootPathName);'
+                        local k32 = ffi.load('kernel32')
+                        win_drive_type = function(path)
+                            local drive = path:match('^([A-Za-z]):')
+                            if not drive then return nil end
+                            local w = ffi.new('wchar_t[4]')
+                            w[0], w[1], w[2], w[3] = drive:byte(), 58, 92, 0  -- "X:\"
+                            return k32.GetDriveTypeW(w)   -- 4 == DRIVE_REMOTE
+                        end
+                    end)
+                end
+            end
+            if win_drive_type == false then return nil end
+            return win_drive_type
+        end
+
+        local wdt = get_win_drive_type()
+        if wdt and wdt(file_path) == 4 then
+            -- 挂载 → 子进程异步
+            return get_mount_hash(file_path, done)
+        end
+        -- 本地 → 同步计算后回调
+        done(get_local_hash())
+    end
+
+    compute_hash(function(hash)
+        -- 进行哈希匹配获取弹幕
+        msg.info("进行 hash 匹配获取弹幕...")
+        local title, season_num, episode_num = parse_title()
+        if title and episode_num then
+            if season_num then
+                file_name = title .. " S" .. season_num .. "E" .. episode_num
+            else
+                file_name = title .. " E" .. episode_num
+            end
         else
-            file_name = title .. " E" .. episode_num
+            file_name = title
         end
+
+        local servers = get_api_server_list(options.api_server)
+        local matched = false
+        local cancel_fn = nil
+
+        local function build_args(server)
+            local url = server .. "/api/v2/match"
+            return make_danmaku_request_args("POST", url,
+                { ["Content-Type"] = "application/json" },
+                { fileName = file_name,
+                  fileHash = hash or "a1b2c3d4e5f67890abcd1234ef567890",
+                  matchMode = "hashAndFileName" })
+        end
+
+        local function per_response(server, err, out)
+            if matched then return end
+            if err then
+                msg.debug(("match failed for %s: %s"):format(server, tostring(err)))
+                return
+            end
+            local data = utils.parse_json(out)
+            if not data or not data.isMatched then return end
+            matched = true
+            DANMAKU.anime = data.matches[1].animeTitle
+            DANMAKU.episode = data.matches[1].episodeTitle
+            set_episode_id(data.matches[1].episodeId, nil, server)
+            if cancel_fn then pcall(cancel_fn) end
+            if callback then pcall(callback) end
+        end
+
+        local function final_cb()
+            if not matched then
+                mp.commandv("script-message", "auto_load_fallback")
+                callback("没有找到 hash 匹配的剧集")
+            end
+        end
+
+        cancel_fn = parallel_requests(servers, build_args, per_response, final_cb,
+            { concurrency = 5, per_request_timeout = 60 })
+    end)
+end
+
+
+-- 通过文件前 16M 的 hash 值进行弹幕匹配（失败则回退解析文件名获取弹幕）
+function get_danmaku_with_hash(file_name, file_path)
+    if type(MD5) ~= "table" or not MD5.sum then
+        msg.warn("MD5 模块不支持 Lua 5.1，回退到文件名匹配")
+        match_anime()
+        return
+    end
+    if is_protocol(file_path) then
+        set_danmaku_button()
+        local temp_file = "temp-" .. PID .. ".mp4"
+        local arg = {
+            "curl",
+            "--connect-timeout",
+            "10",
+            "--max-time",
+            "30",
+            "--range",
+            "0-16777215",
+            "--user-agent",
+            options.user_agent,
+            "--output",
+            utils.join_path(DANMAKU_PATH, temp_file),
+            "-L",
+            file_path,
+        }
+
+        if options.proxy ~= "" then
+            table.insert(arg, '-x')
+            table.insert(arg, options.proxy)
+        end
+
+        call_cmd_async(arg, function(error)
+            file_path = utils.join_path(DANMAKU_PATH, temp_file)
+
+            match_file(file_path, file_name, function(error)
+                if error then
+                    msg.error(error)
+                    msg.info("尝试通过解析文件名获取弹幕")
+                    match_anime()
+                end
+            end)
+        end)
     else
-        file_name = title
-    end
-
-    local servers = get_api_server_list(options.api_server)
-
-    local matched = false
-    local cancel_fn = nil
-
-    local function build_args(server)
-        local url = server .. "/api/v2/match"
-        return make_danmaku_request_args("POST", url, { ["Content-Type"] = "application/json" }, {
-            fileName = file_name,
-            fileHash = hash or "a1b2c3d4e5f67890abcd1234ef567890",
-            matchMode = "hashAndFileName"
-        })
-    end
-
-    local function per_response(server, err, out)
-        if matched then return end
-        if err then
-            msg.debug(("match failed for %s: %s"):format(server, tostring(err)))
+        local dir = get_parent_directory(file_path)
+        local excluded_path = utils.parse_json(options.excluded_path)
+        if PLATFORM == "windows" then
+            for i, path in pairs(excluded_path) do
+                excluded_path[i] = path:gsub("/", "\\")
+            end
+        end
+        if contains_any(excluded_path, dir) then
+            msg.info("尝试通过解析文件名获取弹幕")
+            match_anime()
             return
         end
-        local data = utils.parse_json(out)
-        if not data or not data.isMatched then
-            return
-        end
-        matched = true
-        DANMAKU.anime = data.matches[1].animeTitle
-        DANMAKU.episode = data.matches[1].episodeTitle
-
-        set_episode_id(data.matches[1].episodeId, nil, server)
-        if cancel_fn then pcall(cancel_fn) end
-        if callback then pcall(callback) end
+        match_file(file_path, file_name, function(error)
+            if error then
+                msg.error(error)
+                msg.info("尝试通过解析文件名获取弹幕")
+                match_anime()
+            end
+        end)
     end
-
-    local function final_cb()
-        if not matched then
-            mp.commandv("script-message", "auto_load_fallback")
-            callback("没有找到hash匹配的剧集")
-        end
-    end
-
-    cancel_fn = parallel_requests(servers, build_args, per_response, final_cb, { concurrency = 5, per_request_timeout = 60 })
 end
 
 -- 异步获取弹幕数据
@@ -677,68 +854,4 @@ function save_danmaku_to_list(comments)
     end
 
     return danmaku_list
-end
-
--- 通过文件前 16M 的 hash 值进行弹幕匹配
-function get_danmaku_with_hash(file_name, file_path)
-    if type(MD5) ~= "table" or not MD5.sum then
-        msg.warn("MD5 模块不支持 Lua 5.1，回退到文件名匹配")
-        match_anime()
-        return
-    end
-    if is_protocol(file_path) then
-        set_danmaku_button()
-        local temp_file = "temp-" .. PID .. ".mp4"
-        local arg = {
-            "curl",
-            "--connect-timeout",
-            "10",
-            "--max-time",
-            "30",
-            "--range",
-            "0-16777215",
-            "--user-agent",
-            options.user_agent,
-            "--output",
-            utils.join_path(DANMAKU_PATH, temp_file),
-            "-L",
-            file_path,
-        }
-
-        if options.proxy ~= "" then
-            table.insert(arg, '-x')
-            table.insert(arg, options.proxy)
-        end
-
-        call_cmd_async(arg, function(error)
-            file_path = utils.join_path(DANMAKU_PATH, temp_file)
-
-            match_file(file_path, file_name, function(error)
-                if error then
-                    msg.error(error)
-                    msg.info("尝试通过解析文件名获取弹幕")
-                    match_anime()
-                end
-            end)
-        end)
-    else
-        local dir = get_parent_directory(file_path)
-        local excluded_path = utils.parse_json(options.excluded_path)
-        if PLATFORM == "windows" then
-            for i, path in pairs(excluded_path) do
-                excluded_path[i] = path:gsub("/", "\\")
-            end
-        end
-        if contains_any(excluded_path, dir) then
-            match_anime()
-            return
-        end
-        match_file(file_path, file_name, function(error)
-            if error then
-                msg.error(error)
-                msg.info("尝试通过解析文件名获取弹幕")
-                match_anime()
-            end
-        end)
-    end
 end
