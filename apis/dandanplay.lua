@@ -314,8 +314,8 @@ local function match_anime()
             for _, anime in ipairs(local_candidates) do
                 local animeTitle = tostring(anime.animeTitle or "")
                 animeTitle = animeTitle:gsub("^%s*(.-)%s*$", "%1")
-                    :gsub("%s*%(.-%)%s*$", "")
-                    :gsub("%s*【.-】.*$", "")
+                            :gsub("%s*%(.-%)%s*$", "")
+                            :gsub("%s*【.-】.*$", "")
                 if animeTitle:match("第一[季部]") and tonumber(season_num) == 1 then
                     target_title = title .. " 第一季"
                 end
@@ -354,12 +354,6 @@ local function get_plugin_root()
     local ok, dir = pcall(function() return mp.get_script_directory() end)
     if ok and type(dir) == 'string' and dir ~= '' then
         return dir
-    end
-    -- 兜底：API 不可用时从本文件自身路径上推（apis/ → 上一级）
-    local src = (debug.getinfo(1, 'S') or {}).source or ''
-    local file_dir = src:match('^@(.+)[/\\][^/\\]+$')
-    if file_dir then
-        return (file_dir:match('^(.+)[/\\][^/\\]+$')) or file_dir
     end
     return nil
 end
@@ -400,7 +394,6 @@ mp.register_script_message('uosc_danmaku_hash_result', function(id, hash, t0)
     hash = (hash and hash ~= '') and hash or nil
     for _, cb in ipairs(e.cbs) do cb(hash) end
 end)
-
 
 local function cancel_pending(id, reason)
     local e = hash_pending[id]
@@ -542,6 +535,7 @@ local function match_file(file_path, file_name, callback, session)
             matched = true
             DANMAKU.anime = data.matches[1].animeTitle
             DANMAKU.episode = data.matches[1].episodeTitle
+            msg.info("匹配成功获取源地址url，开始解析弹幕")
 
             set_episode_id(data.matches[1].episodeId, nil, server)
             if cancel_fn then pcall(cancel_fn) end
