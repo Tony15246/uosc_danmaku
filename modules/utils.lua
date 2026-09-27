@@ -1073,6 +1073,22 @@ function record_search_history(query)
     save_search_history()
 end
 
+-- 删除单条搜索历史（按关键词精确匹配），供 uosc 搜索菜单的条目操作调用
+function remove_search_history(keyword)
+    if type(keyword) ~= "string" or keyword == "" then return false end
+
+    local records = load_search_history()
+    for i, item in ipairs(records) do
+        if item.keyword == keyword then
+            table.remove(records, i)
+            save_search_history()
+            return true
+        end
+    end
+
+    return false
+end
+
 function get_search_history()
     return load_search_history()
 end

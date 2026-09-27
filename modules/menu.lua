@@ -556,7 +556,8 @@ function open_input_menu_get()
     })
 end
 
-function open_input_menu_uosc()
+-- 构建搜索菜单 props，供打开与删除后原地刷新复用
+local function build_search_menu_props()
     local items = {}
 
     if DANMAKU.anime and DANMAKU.episode then
@@ -577,19 +578,34 @@ function open_input_menu_uosc()
         selectable = false,
     }
 
-    -- 追加搜索历史条目，点击直接重新搜索
-    for _, item in ipairs(get_search_history()) do
+    -- 首个可选条目承载「回车即搜索识别到的名称」。uosc 打开菜单时会预选中第一个可选条目，
+    -- 且回车优先激活选中项（elements/Menu.lua:1260）；若预选中的是历史条目，回车就会搜到
+    -- 最新一条历史而不是输入框里的名称。输入框内容一旦变化，uosc 会自行清除选中项
+    -- （elements/Menu.lua:1014-1017），因此手动改过内容后回车仍会提交改后的文本。
+    local suggested_title = parse_title()
+    if suggested_title and suggested_title ~= "" then
         items[#items + 1] = {
-            title = item.keyword,
-            hint = item.time > 0 and os.date("%Y/%m/%d %H:%M", item.time) or nil,
-            icon = "history",
-            value = { "script-message-to", mp.get_script_name(), "search-anime-event", item.keyword },
+            title = "搜索：" .. suggested_title,
+            value = suggested_title,
             keep_open = false,
             selectable = true,
         }
     end
 
-    local menu_props = {
+    -- 追加搜索历史条目，点击直接重新搜索，条目操作提供单条删除
+    for _, item in ipairs(get_search_history()) do
+        items[#items + 1] = {
+            title = item.keyword,
+            hint = item.time > 0 and os.date("%Y/%m/%d %H:%M", item.time) or nil,
+            icon = "history",
+            value = item.keyword,
+            actions = {{icon = "delete", name = "delete", label = "删除此记录"}},
+            keep_open = false,
+            selectable = true,
+        }
+    end
+
+    return {
         type = "menu_danmaku",
         title = "在此处输入番剧名称",
         search_style = "palette",
@@ -597,9 +613,15 @@ function open_input_menu_uosc()
         search_suggestion = parse_title(),
         on_search = { "script-message-to", mp.get_script_name(), "search-anime-event" },
         footnote = "使用enter或ctrl+enter进行搜索",
-        items = items
+        items = items,
+        -- 条目操作必须配 callback 才会派发：uosc 在未设置 callback 时忽略 event.action
+        item_actions_place = "outside",
+        callback = { mp.get_script_name(), 'setup-danmaku-search-history' },
     }
-    local json_props = utils.format_json(menu_props)
+end
+
+function open_input_menu_uosc()
+    local json_props = utils.format_json(build_search_menu_props())
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
 end
 
@@ -1645,6 +1667,23 @@ mp.register_script_message('setup-danmaku-source', function(json)
             load_danmaku(true)
         end
     end
+end)
+
+-- 搜索菜单事件回调：条目激活复用原有搜索流程，删除操作移除单条历史
+mp.register_script_message('setup-danmaku-search-history', function(json)
+    local event = utils.parse_json(json)
+    if event == nil or event.type ~= 'activate' then return end
+
+    if event.action == 'delete' then
+        if remove_search_history(event.value) then
+            -- 原地刷新菜单，保持菜单打开以便连续删除
+            local json_props = utils.format_json(build_search_menu_props())
+            mp.commandv("script-message-to", "uosc", "update-menu", json_props)
+        end
+        return
+    end
+
+    mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", event.value)
 end)
 
 mp.register_script_message("setup-source-delay", function(query, text)
