@@ -18,14 +18,14 @@ local function load_md5_lib(md5_lib)
     if ok and type(lib) == 'table' and lib.new then
         MD5_LIB = lib
     end
-    -- 2) 主脚本传入的路径 dofile（apis/dandanplay.lua 计算）
+    -- 2) 回退：主脚本传入的路径 dofile（apis/dandanplay.lua 计算）
     if MD5_LIB == nil and md5_lib and md5_lib ~= '' then
         local ok2, lib2 = pcall(dofile, md5_lib)
         if ok2 and type(lib2) == 'table' and lib2.new then
             MD5_LIB = lib2
         end
     end
-    -- 3) 本文件自身同目录 dofile 兜底
+    -- 3) 回退：本文件自身同目录 dofile 兜底
     if MD5_LIB == nil then
         local src = (debug.getinfo(1, 'S') or {}).source or ''
         local dir = src:match('^@(.+)[/\\][^/\\]+$')
@@ -43,7 +43,8 @@ local function load_md5_lib(md5_lib)
 end
 
 mp.register_script_message('uosc_danmaku_hash_cancel', function(id)
-    if id then cancelled[id] = true end   -- FIFO：正在阻塞读时先排队，读完后处理
+    -- FIFO：正在阻塞读时先排队，读完后处理
+    if id then cancelled[id] = true end
 end)
 
 mp.register_script_message('uosc_danmaku_hash_request', function(id, path, md5_lib, reply_to)
