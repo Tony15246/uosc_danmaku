@@ -359,7 +359,7 @@ local function get_plugin_root()
 end
 local PLUGIN_ROOT  = get_plugin_root() 
 local MODULES_DIR  = PLUGIN_ROOT and utils.join_path(PLUGIN_ROOT, 'modules') or nil
-local WORKER_FILE  = MODULES_DIR and utils.join_path(MODULES_DIR, 'hash_worker.lua') or nil
+local WORKER_FILE  = MODULES_DIR and utils.join_path(MODULES_DIR, 'worker.lua') or nil
 -- 与 main.lua 的 require("modules/md5") 指向同一文件，worker 侧独立加载
 local md5_lib_path = MODULES_DIR and utils.join_path(MODULES_DIR, 'md5.lua') or nil
 
@@ -459,7 +459,7 @@ local function request_hash(path, done)
         worker.state = 'unavailable'
         hash_pending[id] = nil
         if e.timer then e.timer:kill() end
-        msg.warn('未找到 hash_worker，哈希匹配降级为文件名匹配')
+        msg.warn('未找到 worker，哈希匹配降级为文件名匹配')
         for _, cb in ipairs(e.cbs) do cb(nil) end
         return
     end
@@ -469,14 +469,14 @@ local function request_hash(path, done)
         worker.state = 'unavailable'
         hash_pending[id] = nil
         if e.timer then e.timer:kill() end
-        msg.warn('无法加载 hash_worker.lua，哈希匹配降级为文件名匹配')
+        msg.warn('无法加载 worker.lua，哈希匹配降级为文件名匹配')
         for _, cb in ipairs(e.cbs) do cb(nil) end
         return
     end
     worker.boot_timer = mp.add_timeout(BOOT_TIMEOUT, function()
         if worker.state ~= 'booting' then return end
         worker.state = 'unavailable'
-        msg.warn('hash_worker 启动超时，哈希匹配降级为文件名匹配')
+        msg.warn('worker 启动超时，哈希匹配降级为文件名匹配')
         for id2, e2 in pairs(hash_pending) do
             hash_pending[id2] = nil
             if e2.timer then e2.timer:kill() end
@@ -485,7 +485,7 @@ local function request_hash(path, done)
     end)
 end
 
--- 尝试通过获取计算哈希匹配获取弹幕（哈希统一由 hash_worker.lua 异步计算）
+-- 尝试通过获取计算哈希匹配获取弹幕（哈希统一由 worker.lua 异步计算）
 local function match_file(file_path, file_name, callback, session)
     show_message("执行哈希匹配获取弹幕...", 15)
 
