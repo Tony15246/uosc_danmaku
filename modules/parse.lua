@@ -55,71 +55,65 @@ local function decode_html_entities(text)
     end)
 end
 
+-- 黑名单模式状态（惰性初始化，不依赖模块加载顺序）
+local blacklist_patterns = nil
+
+function get_blacklist_path()
+    local path = options and options.blacklist_path
+    -- 未指定（空/纯空白）时返回 nil —— nil 即“未配置”：
+    if type(path) ~= "string" or path:match("^%s*$") then return nil end
+    local ok, expanded = pcall(mp.command_native, { "expand-path", path })
+    if not ok or type(expanded) ~= "string" or expanded == "" then return nil end
+    return expanded
+end
+
 -- 加载黑名单模式
-local function load_blacklist_patterns(filepath)
-    local patterns = {}
-    if not file_exists(filepath) then
-        return patterns
-    end
-    local file = io.open(filepath, "r")
-    if not file then
-        msg.error("无法打开黑名单文件: " .. filepath)
-        return patterns
-    end
-
-    if string.match(filepath, "%.xml$") then
-        -- xml文件格式示例
-        --<?xml version="1.0" encoding="utf-8"?>
-        --<filters>
-        --  <item enabled="true">t=卡在</item>
-        --  <item enabled="true">t=进度条</item>
-        --</filters>
-        print("加载黑名单文件: " .. filepath)
-        for line in file:lines() do
-            local pattern = line:match('<item%s+enabled="true">t=(.-)</item>')
-            if pattern then
-                print("加载黑名单模式: " .. pattern)
-                table.insert(patterns, pattern)
-            end
-        end
-    end
-
-    if string.match(filepath, "%.json$") then
-        -- json文件格式示例
-        -- [{"type":0,"filter":"开门","opened":true,"id":15628936}
-        -- ,{"type":0,"filter":"tony","opened":true,"id":15628939}
-        -- ,{"type":1,"filter":"0+.1","opened":true,"id":15628951}]
-        local content = read_file(filepath)
+function get_blacklist_patterns(force)
+    if blacklist_patterns == nil or force then
+        blacklist_patterns = {}
+        local path = get_blacklist_path()
+        local content = path and file_exists(path) and read_file(path)
         if content then
-            local json = utils.parse_json(content)
-            if json and type(json) == "table" then
-                for _, entry in ipairs(json) do
-                    if entry.opened and entry.filter and entry.type == 0 then
-                        table.insert(patterns, entry.filter)
+            local ext = path:lower():match("%.([a-z]+)$")
+            if ext == "xml" then
+                -- xml文件格式示例
+                --<?xml version="1.0" encoding="utf-8"?>
+                --<filters>
+                --  <item enabled="true">t=卡在</item>
+                --  <item enabled="true">t=进度条</item>
+                --</filters>
+                for _, line in ipairs(split_lines(content)) do
+                    local p = line:match('<item%s+enabled="true">t=(.-)</item>')
+                    if p then blacklist_patterns[#blacklist_patterns + 1] = p end
+                end
+            elseif ext == "json" then
+                -- json文件格式示例
+                -- [{"type":0,"filter":"开门","opened":true,"id":15628936}
+                -- ,{"type":0,"filter":"tony","opened":true,"id":15628939}
+                -- ,{"type":1,"filter":"0+.1","opened":true,"id":15628951}]
+                local data = utils.parse_json(content)
+                if type(data) == "table" then
+                    for _, e in ipairs(data) do
+                        if e.type == 0 and e.opened and e.filter then
+                            blacklist_patterns[#blacklist_patterns + 1] = e.filter
+                        end
+                    end
+                end
+            elseif ext == "txt" then
+                -- 文本文件格式示例
+                -- 卡在
+                -- 进度条
+                for _, line in ipairs(split_lines(content)) do
+                    line = line:match("^%s*(.-)%s*$")
+                    if line ~= "" then
+                        blacklist_patterns[#blacklist_patterns + 1] = line
                     end
                 end
             end
         end
     end
-
-    if string.match(filepath, "%.txt$") then
-        -- 文本文件格式示例
-        -- 卡在
-        -- 进度条
-        for line in file:lines() do
-            line = line:match("^%s*(.-)%s*$")
-            if line ~= "" then
-                table.insert(patterns, line)
-            end
-        end
-    end
-
-    file:close()
-    return patterns
+    return blacklist_patterns
 end
-
-local blacklist_file = mp.command_native({ "expand-path", options.blacklist_path })
-local black_patterns = load_blacklist_patterns(blacklist_file)
 
 -- 检查字符串是否在黑名单中
 function is_blacklisted(str, patterns)
@@ -654,7 +648,7 @@ function convert_danmaku_to_ass_events(force)
                     text = d.text,
                     source = url,
                 }
-                if not is_blacklisted(d.text, black_patterns) then
+                if not is_blacklisted(d.text, get_blacklist_patterns()) then
                     table.insert(list, entry)
                 end
             end
