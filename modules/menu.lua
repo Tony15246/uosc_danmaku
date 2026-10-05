@@ -507,57 +507,8 @@ function open_menu_select(menu_items, is_time)
 end
 
 -- 打开弹幕输入搜索菜单
-function open_input_menu_get()
-    mp.commandv('script-message-to', 'console', 'disable')
-    local title = parse_title()
-    local history_items = get_search_history()
-
-    local function build_log(select_text)
-        local log = {
-            { text = "【弹幕搜索】", style = "{\\c&H00CCFF&\\b1}" },
-            { text = "提示: 回车进行搜索", style = "{\\c&H999999&}" },
-        }
-        if #history_items > 0 then
-            table.insert(log, { text = "【搜索历史】", style = "{\\c&H00CCFF&\\b1}" })
-            for i, item in ipairs(history_items) do
-                local text = string.format("  [%02d] %s", i, item.keyword)
-                if item.time > 0 then
-                    text = text .. string.format("  [%s]", os.date("%Y/%m/%d %H:%M", item.time))
-                end
-                local style = (tonumber(select_text) == i) and "{\\c&HFFDE7F&\\b1}" or "{\\c&HCCCCCC&}"
-                table.insert(log, { text = text, style = style })
-            end
-            table.insert(log, { text = string.format("提示: 输入【1-%d】可快速重新搜索对应关键词", #history_items), style = "{\\c&H999999&}" })
-        end
-        input.set_log(log)
-    end
-
-    input_open({
-        prompt = '番剧名称:',
-        default_text = title,
-        cursor_position = title and #title + 1,
-        opened = function() build_log() end,
-        edited = function(text)
-            text = text:gsub("^%s*(.-)%s*$", "%1")
-            build_log(text ~= "" and text or nil)
-        end,
-        submit = function(text)
-            text = text:gsub("^%s*(.-)%s*$", "%1")
-
-            -- 输入历史编号则替换为对应关键词重搜
-            local num = tonumber(text)
-            if num and history_items[num] then
-                text = history_items[num].keyword
-            end
-
-            input.terminate()
-            mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", text)
-        end
-    })
-end
-
--- 构建搜索菜单 props，供打开与删除后原地刷新复用
 local function build_search_menu_props()
+    -- 构建搜索菜单 props，供打开与删除后原地刷新复用
     local items = {}
 
     if DANMAKU.anime and DANMAKU.episode then
@@ -623,6 +574,55 @@ end
 function open_input_menu_uosc()
     local json_props = utils.format_json(build_search_menu_props())
     mp.commandv("script-message-to", "uosc", "open-menu", json_props)
+end
+
+function open_input_menu_get()
+    mp.commandv('script-message-to', 'console', 'disable')
+    local title = parse_title()
+    local history_items = get_search_history()
+
+    local function build_log(select_text)
+        local log = {
+            { text = "【弹幕搜索】", style = "{\\c&H00CCFF&\\b1}" },
+            { text = "提示: 回车进行搜索", style = "{\\c&H999999&}" },
+        }
+        if #history_items > 0 then
+            table.insert(log, { text = "【搜索历史】", style = "{\\c&H00CCFF&\\b1}" })
+            for i, item in ipairs(history_items) do
+                local text = string.format("  [%02d] %s", i, item.keyword)
+                if item.time > 0 then
+                    text = text .. string.format("  [%s]", os.date("%Y/%m/%d %H:%M", item.time))
+                end
+                local style = (tonumber(select_text) == i) and "{\\c&HFFDE7F&\\b1}" or "{\\c&HCCCCCC&}"
+                table.insert(log, { text = text, style = style })
+            end
+            table.insert(log, { text = string.format("提示: 输入【1-%d】可快速重新搜索对应关键词", #history_items), style = "{\\c&H999999&}" })
+        end
+        input.set_log(log)
+    end
+
+    input_open({
+        prompt = '番剧名称:',
+        default_text = title,
+        cursor_position = title and #title + 1,
+        opened = function() build_log() end,
+        edited = function(text)
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+            build_log(text ~= "" and text or nil)
+        end,
+        submit = function(text)
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+
+            -- 输入历史编号则替换为对应关键词重搜
+            local num = tonumber(text)
+            if num and history_items[num] then
+                text = history_items[num].keyword
+            end
+
+            input.terminate()
+            mp.commandv("script-message-to", mp.get_script_name(), "search-anime-event", text)
+        end
+    })
 end
 
 function open_input_menu()
@@ -894,7 +894,7 @@ local menu_items_config = {
 -- 创建一个包含键顺序的表，这是样式菜单的排布顺序
 local ordered_keys = {"bold", "fontsize", "outline", "shadow", "scrolltime", "opacity", "displayarea"}
 
--- 设置弹幕样式菜单
+-- 打开弹幕样式设置菜单
 function open_style_menu_get(query, indicator)
     mp.commandv('script-message-to', 'console', 'disable')
     local menu_log = {}
@@ -1188,7 +1188,7 @@ function open_delay_from_time(source, time, status)
     end
 end
 
--- 设置弹幕源延迟菜单
+-- 打开弹幕源延迟设置菜单
 function open_delay_menu_get(source, status)
     mp.commandv('script-message-to', 'console', 'disable')
     local menu_log = {}
@@ -1359,7 +1359,7 @@ function open_delay_menu(source, status)
     end
 end
 
--- 设置弹幕屏蔽规则菜单
+-- 打开弹幕屏蔽规则设置菜单
 function open_blacklist_menu_uosc(action, index)
     -- ---------- 编辑菜单：搜索框预填原文，回车提交，Esc 取消 ----------
     if action == "edit" then
@@ -1372,7 +1372,7 @@ function open_blacklist_menu_uosc(action, index)
             search_suggestion = entry.pattern,
             footnote = "在输入框中修改规则后回车提交；Esc 取消",
             items = {
-                { title = "← 返回黑名单（不修改）", selectable = true,
+                { title = "↩️ 返回黑名单（不修改）", selectable = true,
                   value = { "script-message-to", mp.get_script_name(), "open_blacklist_menu" } },
             },
             on_search = { "script-message-to", mp.get_script_name(),
@@ -1416,7 +1416,7 @@ function open_blacklist_menu_uosc(action, index)
             else
                 actions = {
                     { name = "edit",   icon = "edit", label = "修改此规则" },
-                    { name = "toggle", icon = entry.enabled and "toggle_off" or "toggle_on",
+                    { name = "toggle", icon = entry.enabled and "toggle_on" or "toggle_off",
                       label = entry.enabled and "停用此规则" or "启用此规则" },
                     { name = "delete", icon = "delete", label = "删除此规则" },
                 }
@@ -1475,7 +1475,7 @@ function open_blacklist_menu_select()
         end
         if #state.entries > 0 then push("－ 删除条目...", "delete_mode") end
     end
-    push("← 返回", "close")
+    push("↩️ 返回", "close")
     mp.commandv("script-message-to", "console", "disable")
     input.select({
         prompt = "黑名单编辑:",
@@ -1528,7 +1528,7 @@ function open_blacklist_menu_select()
                     apush(entry.enabled and "停用此规则" or "启用此规则", "toggle")
                 end
                 apush("删除此规则", "delete")
-                apush("← 返回", "back")
+                apush("↩️ 返回", "back")
                 input.select({
                     prompt = abbr_str(entry.pattern, 40),
                     items = a_titles,
@@ -1918,8 +1918,8 @@ mp.register_script_message('setup-danmaku-source', function(json)
     end
 end)
 
--- 搜索菜单事件回调：条目激活复用原有搜索流程，删除操作移除单条历史
 mp.register_script_message('setup-danmaku-search-history', function(json)
+    -- 搜索菜单事件回调：条目激活复用原有搜索流程，删除操作移除单条历史
     local event = utils.parse_json(json)
     if event == nil or event.type ~= 'activate' then return end
 
@@ -2019,7 +2019,6 @@ mp.register_script_message("open_blacklist_menu", function()
     open_blacklist_menu()
 end)
 
--- 统一操作入口（仅 uosc 侧触发）：blacklist-deal <payload/mode> [arg] [extra]
 mp.register_script_message("blacklist-deal", function(payload, arg, extra)
     -- ① uosc 菜单回调：条目动作按钮 / 整项激活
     local event = utils.parse_json(payload or "")
@@ -2058,5 +2057,4 @@ mp.register_script_message("blacklist-deal", function(payload, arg, extra)
     if message then show_message("[弹幕屏蔽规则] " .. message, ok and 2 or 3) end
     if ok then mp.add_timeout(0.05, open_blacklist_menu) end
 end)
-
 

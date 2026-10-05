@@ -83,7 +83,7 @@ function get_blacklist_patterns(force)
                 --  <item enabled="true">t=进度条</item>
                 --</filters>
                 for _, line in ipairs(split_lines(content)) do
-                    local p = line:match('<item%s+enabled="true">t=(.-)</item>')
+                    local p = line:match('<item%s+enabled="([^"]*)"%s*>t=(.-)</item>')
                     if p then blacklist_patterns[#blacklist_patterns + 1] = p end
                 end
             elseif ext == "json" then
