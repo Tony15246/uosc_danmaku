@@ -283,13 +283,33 @@ function url_decode(str)
     end
 end
 
--- Utility function to split a string by a delimiter
+-- 按分隔符拆分文本
 function split(str, delim)
     local result = {}
     for match in (str .. delim):gmatch("(.-)" .. delim) do
         table.insert(result, match)
     end
     return result
+end
+
+-- 按行拆分文本：保留空行与“末行无换行符”结构，兼容 \n 与 \r\n
+function split_lines(content)
+    content = tostring(content or "")
+    local lines, pos = {}, 1
+    while pos <= #content do
+        local nl = content:find("[\r\n]", pos)
+        if not nl then
+            lines[#lines + 1] = content:sub(pos)
+            break
+        end
+        lines[#lines + 1] = content:sub(pos, nl - 1)
+        local next_pos = nl + 1
+        if content:sub(nl, nl) == "\r" and content:sub(next_pos, next_pos) == "\n" then
+            next_pos = next_pos + 1
+        end
+        pos = next_pos
+    end
+    return lines
 end
 
 function table_to_zero_indexed(tbl)
@@ -481,7 +501,7 @@ function get_api_server_list(api_server_str, meta)
     return urls
 end
 
---读history 和 写history
+-- 读history
 function read_file(file_path)
     local file = io.open(file_path, "r") -- 打开文件，"r"表示只读模式
     if not file then
@@ -490,6 +510,23 @@ function read_file(file_path)
     local content = file:read("*all") -- 读取文件所有内容
     file:close()                      -- 关闭文件
     return content
+end
+
+-- 写history
+function write_json_file(file_path, data)
+    return write_file(file_path, utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
+end
+
+-- 通用写文件原语（历史记录、黑名单等共用）
+function write_file(file_path, content)
+    if type(file_path) ~= "string" or file_path == "" or content == nil then
+        return false
+    end
+    local file = io.open(file_path, "wb")
+    if not file then return false end
+    file:write(content)
+    file:close()
+    return true
 end
 
 -- 应用额外的自定义标题替换规则
@@ -509,15 +546,6 @@ function title_replace(title)
         end
     end
     return title
-end
-
-function write_json_file(file_path, data)
-    local file = io.open(file_path, "w")
-    if not file then
-        return
-    end
-    file:write(utils.format_json(data)) -- 将 Lua 表转换为 JSON 并写入
-    file:close()
 end
 
 -- 拆分字符串中的字符和数字
@@ -996,6 +1024,7 @@ function parallel_requests(servers, build_args_fn, per_response_cb, final_cb, op
         end
     end
 end
+
 
 -- ============== 弹幕搜索历史 ==============
 
