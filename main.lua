@@ -460,11 +460,13 @@ function read_danmaku_source_record(path)
                 delay_segments = nil
             end
 
+            local existing = DANMAKU.sources[source]
             DANMAKU.sources[source] = {
                 from = from,
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
+                data = existing and existing.data,
             }
         end
     else
@@ -489,14 +491,17 @@ function read_danmaku_source_record(path)
                 }
             end
 
+            local existing = DANMAKU.sources[source]
             DANMAKU.sources[source] = {
                 from = from or "user_custom",
                 blocked = blocked,
                 delay_segments = delay_segments,
                 from_history = true,
+                data = existing and existing.data,
             }
 
             upgraded_sources[source] = shallow_copy(DANMAKU.sources[source])
+            upgraded_sources[source].data = nil
         end
 
         if next(upgraded_sources) then
@@ -658,6 +663,7 @@ end
 
 function init(path)
     if not path then return end
+    read_danmaku_source_record(path)
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
     local video = mp.get_property_native("current-tracks/video")
@@ -685,13 +691,15 @@ mp.register_event("file-loaded", function()
     local dir = get_parent_directory(path)
     local filename = mp.get_property('filename/no-ext')
     local video = mp.get_property_native("current-tracks/video")
-    local fps = mp.get_property_number("container-fps", 0)
     local duration = mp.get_property_number("duration", 0)
-    if not video or video["image"] or video["albumart"] or fps < 23 or duration < 60 then
+
+    -- 先读取历史源，确保不满足自动加载条件时仍可手动使用。
+    read_danmaku_source_record(path)
+
+    -- 网络流在 file-loaded 时的 container-fps 可能尚未就绪。
+    if not video or video["image"] or video["albumart"] or duration < 60 then
         return
     end
-
-    read_danmaku_source_record(path)
 
     if not get_danmaku_visibility() then
         return
