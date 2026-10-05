@@ -47,6 +47,10 @@ options = {
     merge_fontsize_max = 100,
     -- 指定弹幕关联历史记录文件的路径，支持绝对路径和相对路径
     history_path = "~~/danmaku-history.json",
+    -- 指定弹幕搜索历史记录文件的路径，支持绝对路径和相对路径。留空禁用搜索历史功能
+    search_history_path = "~~/danmaku-search-history.json",
+    -- 搜索历史最多保留的条数，小于 1 表示不限制
+    search_history_size = 15,
     -- 自定义插件快捷键，若 mpv.conf 里设置 input-default-bindings=no 将禁用以下两个选项
     open_search_danmaku_menu_key = "Ctrl+d",
     show_danmaku_keyboard_key = "j",

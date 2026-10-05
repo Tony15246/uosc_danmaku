@@ -1,3 +1,4 @@
+local msg = require('mp.msg')
 local utils = require("mp.utils")
 local unpack = unpack or table.unpack
 
@@ -994,4 +995,105 @@ function parallel_requests(servers, build_args_fn, per_response_cb, final_cb, op
             monitor = nil
         end
     end
+end
+
+-- ============== 弹幕搜索历史 ==============
+
+local search_history_records = nil
+
+function get_search_history_path()
+    local path = options.search_history_path
+    if path == nil or path == "" then return nil end
+    return mp.command_native({"expand-path", path})
+end
+
+function load_search_history()
+    if search_history_records ~= nil then
+        return search_history_records
+    end
+
+    search_history_records = {}
+    local path = get_search_history_path()
+    if path == nil then return search_history_records end
+
+    local content = read_file(path)
+    if content == nil then return search_history_records end
+
+    local data = utils.parse_json(content)
+    if type(data) ~= "table" then
+        msg.warn("搜索历史文件解析失败，已忽略: " .. path)
+        return search_history_records
+    end
+
+    for _, item in ipairs(data) do
+        if type(item) == "table" and type(item.keyword) == "string" and item.keyword ~= "" then
+            table.insert(search_history_records, {
+                keyword = item.keyword,
+                time = tonumber(item.time) or 0,
+            })
+        end
+    end
+
+    return search_history_records
+end
+
+function save_search_history()
+    local path = get_search_history_path()
+    if path then
+        write_json_file(path, search_history_records)
+    end
+end
+
+function record_search_history(query)
+    local path = get_search_history_path()
+    if path == nil or type(query) ~= "string" then return end
+
+    query = query:gsub("^%s*(.-)%s*$", "%1")
+    if query == "" then return end
+
+    local records = load_search_history()
+
+    -- 去重：已存在的记录先移除，新记录插入头部置顶
+    for i, item in ipairs(records) do
+        if item.keyword == query then
+            table.remove(records, i)
+            break
+        end
+    end
+    table.insert(records, 1, { keyword = query, time = os.time() })
+
+    -- 超过上限时从尾部丢弃，小于 1 表示不限制
+    local size = tonumber(options.search_history_size) or 15
+    if size >= 1 then
+        while #records > size do
+            table.remove(records)
+        end
+    end
+
+    save_search_history()
+end
+
+-- 删除单条搜索历史（按关键词精确匹配），供 uosc 搜索菜单的条目操作调用
+function remove_search_history(keyword)
+    if type(keyword) ~= "string" or keyword == "" then return false end
+
+    local records = load_search_history()
+    for i, item in ipairs(records) do
+        if item.keyword == keyword then
+            table.remove(records, i)
+            save_search_history()
+            return true
+        end
+    end
+
+    return false
+end
+
+function get_search_history()
+    return load_search_history()
+end
+
+function clear_search_history()
+    search_history_records = {}
+    save_search_history()
 end
