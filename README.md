@@ -1064,6 +1064,8 @@ title_replace
 
 自定义标题解析中的额外替换规则，内容格式为 JSON 字符串，替换模式为 lua 的 string.gsub 函数
 
+同时支持 JSON 规则文件路径（如 ~~/script-opts/title_replace.json），文件内容格式与示例字符串规则相同
+
 注意⚠️：由于 mpv 的 lua 版本限制，自定义规则只支持形如 %n 的捕获组写法，即示例用法，不支持直接替换字符的写法
 
 用法示例：
