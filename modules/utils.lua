@@ -494,17 +494,49 @@ end
 
 -- 应用额外的自定义标题替换规则
 function title_replace(title)
-    local title_replace = utils.parse_json(options.title_replace)
-    if not title_replace then
+    if not title then return title end 
+    local content = options.title_replace
+    if content == nil or content == "" then
         return title
     end
-    for _, v in pairs(title_replace) do
-        for _, indexrules in pairs(v['rules']) do
-            for rule, override in pairs(indexrules) do
-                title = title:gsub(rule, override)
-                        :gsub("[_%.]", " ")
-                        :gsub("^%s*(.-)%s*$", "%1")
-                        :gsub("[@#%.%+%-%%&*_=,/~`]+$", "")
+    content = content:gsub("^%s*(.-)%s*$", "%1")
+
+    if content:sub(1, 1) ~= "[" and content:sub(1, 1) ~= "{" then
+        -- JSON 规则文件路径
+        local path = mp.command_native({ "expand-path", content })
+        local file_content = read_file(path)
+        if not file_content then
+            msg.warn(("title_replace 规则文件不存在：%s"):format(path))
+            return title
+        end
+        content = file_content
+    end
+
+    local title_replace_rules = utils.parse_json(content)
+    if not title_replace_rules then
+        msg.warn("title_replace JSON 解析失败，已忽略标题替换规则")
+        return title
+    end
+    local parsed = title_replace_rules
+    -- 兼容顶层为 { "rules": [...] } 的简化写法
+    if type(parsed) == "table" and parsed.rules ~= nil and #parsed == 0 then
+        parsed = { parsed }
+    end
+    if type(parsed) ~= "table" or #parsed == 0 then
+        msg.warn("title_replace 规则结构不正确，已忽略")
+        return title
+    end
+    title_replace_rules = parsed
+    for _, v in pairs(title_replace_rules) do
+        -- 容错：规则项不是表或缺 rules 键时跳过，避免 pairs(nil) 抛错
+        if type(v) == "table" and type(v["rules"]) == "table" then
+            for _, indexrules in pairs(v['rules']) do
+                for rule, override in pairs(indexrules) do
+                    title = title:gsub(rule, override)
+                            :gsub("[_%.]", " ")
+                            :gsub("^%s*(.-)%s*$", "%1")
+                            :gsub("[@#%.%+%-%%&*_=,/~`]+$", "")
+                end
             end
         end
     end
