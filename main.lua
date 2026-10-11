@@ -15,6 +15,7 @@ require("modules/utils")
 require("modules/parse")
 require("modules/guess")
 require('modules/render')
+require('modules/blacklist')
 require('modules/menu')
 require("modules/update")
 
