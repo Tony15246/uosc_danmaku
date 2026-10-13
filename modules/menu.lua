@@ -124,14 +124,15 @@ local function make_handle_response(ctx)
                 summary.title = summary.title .. string.format("（%d 个数据源请求失败）",ctx.failed_servers)
                 summary.icon = "warning"
             end
+            -- 首行插入，由于result_count需要#final_items，所以该处代码需放置结果列表后面
             table.insert(final_items, 1, summary)
 
             if uosc_available then
                 latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, final_items,
                                                      ctx.footnote, ctx.menu_cmd, ctx.query)
             else
-                latest_menu_anime = utils.format_json(final_items)
                 show_message("", 0)
+                latest_menu_anime = utils.format_json(final_items)
                 if input_loaded then
                     input.terminate()
                     mp.add_timeout(0.1, function()
