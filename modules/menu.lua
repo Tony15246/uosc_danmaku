@@ -325,6 +325,21 @@ function get_episodes(animeTitle, bangumiId, api_server)
     local menu_title = "剧集信息"
     local footnote = "使用 / 打开筛选"
 
+    -- 解析当前视频所属集数，用于菜单打开时自动定位
+    local current_episode = nil
+    local filename = mp.get_property("filename")
+    if filename then
+        current_episode = get_episode_number(filename)
+    end
+    if current_episode == nil then
+        -- 本地文件名解析失败时（如协议流/纯标题），回退到标题解析
+        local _, _, ep = parse_title()
+        current_episode = tonumber(ep)
+    end
+    if current_episode ~= nil then
+        current_episode = math.floor(current_episode)
+    end
+
     if uosc_available then
         active_request_type = menu_type
         update_menu_uosc(menu_type, menu_title, message, footnote, nil, nil, "spinner",
@@ -393,6 +408,7 @@ function get_episodes(animeTitle, bangumiId, api_server)
             return
         end
 
+        local episode_index = nil
         for _, episode in ipairs(response.bangumi.episodes) do
             table.insert(items, {
                 title = episode.episodeTitle,
@@ -402,6 +418,16 @@ function get_episodes(animeTitle, bangumiId, api_server)
                 keep_open = false,
                 selectable = true,
             })
+
+            -- 标记标题推定集数：仅首个匹配项，定位索引 + hint 前缀
+            if current_episode ~= nil and episode_index == nil then
+                local ep_num = tonumber(episode.episodeNumber)
+                    or tonumber(tostring(episode.episodeNumber):match("%d+"))
+                if ep_num ~= nil and math.floor(ep_num) == current_episode then
+                    items[#items].hint = "▶ " .. episode.episodeNumber
+                    episode_index = #items
+                end
+            end
         end
 
         -- ====== 新增：更新 latest_menu_anime ======
@@ -422,19 +448,21 @@ function get_episodes(animeTitle, bangumiId, api_server)
 
         if uosc_available then
             footnote = mp.get_property("filename")
-            update_menu_uosc(menu_type, menu_title, items, footnote)
+            update_menu_uosc(menu_type, menu_title, items, footnote,
+                             nil, nil, nil, nil, episode_index)
         elseif input_loaded then
             show_message("", 0)
             input.terminate()
             mp.add_timeout(0.1, function()
-                open_menu_select(items)
+                open_menu_select(items, nil, episode_index)
             end)
         end
     end)
     active_request_type = menu_type
 end
 
-function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd, query, message_icon, on_close)
+function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_cmd,
+                          query, message_icon, on_close, selected_index)
     local items = {}
     if type(menu_item) == "string" then
         table.insert(items, {
@@ -464,10 +492,14 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
     if on_close ~= nil then
         menu_props.on_close = on_close
     end
+    
+    if selected_index ~= nil then
+        menu_props.selected_index = selected_index
+    end
 
     local current_menu_type = mp.get_property_native('user-data/uosc/menu/type')
     local cmd = "open-menu"
-    if current_menu_type and tostring(current_menu_type) == tostring(menu_type) then
+    if not selected_index and current_menu_type and tostring(current_menu_type) == tostring(menu_type) then
         cmd = "update-menu"
     end
 
@@ -477,7 +509,7 @@ function update_menu_uosc(menu_type, menu_title, menu_item, menu_footnote, menu_
     return json_props
 end
 
-function open_menu_select(menu_items, is_time)
+function open_menu_select(menu_items, is_time, default_item)
     local item_titles, item_values = {}, {}
     for i, v in ipairs(menu_items) do
         item_titles[i] = is_time and "[" .. v.hint .. "] " .. v.title or
@@ -488,6 +520,7 @@ function open_menu_select(menu_items, is_time)
     input_open({
         prompt = is_time and '筛选:' or '选择:',
         items = item_titles,
+        default_item = default_item,
         submit = function(id)
             input.terminate()
             perform_cancel_active_request()
