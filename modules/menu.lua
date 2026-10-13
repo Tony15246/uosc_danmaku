@@ -94,6 +94,10 @@ local function make_handle_response(ctx)
         end
 
         local function do_final_update()
+            if request_cancelled then return end
+            if ctx.rendered then return end
+            ctx.rendered = true
+
             local final_items = {}
             -- 按配置的 server 顺序拼接每个 server 的结果
             for _, srv in ipairs(ctx.server_order or {}) do
@@ -102,21 +106,46 @@ local function make_handle_response(ctx)
                     for _, v in ipairs(list) do table.insert(final_items, v) end
                 end
             end
-            if request_cancelled then return end
+
+            -- result_count 用去重后的总数；total_count 缺失时退化为条目数
+            local result_count = ctx.total_count or #final_items
+            local summary = {
+                title = string.format("搜索完成，共 %d 个结果", result_count),
+                italic = true,
+                keep_open = true,
+                selectable = false,
+                icon = "done_all",
+            }
+            if result_count == 0 then
+                summary.title = "搜索完成，无结果"
+                summary.icon = "info"
+            end
+            if (ctx.failed_servers or 0) > 0 then
+                summary.title = summary.title .. string.format("（%d 个数据源请求失败）",ctx.failed_servers)
+                summary.icon = "warning"
+            end
+            table.insert(final_items, 1, summary)
+
             if uosc_available then
-                latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, final_items, ctx.footnote, ctx.menu_cmd, ctx.query)
+                latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, final_items,
+                                                     ctx.footnote, ctx.menu_cmd, ctx.query)
             else
                 latest_menu_anime = utils.format_json(final_items)
+                show_message("", 0)
                 if input_loaded then
                     input.terminate()
                     mp.add_timeout(0.1, function()
-                        open_menu_select(final_items)
+                        -- 跳过首项提示，光标直接落在第一个结果上
+                        open_menu_select(final_items, nil, #final_items > 1 and 2 or nil)
                     end)
                 end
             end
         end
 
+        -- 挂到 ctx 上，供 get_animes 的 final_cb 兜底调用
+        ctx.render_final = do_final_update
         if err then
+            ctx.failed_servers = (ctx.failed_servers or 0) + 1
             msg.debug(("search anime failed for %s: %s"):format(server, tostring(err)))
             ctx.remaining.n = math.max(0, ctx.remaining.n - 1)
             if ctx.remaining.n == 0 then pcall(do_final_update) end
@@ -124,6 +153,7 @@ local function make_handle_response(ctx)
         end
         local data = utils.parse_json(out)
         if not data or not data.animes then
+            ctx.failed_servers = (ctx.failed_servers or 0) + 1
             ctx.remaining.n = math.max(0, ctx.remaining.n - 1)
             if ctx.remaining.n == 0 then pcall(do_final_update) end
             return
@@ -184,6 +214,7 @@ local function make_handle_response(ctx)
                 show_message("", 0)
                 input.terminate()
                 mp.add_timeout(0.1, function()
+                    if ctx.rendered then return end
                     latest_menu_anime = utils.format_json(display_items)
                     open_menu_select(display_items)
                 end)
@@ -285,32 +316,14 @@ function get_animes(query, filter_note)
         server_order = server_order,
         server_notes = server_notes,
         total_count = total_count,
+        failed_servers = 0,
+        rendered = false,
     }
 
     local handle_response = make_handle_response(ctx)
 
     local cancel_fn = parallel_requests(servers, build_args, handle_response, function()
-        if request_cancelled then return end
-        local final_items = {}
-        for _, srv in ipairs(ctx.server_order or {}) do
-            local list = ctx.server_items and ctx.server_items[srv]
-            if list and type(list) == 'table' then
-                for _, v in ipairs(list) do table.insert(final_items, v) end
-            end
-        end
-        if uosc_available then
-            latest_menu_anime = update_menu_uosc(ctx.menu_type, ctx.menu_title, final_items, ctx.footnote, ctx.menu_cmd, ctx.query)
-        else
-            latest_menu_anime = utils.format_json(final_items)
-            if not ctx.first_opened.val and input_loaded and #final_items > 0 then
-                ctx.first_opened.val = true
-                show_message("", 0)
-                input.terminate()
-                mp.add_timeout(0.1, function()
-                    open_menu_select(final_items)
-                end)
-            end
-        end
+        if ctx.render_final then pcall(ctx.render_final) end
     end, { concurrency = 5, per_request_timeout = 60 })
     active_request_cancel = cancel_fn
     active_request_type = menu_type
