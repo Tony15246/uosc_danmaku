@@ -136,8 +136,7 @@ local function make_handle_response(ctx)
                 if input_loaded then
                     input.terminate()
                     mp.add_timeout(0.1, function()
-                        -- 跳过首项提示，光标直接落在第一个结果上
-                        open_menu_select(final_items, nil, #final_items > 1 and 2 or nil)
+                        open_menu_select(final_items)
                     end)
                 end
             end
