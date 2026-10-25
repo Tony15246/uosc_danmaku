@@ -80,7 +80,7 @@ options = {
     --支持 lua 的正则表达式写法
     blacklist_path = "",
     --指定脚本相关消息显示的消息的对齐方式
-    message_anlignment = 7,
+    message_alignment = 7,
     --指定脚本相关消息显示的消息的x轴坐标
     message_x = 30,
     --指定脚本相关消息显示的消息的y轴坐标
