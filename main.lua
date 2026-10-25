@@ -783,8 +783,8 @@ mp.register_script_message("show_danmaku_keyboard", function()
 end)
 
 mp.register_script_message("auto_load_fallback", function()
-    if not fallback_triggered and options.auto_fallback_search and COMMENTS == nil then
-        fallback_triggered = true
+    if not FALLBACK_TRIGGER and options.auto_fallback_search and COMMENTS == nil then
+        FALLBACK_TRIGGER = true
         msg.info("自动加载弹幕失败，自动弹出搜索框")
         mp.commandv("script-message", "open_search_danmaku_menu")
     end
