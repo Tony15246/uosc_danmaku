@@ -31,6 +31,7 @@ local function get_tvid_from_url(url, callback)
     call_cmd_async(build_curl_args(api), function(err, out)
         if err or not out or out == '' then
             msg.warn('Iqiyi decode request failed: ' .. tostring(err))
+            callback(nil)
             return
         end
         local data = utils.parse_json(out)
@@ -54,6 +55,7 @@ local function get_video_info(tvid, callback)
     call_cmd_async(build_curl_args(api), function(err, out)
         if err or not out or out == '' then
             msg.warn('Iqiyi baseinfo request failed: ' .. tostring(err))
+            callback(nil)
             return
         end
         local data = utils.parse_json(out)
@@ -171,10 +173,14 @@ local function build_args_for_server(server, referer)
         'Accept: */*',
     }
     local args = build_curl_args(server.url, headers)
-    local last = args[#args]
-    args[#args] = '--output'
-    table.insert(args, server.zfile)
-    table.insert(args, last)
+    local url_pos
+    for i = #args, 1, -1 do
+        if args[i] == server.url then url_pos = i break end
+    end
+    if url_pos then
+        table.insert(args, url_pos, '--output')
+        table.insert(args, url_pos + 1, server.zfile)
+    end
     return args
 end
 
