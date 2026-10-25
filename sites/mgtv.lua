@@ -85,12 +85,14 @@ function load_danmaku_for_mgtv(path, callback)
     local url = path or mp.get_property('stream-open-filename', '')
     if not url or url == '' then
         msg.error('mgtv: 无效的 url')
+        callback(false)
         return
     end
 
     local cid, vid = extract_mgtv_ids(url)
     if not cid or not vid then
         msg.error('mgtv: 无法解析 cid/vid: ' .. tostring(url))
+        callback(false)
         return
     end
 
