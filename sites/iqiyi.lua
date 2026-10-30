@@ -13,7 +13,7 @@ local function cleanup_iqiyi_temp(mode)
     local entries = utils.readdir(dir)
     if not entries then return end
     local now = os.time()
-    for name in pairs(entries) do
+    for _, name in ipairs(entries) do
         local pid = name:match(TEMP_NAME_PATTERN)
         if pid then
             local full = utils.join_path(dir, name)
