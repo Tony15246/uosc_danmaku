@@ -24,7 +24,27 @@ local function build_curl_args(url, extra_headers)
     return args
 end
 
-local function get_cid()
+local function get_cid_from_ytdl()
+    local result = mp.get_property_native("user-data/mpv/ytdl/json-subprocess-result")
+        or mp.get_property_native("user-data/ytdl/json-subprocess-result")  -- 旧版 mpv 路径兜底
+    local info = result and result.stdout and utils.parse_json(result.stdout)
+    if not info then return nil end
+
+    -- 只信任 B 站提取器的结果（BiliBili / BiliBiliBangumi / BiliBiliCheese / BiliIntl 等）
+    if not (info.extractor and info.extractor:lower():find("bili")) then
+        return nil
+    end
+
+    -- /upgcxcode/{两位}/{两位}/{cid}/{cid}-1-30280.m4s，同一视频所有流 cid 相同
+    for _, format in ipairs(info.formats or {}) do
+        local cid = format.url and format.url:match('/upgcxcode/%d+/%d+/(%d+)/')
+        if cid then return cid end
+    end
+    -- 单格式结果兜底（playlist 单条目 / direct 等无 formats 数组的场景）
+    return info.url and info.url:match('/upgcxcode/%d+/%d+/(%d+)/')
+end
+
+local function get_cid_from_track()
     local cid, danmaku_id = nil, nil
     local tracks = mp.get_property_native("track-list")
     for _, track in ipairs(tracks) do
@@ -201,7 +221,7 @@ end
 -- 为 bilibli 网站的视频播放加载弹幕
 function load_danmaku_for_bilibili(path, callback)
     callback = callback or function() end
-    local cid, danmaku_id = get_cid()
+    local cid, danmaku_id = get_cid_from_track()
     if danmaku_id ~= nil then
         mp.commandv('sub-remove', danmaku_id)
     end
@@ -229,6 +249,12 @@ function load_danmaku_for_bilibili(path, callback)
         end
     end
     if cid == nil then
+        -- 新增：CDN 正则未命中时，从 ytdl JSON 兜底
+        cid = get_cid_from_ytdl()
+        -- msg.info("ytdl cid:", cid)
+    end
+    if cid == nil then
+        -- 网站 API 反查
         resolve_bilibili_cid(path, function(resolved_cid)
             if resolved_cid then
                 download_bilibili_danmaku(path, resolved_cid, true, callback)
